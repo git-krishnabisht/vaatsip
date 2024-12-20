@@ -41,9 +41,8 @@ export default function NavBar() {
 
   const Links = {
     Users: "/get-users",
-    Page1: "/docs",
-    Page2: "/about-us",
     Game: "/tic-tac-toe",
+    Click_me_bitch: "/edit-profile",
   };
 
   return (

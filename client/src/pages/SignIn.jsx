@@ -12,7 +12,6 @@ import {
   VStack,
 } from "@chakra-ui/react";
 
-
 export default function SignIn() {
 
   const [username, setUsername] = useState("");
@@ -22,11 +21,6 @@ export default function SignIn() {
     event.preventDefault();
     try {
       const gotToken = localStorage.getItem("token");
-
-      if(gotToken) {
-        console.log("it seems like you do hvae the token, so you don't have to login");
-        return;
-      };
 
       const res = await fetch('http://localhost:50136/user-login', {
         method: "POST",
@@ -38,6 +32,10 @@ export default function SignIn() {
 
       const data = await res.json();
       if(data.token) {
+        if (gotToken) {
+          localStorage.removeItem("token");
+          console.info("Deleted the prvious token and created new one");
+        }
         localStorage.setItem("token", data.token);
         console.log("Successfully logged in");
       } else {

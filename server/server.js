@@ -1,25 +1,28 @@
 /*
-* 1 - Include the image uploading functionality both in server in client
-* 2 - Also include JWT Tokens functioality either store then in the localstorage or cookie, the reason 
-*     being because you have to priorly know, what is the name of the user in which you are going to 
-*     upload the picture.
-*/
+ * 1 - Include the image uploading functionality both in server in client -> from server > done
+ * 2 - Also include JWT Tokens functioality either store then in the localstorage or cookie, the reason
+ *     being because you have to priorly know, what is the name of the user in which you are going to
+ *     upload the picture. -> Done
+ *
+ * To-do -> have to create upload profile page from where you can upload you profile picture and if there is not profile picture then it will use the default picture from teh storage
+ *
+ */
 
 import express from "express";
 import pg from "pg";
 import cors from "cors";
-import multer from "multer";
 import jwt from "jsonwebtoken";
 import fs from "fs";
+import multer from "multer";
 
 const { Client } = pg;
 const db = new Client(
-  "postgres://postgres:501363495577409@localhost:5432/my_database",
+  "postgres://postgres:501363495577409@localhost:5432/my_database"
 );
+const upload = multer({ storage: multer.memoryStorage() });
 
-const storage = multer.memoryStorage();
-const upload = multer({storage});
 const privatekey = fs.readFileSync("./private.key", "utf8");
+const publickey = fs.readFileSync("./public.key", "utf8");
 
 (async () => {
   try {
@@ -38,7 +41,7 @@ app.use(
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization"],
-  }),
+  })
 );
 
 app.use(express.json());
@@ -53,24 +56,12 @@ app.get("/get-users", async (_, res) => {
   }
 });
 
-app.post("/edit-profile", upload.single("image"), async (req, res) => {
-  try {
-    if(!req.file) {
-      return res.status(400).send("Error with request");
-    }
-    const base64Image = req.file.buffer.toString("base64");
-
-
-  } catch(err) {
-  }
-});
-
 app.post("/create-account", async (req, res) => {
   try {
     const { username, name, email, gender, dob, password } = req.body;
     const result = await db.query(
       "select exists (select 1 FROM users WHERE username = $1)",
-      [username],
+      [username]
     );
     if (result.rows[0].exists) {
       console.log("User already exists");
@@ -93,15 +84,64 @@ app.post("/create-account", async (req, res) => {
   }
 });
 
-app.post("/user-login", async (req, res) => {
+app.post("/edit-profile", upload.single("image"), async (req, res) => {
+  const authHeader = req.headers.authorization;
 
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ message: "Authorization header is missing" });
+  }
+
+  const token = authHeader.split(" ")[1];
+  try {
+    const auth = jwt.verify(token, publickey, {
+      expiresIn: "1h",
+      algorithm: "RS256",
+    });
+
+    const username = auth.username;
+
+    const checkUser = await db.query(
+      "Select exists (Select 1 FROM users Where username = $1);",
+      [username]
+    );
+
+    if (!checkUser.rows[0].exists) {
+      console.log("Invalid User");
+      return;
+    }
+
+    if (!req.file) {
+      console.log("No file uploaded");
+      return res.status(400).json({ message: "No Image uploaded" });
+    }
+
+    const image = req.file.buffer;
+    const result = await db.query(
+      "Update users SET image = $1 WHERE username = $2 RETURNING *;",
+      [image, username]
+    );
+
+    if (result.rowCount) {
+      res.status(200).json({ message: "Image uploaded successfully" });
+      return;
+    } else {
+      res.status(400).json({ message: "Error while uploading the image" });
+      return;
+    }
+  } catch (err) {
+    console.error("Error in edit-profile : ", err);
+    return res.status(400).json({ message: "Internal server error" });
+  }
+});
+
+app.post("/user-login", async (req, res) => {
   const payload = {
-    username: req.username
+    username: req.body.username,
   };
 
   const signOptions = {
     expiresIn: "1h",
-    algorithm: "RS256"
+    algorithm: "RS256",
   };
 
   const { username, password } = req.body;
@@ -160,7 +200,3 @@ app.put("/user-update", async (req, res) => {
 app.listen(50136, () => {
   console.log("Server is Listening to port 50136...");
 });
-
-/*
- * To-do -> have to create upload profile page from where you can upload you profile picture and if there is not profile picture then it will use the default picture from teh storage
- */
