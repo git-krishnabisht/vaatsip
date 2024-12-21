@@ -1,19 +1,10 @@
-/*
- * 1 - Include the image uploading functionality both in server in client -> from server > done
- * 2 - Also include JWT Tokens functioality either store then in the localstorage or cookie, the reason
- *     being because you have to priorly know, what is the name of the user in which you are going to
- *     upload the picture. -> Done
- *
- * To-do -> have to create upload profile page from where you can upload you profile picture and if there is not profile picture then it will use the default picture from teh storage
- *
- */
-
 import express from "express";
 import pg from "pg";
 import cors from "cors";
 import jwt from "jsonwebtoken";
 import fs from "fs";
 import multer from "multer";
+import { fileTypeFromBuffer } from "file-type";
 
 const { Client } = pg;
 const db = new Client(
@@ -51,7 +42,7 @@ app.get("/get-users", async (_, res) => {
     const { rows } = await db.query("SELECT * FROM users");
     return res.status(200).json({ users: rows });
   } catch (err) {
-    console.error("errorfetching users:", err.stack);
+    console.error("Error fetching users:", err.stack);
     return res.status(500).json({ error: "Error while fetching data" });
   }
 });
@@ -64,7 +55,6 @@ app.post("/create-account", async (req, res) => {
       [username]
     );
     if (result.rows[0].exists) {
-      console.log("User already exists");
       return res.status(400).send("User already exists");
     } else {
       const query = {
@@ -73,14 +63,46 @@ app.post("/create-account", async (req, res) => {
       };
 
       await db.query(query);
-      console.log("User Registered successfully:");
       return res.status(200).send({
         message: "Registered successfully",
       });
     }
   } catch (err) {
-    console.error("error registering user:", err.stack);
+    console.error("Error while registration : ", err.stack);
     return res.status(500).send(err);
+  }
+});
+
+app.get("/get-pictures/:username", async (req, res) => {
+  const { username } = req.params;
+
+  try {
+    if (!username) {
+      return res.status(400).json({ message: "Username not found" });
+    }
+    const result = await db.query(
+      "SELECT image FROM users where username = $1;",
+      [username]
+    );
+
+    const img = result.rows[0].image;
+    if (!img) {
+      return res
+        .status(404)
+        .json({ message: "No image found from the result query" });
+    }
+
+    const fileType = await fileTypeFromBuffer(img);
+    res.setHeader("Content-Type", fileType.mime);
+    res.setHeader(
+      "Content-Disposition",
+      `inline; filename="${username}-img.${fileType.ext}"`
+    );
+    res.send(img);
+  } catch (err) {
+    return res
+      .status(400)
+      .json({ message: "Error while fetching the picture : " + err });
   }
 });
 
@@ -92,6 +114,13 @@ app.post("/edit-profile", upload.single("image"), async (req, res) => {
   }
 
   const token = authHeader.split(" ")[1];
+
+  if (!token) {
+    return res
+      .status(400)
+      .json({ message: "Token is not available in the authorization header" });
+  }
+
   try {
     const auth = jwt.verify(token, publickey, {
       expiresIn: "1h",
@@ -99,46 +128,47 @@ app.post("/edit-profile", upload.single("image"), async (req, res) => {
     });
 
     const username = auth.username;
-
     const checkUser = await db.query(
       "Select exists (Select 1 FROM users Where username = $1);",
       [username]
     );
 
     if (!checkUser.rows[0].exists) {
-      console.log("Invalid User");
-      return;
+      return res.status(400).json({ message: "User not existence" });
     }
 
     if (!req.file) {
-      console.log("No file uploaded");
-      return res.status(400).json({ message: "No Image uploaded" });
+      return res
+        .status(400)
+        .json({ message: "No presence of the file in the request" });
     }
 
     const image = req.file.buffer;
+
+    if (!image) {
+      return res
+        .status(400)
+        .json({ message: "No presence of the image in the buffer" });
+    }
+
     const result = await db.query(
       "Update users SET image = $1 WHERE username = $2 RETURNING *;",
       [image, username]
     );
 
     if (result.rowCount) {
-      res.status(200).json({ message: "Image uploaded successfully" });
-      return;
+      return res.status(200).json({ message: "Image uploaded successfully" });
     } else {
-      res.status(400).json({ message: "Error while uploading the image" });
-      return;
+      return res
+        .status(400)
+        .json({ message: "Error while uploading the image" });
     }
   } catch (err) {
-    console.error("Error in edit-profile : ", err);
-    return res.status(400).json({ message: "Internal server error" });
+    return res.status(400).json({ message: "Error while uploading the image" });
   }
 });
 
 app.post("/user-login", async (req, res) => {
-  const payload = {
-    username: req.body.username,
-  };
-
   const signOptions = {
     expiresIn: "1h",
     algorithm: "RS256",
@@ -149,54 +179,59 @@ app.post("/user-login", async (req, res) => {
 
   try {
     const result = await db.query(searchQuery, [username, password]);
-    var token = jwt.sign(payload, privatekey, signOptions);
+    var token = jwt.sign(req.body.username, privatekey, signOptions);
 
     if (result.rows[0].is_valid) {
-      console.log("Login successfull");
-      res.send({ token }).status(200);
+      return res
+        .status(200)
+        .send({ token: token, message: "Login successfull" });
     } else {
-      res.status(400);
-      console.log("Login failed");
+      return res.status(400).send({ message: "Login failed" });
     }
   } catch (err) {
-    console.error("Error : ", err.stack);
+    return res.status(400).send({ Error: err });
   }
 });
 
 app.delete("/user-delete", async (req, res) => {
   const { username } = req.body;
+  if (!username) {
+    return res.status(400).json({ message: "Username not found" });
+  }
   const deleteQuery = `delete from users where username=$1;`;
   try {
     const result = await db.query(deleteQuery, [username]);
     if (result.rowCount > 0) {
-      console.log("Deletion successful");
-      res.status(200);
+      return res.status(200).send({ message: "User deleted sucessfully" });
     } else {
-      console.log("Count not find the user");
-      res.status(400);
+      return res.status(400).send({ message: "Deletion failed" });
     }
   } catch (err) {
-    console.error("Error at delete : ", err.stack);
+    return res.status(400).send({ message: "Error while deletion" });
   }
 });
 
 app.put("/user-update", async (req, res) => {
   const { username, password } = req.body;
+
+  if (!username || !password) {
+    return res.status(400).send({ message: "Provide correct information" });
+  }
   const updateQuery = `update users set password=$2 where username=$1 returning *;`;
   try {
     const result = await db.query(updateQuery, [username, password]);
     if (result.rowCount > 0) {
-      console.log(`the ${result.rows[0].username} updated Successfully`);
-      res.status(200);
+      return res.status(200).send({ message: "Updation successfull" });
     } else {
-      console.error("Cannot Update : ");
-      res.status(400);
+      return res.status(400).send({ message: "Updation failed" });
     }
   } catch (err) {
-    console.error("Error : ", err.stack);
+    return res.status(400).send({ message: "Error while updation" });
   }
 });
 
-app.listen(50136, () => {
-  console.log("Server is Listening to port 50136...");
+const PORT = 50136;
+
+app.listen(PORT, () => {
+  console.log(`Server is Listening to port ${PORT}...`);
 });

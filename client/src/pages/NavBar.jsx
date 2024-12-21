@@ -15,14 +15,16 @@ import {
   ModalFooter,
   ModalBody,
   ModalCloseButton,
-  Text,
+  Input,
+  FormControl,
+  FormLabel,
 } from "@chakra-ui/react";
-import { useState } from "react";
-import { Link, NavLink} from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, NavLink } from "react-router-dom";
 
-const DefaultImg ="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAKgAAACUCAMAAAAwLZJQAAAAY1BMVEX///8AAAAEBAT7+/s/Pz/39/cICAh9fX0NDQ3z8/Pf399eXl6WlpbT09MuLi7w8PDDw8OqqqpnZ2c5OTm3t7cXFxfq6upTU1OdnZ0bGxtHR0eGhoaPj4+kpKQhISHLy8tycnIQFVVrAAAErklEQVR4nO2ai5aqOgyGLbXcpNxEUMDL+z/lTlouOlu2OFrKOiffUsZBlN+koUnKZkMQBEEQBEEQBEEQBEEQxP8KrjZc/+13cT68tRJACxd3/95pE3xdUgFUGoRFm1f7fZW3RRh0O9cFWE6EhbdnA3uvCMWDpdcA57ws8gMKdIbNIS9KzlfkeI52C70LY64LEh3XhQ2+ZhcvRFuvRiu497pDIzqO3o4vd9eVDFSuniK9G5yP7FPRHWRdJ1gsrV09LH8CI6BOtUmt+x8EhDsYns+FwkDdhbYlKjBWPFDkP/e8D/o968ZEMJAOXeg8Mym8cbAfUBwVlDlzwfPPXQ++d1leolCbdlXhXMTseST18cQuheW41zHfTIvsaYTtYQrnl9VroZW0fXmCs6fxa6GX1LZQOH/mvhbKMvtCk3aGTtYGlmWCUG+OUC+xrXOT3OYIvVkWCuOunCe0tCt084brbQeTiOYIjYR1oTybyJvu8TPbMoHp5H5kn65AaDhnCrWcO6OZhGiw8GQT8xMmgMxRSYnVwhnPDZP9RMWEQNXE4ivko3ZTZ4GtB0/X81M6XeYJsKbdSVT1HmTM/GnX+yyWugthNaDU6Y9sMsfH3Ud9oG2h8Azy6YBnLA9U0NlU2cFVYT8FlPW8O8w2MABlDgX82HgaXjp+LtfVegy9kx6TvVA9Zk/eOtokGhUn4TnW/ZK+P4o9kvgcWo+iO1QbYsOlMqozRvvJk91bthU+EggZ1WMQ1ZEU9iulR8aJnMus9W43r81kt2NFnu/hP9IOvqKeOEF0QM7HxbCxrea/gUjKMgzLMlnT/I7wMTPi4TWLmlue73Z5fmui7BqOjeZVDAQ0npDnvIpPdzW+f4qr/CzFZg25KA+wDAVbHqvTXVZ/l+2fqiPYFY7ZBHZ7+ODSRDaHUSGmpZ3STu+hkYmapmx6X2ySFJeVVWE/rtX26bMu69nFSxOr/selhmbfyXNRrjPmo+oft1O+b+wuN4ii9pl297jtRwE+WLdlfl1YMin2EcsGZT5frr0Hl26Z35S4YL6wTBUbadVpmAH+miq1EFIwmxfbxyvRC6vCkduCL72EBz7MYh0vs5XCwXG2eOcZdXaxMtugWJZmCw9S1Ol2l/Z5weToS9jSSnHpmz3MPy+kDtu4WEiizkC22F94Y4D2ch2fbZfJU/hws8tMW/6wa3czzAIFKrZkWx1H7+rsP9XyJfpmcIb08k68PwhVSnH1fgnXh5XOk96W2k37DqvCBVzPk/bwC5EPYg9tYv6yL+TQCPtNMGlqucAYjfzfhNGjXj8yX5iEb6UiT3ViemK+EX1UYfSpSfWSjkmSLZta+5oPfEFtusebqvN85nr1S1PDQr3uUviRUHx65jSqLt2/bxh8Q2ucGOtIYyNRfmrOQSiTRku96NNrE+tdzyJjIpGc/TZx+ktsblJnUo9G+UCl+nht7J4tbODMuCNnLntjTR6dibJvRBN+g7F7SvFLz4ePNQ6cMmNhzzdHX5W934D5x40x3/PW+Z5QKJ0MXe/hMeMG8fk0xlJSHhzr7fc4mkqgAtXD+xqCm6pFOf9u/bCqe2IIgiAIgiAIgiAIgiAIgvgafwAJIC5QBmWRZQAAAABJRU5ErkJggg==";
 
 export default function NavBar() {
+
   const {
     isOpen: isMenuOpen,
     onOpen: onMenuOpen,
@@ -33,16 +35,61 @@ export default function NavBar() {
     onOpen: onModalOpen,
     onClose: onModalClose,
   } = useDisclosure();
-  const [img, setImg] = useState(DefaultImg);
+  const [img, setImg] = useState();
+  const [tempImg, setTempImg] = useState(null);
 
-  const handleProfileStuff = () => {
-    onModalOpen();
-  };
+
+  useEffect(() => {
+    async function fetchImage() {
+      try {
+        const response = await fetch(
+          "http://localhost:50136/get-pictures/rajkumar"
+        );
+        if(response.ok) {
+          const imgBlob = await response.blob();
+          const imgUrl = URL.createObjectURL(imgBlob);
+          console.log(imgUrl);
+          setImg(imgUrl);
+        } else {
+        }
+      } catch (error) {
+        console.error("Error fetching image:", error);
+      }
+    }
+    fetchImage();
+  }, []);
+
+  const handleProfileChange = async() => {
+
+    const formData = new FormData();
+    formData.append("image", tempImg);
+
+    if(!tempImg) {
+      throw new Error("Select an Image");
+    }
+
+    const token = localStorage.getItem("token");
+    try {
+      const response = await fetch("http://localhost:50136/edit-profile/", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData
+      });
+      if(!response.ok) {
+        console.log("Failed to upload the image");
+      } else {
+        console.log("Image uploaded successfully");
+      }
+    } catch(err) {
+      console.error("Error: ", err);
+    }
+  }
 
   const Links = {
     Users: "/get-users",
     Game: "/tic-tac-toe",
-    Click_me_bitch: "/edit-profile",
   };
 
   return (
@@ -56,7 +103,8 @@ export default function NavBar() {
             display={{ md: "none" }}
             onClick={isMenuOpen ? onMenuClose : onMenuClose}
           />
-           {/*for now this icon menu is not working , we will work on this later*/}
+
+          {/*for now this icon menu is not working , we will work on this later*/}
 
           <HStack spacing={8} alignItems={"center"}>
             <NavLink to="/"> Home </NavLink>
@@ -75,7 +123,7 @@ export default function NavBar() {
           <Flex alignItems={"center"}>
             <Avatar
               as={"button"}
-              onClick={handleProfileStuff}
+              onClick={onModalOpen}
               size={"md"}
               src={img}
               border={"2px"}
@@ -92,13 +140,23 @@ export default function NavBar() {
               Sign-in
             </Button>
 
-            <Modal isOpen={isModalOpen} onClose={onModalClose} isCentered size={"xl"}>
+            <Modal
+              isOpen={isModalOpen}
+              onClose={onModalClose}
+              isCentered
+              size={"xl"}
+            >
               <ModalOverlay />
               <ModalContent>
                 <ModalHeader>Edit-Profile</ModalHeader>
                 <ModalCloseButton />
                 <ModalBody>
-                  
+                  {/* need to add the feature for uploding picture easy will do in <30mins LFG*/}
+                  <FormControl>
+                    <FormLabel>Select Image</FormLabel>
+                  <Input type="file" onChange={(e) => setTempImg(e.target.files[0])}></Input>
+                  <Button onClick={handleProfileChange}> Update profile </Button>
+                  </FormControl>
                 </ModalBody>
                 <ModalFooter>
                   <Button onClick={onModalClose}>Close</Button>

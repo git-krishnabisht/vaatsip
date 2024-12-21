@@ -35,7 +35,7 @@ console.log("Token :" + token);
  ====================   JWT Verify =====================
 */
 
-var verifyOptions = {
+var verifyoptions = {
  issuer:  i,
  subject:  s,
  audience:  a,
