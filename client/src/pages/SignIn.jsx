@@ -11,18 +11,19 @@ import {
   Link,
   VStack,
 } from "@chakra-ui/react";
+import { useNavigate } from "react-router-dom";
 
 export default function SignIn() {
-
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const navigate = useNavigate();
 
   const handleLogin = async (event) => {
     event.preventDefault();
     try {
-      const gotToken = localStorage.getItem("token");
+      const currentToken = localStorage.getItem("token");
 
-      const res = await fetch('http://localhost:50136/user-login', {
+      const res = await fetch("http://localhost:50136/user-login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -31,18 +32,19 @@ export default function SignIn() {
       });
 
       const data = await res.json();
-      if(data.token) {
-        if (gotToken) {
-          localStorage.removeItem("token");
-          console.info("Deleted the prvious token and created new one");
-        }
+
+      if (currentToken && !data.token) {
+        localStorage.removeItem("token");
+      }
+      if (data.token) {
+        navigate('/');
         localStorage.setItem("token", data.token);
-        console.log("Successfully logged in");
+        console.log("Login Successfull");
       } else {
-        console.log("No token assigned");
+        console.log("Error :", data.error);
       }
     } catch (err) {
-      console.error("Error found : ", err);
+      console.error("Error found in client login : ", err);
     }
   };
 
@@ -56,7 +58,13 @@ export default function SignIn() {
         boxShadow="lg"
         mt={10}
       >
-        <Heading fontFamily={'Times New Roman, time, serif'} as="h1" size="lg" textAlign="center" mb={4}>
+        <Heading
+          fontFamily={"Times New Roman, time, serif"}
+          as="h1"
+          size="lg"
+          textAlign="center"
+          mb={4}
+        >
           Sign In
         </Heading>
         <VStack spacing={4} align="stretch">
@@ -92,4 +100,3 @@ export default function SignIn() {
     </Container>
   );
 }
-

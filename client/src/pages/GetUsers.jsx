@@ -48,7 +48,7 @@ export default function GetUsers() {
 
   return (
     <>
-      <Card width={"20%"} height={"20%"} m={"10px"}>
+      {/* <Card width={"20%"} height={"20%"} m={"10px"}>
         <CardBody p={"5px"}>
           <Image
             src="https://images.unsplash.com/photo-1555041469-a586c61ea9bc"
@@ -57,7 +57,7 @@ export default function GetUsers() {
         </CardBody>
         <Divider />
         <CardFooter></CardFooter>
-      </Card>
+      </Card> */}
 
       <Container minWidth={"90vh"} paddingTop={"10px"}>
         {Array.isArray(users) && users.length > 0 ? (

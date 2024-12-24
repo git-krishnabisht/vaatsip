@@ -37,27 +37,61 @@ export default function NavBar() {
   } = useDisclosure();
   const [img, setImg] = useState();
   const [tempImg, setTempImg] = useState(null);
+  const [currUser, setCurrUser] = useState('');
 
+  useEffect(() => {
+    async function fetchUser() {
+      try {
+        const token = localStorage.getItem("token");
+        if(!token) {
+          console.error("Token is missing in localStorage.");
+          return;
+        }
+        const res = await fetch("http://localhost:50136/current-user", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!res.ok) {
+          throw new Error("Error while fetching users from get-user endpoint");
+        }
+
+        const user = await res.json();
+        console.log("user" , user)
+        setCurrUser(user);
+      } catch (err) {
+        console.log("Error while fetching the user from fetchUser");
+      }
+    }
+    fetchUser();
+  },[]);
 
   useEffect(() => {
     async function fetchImage() {
       try {
-        const response = await fetch(
-          "http://localhost:50136/get-pictures/rajkumar"
-        );
+        let user = currUser;
+        const response = await fetch(`http://localhost:50136/get-pictures/${user}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
         if(response.ok) {
           const imgBlob = await response.blob();
           const imgUrl = URL.createObjectURL(imgBlob);
-          console.log(imgUrl);
           setImg(imgUrl);
         } else {
+          console.error("Failed to fetch the image");
         }
       } catch (error) {
         console.error("Error fetching image:", error);
       }
     }
-    fetchImage();
-  }, []);
+    if(currUser) fetchImage();
+  }, [currUser]);
 
   const handleProfileChange = async() => {
 

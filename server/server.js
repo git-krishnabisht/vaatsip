@@ -12,8 +12,8 @@ const db = new Client(
 );
 const upload = multer({ storage: multer.memoryStorage() });
 
-const privatekey = fs.readFileSync("./private.key", "utf8");
-const publickey = fs.readFileSync("./public.key", "utf8");
+const privatekey = fs.readFileSync("./server/private.key", "utf8");
+const publickey = fs.readFileSync("./server/public.key", "utf8");
 
 (async () => {
   try {
@@ -55,21 +55,26 @@ app.post("/create-account", async (req, res) => {
       [username]
     );
     if (result.rows[0].exists) {
-      return res.status(400).send("User already exists");
+      return res.status(400).send({message: "User already exists"});
     } else {
       const query = {
         text: "insert into users (username, name, email, gender, dob, password) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
         values: [username, name, email, gender, dob, password],
       };
 
-      await db.query(query);
-      return res.status(200).send({
-        message: "Registered successfully",
-      });
+      const inc = await db.query(query);
+      if (inc.rowCount) {
+        return res.status(201).json({
+          message: "Registered successfully",
+        });
+      } else {
+        return res.status(500).json({
+          message: "Registration failed. Please try again later.",
+        });
+      }
     }
   } catch (err) {
-    console.error("Error while registration : ", err.stack);
-    return res.status(500).send(err);
+    return res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -103,8 +108,7 @@ app.get("/get-pictures/:username", async (req, res) => {
     return res
       .status(400)
       .json({ message: "Error while fetching the picture : " + err });
-  }
-});
+  } });
 
 app.post("/edit-profile", upload.single("image"), async (req, res) => {
   const authHeader = req.headers.authorization;
@@ -134,7 +138,7 @@ app.post("/edit-profile", upload.single("image"), async (req, res) => {
     );
 
     if (!checkUser.rows[0].exists) {
-      return res.status(400).json({ message: "User not existence" });
+      return res.status(400).json({ message: "User not exists" });
     }
 
     if (!req.file) {
@@ -157,18 +161,21 @@ app.post("/edit-profile", upload.single("image"), async (req, res) => {
     );
 
     if (result.rowCount) {
-      return res.status(200).json({ message: "Image uploaded successfully" });
+      return res.status(200).send({ message: "Image uploaded successfully" });
     } else {
       return res
-        .status(400)
-        .json({ message: "Error while uploading the image" });
+        .send({ message: "Error while uploading the image" });
     }
   } catch (err) {
-    return res.status(400).json({ message: "Error while uploading the image" });
+    return res.status(400).send({ message: "Error while uploading the image" });
   }
 });
 
 app.post("/user-login", async (req, res) => {
+  const payload = {
+    username: req.body.username,
+  };
+
   const signOptions = {
     expiresIn: "1h",
     algorithm: "RS256",
@@ -179,19 +186,43 @@ app.post("/user-login", async (req, res) => {
 
   try {
     const result = await db.query(searchQuery, [username, password]);
-    var token = jwt.sign(req.body.username, privatekey, signOptions);
+    var token = jwt.sign(payload, privatekey, signOptions);
 
     if (result.rows[0].is_valid) {
       return res
         .status(200)
-        .send({ token: token, message: "Login successfull" });
+        .send({ token: token, message: "Login Successfull" });
     } else {
-      return res.status(400).send({ message: "Login failed" });
+      return res.status(400).send({ error: "Login Failed" });
     }
   } catch (err) {
-    return res.status(400).send({ Error: err });
+    console.error("Error : ", err.stack);
   }
 });
+
+app.get("/current-user", async (req, res) => {
+  const authHeader = req.headers.authorization;
+  if(!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ message: "Authorization header is missing" });
+  }
+  const token = authHeader.split(" ")[1];
+
+  if(!token) {
+    return res
+      .status(400)
+      .json({ message: "Token is not available in the authorization header" });
+  }
+
+  try {
+    const auth = jwt.verify(token, publickey, {
+      expiresIn: "1h",
+      algorithm: "RS256",
+    });
+    return res.json(auth.username);
+  } catch (err) {
+    return res.status(400).send({ message: "Cannot get the username"});
+  }
+})
 
 app.delete("/user-delete", async (req, res) => {
   const { username } = req.body;

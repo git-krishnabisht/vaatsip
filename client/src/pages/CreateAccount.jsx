@@ -11,8 +11,10 @@ import {
 } from "@chakra-ui/react";
 import { Radio, RadioGroup } from "@chakra-ui/react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 export default function CreaetAccount() {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     username: "",
     name: "",
@@ -42,10 +44,15 @@ export default function CreaetAccount() {
         body: JSON.stringify(formData),
       });
 
-      const result = await res.json();
-      console.log(result);
+      if (!res.ok) {
+        throw new Error(`Error: ${res.status} - ${res.statusText}`);
+      } else {
+        const result = await res.json();
+        navigate("/");
+        console.log(result.message);
+      }
     } catch (error) {
-      console.error(error);
+      console.error("Registration failed:", error.message || error);
     }
   };
 
