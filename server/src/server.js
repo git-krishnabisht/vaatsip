@@ -1,35 +1,22 @@
 import express from "express";
-import pg from "pg";
 import cors from "cors";
 import jwt from "jsonwebtoken";
-import fs from "fs";
 import multer from "multer";
 import { fileTypeFromBuffer } from "file-type";
+import dotenv from "dotenv";
+dotenv.config();
+import db from "./lib/db.js";
 
-const { Client } = pg;
-const db = new Client(
-  "postgres://postgres:501363495577409@localhost:5432/my_database"
-);
 const upload = multer({ storage: multer.memoryStorage() });
 
-const privatekey = fs.readFileSync("./server/private.key", "utf8");
-const publickey = fs.readFileSync("./server/public.key", "utf8");
-
-(async () => {
-  try {
-    await db.connect();
-    console.log("Connected to the DB");
-  } catch (err) {
-    console.error("Error while connecting to the database", err.stack);
-  }
-})();
+const privateKey = process.env.PRIVATE_KEY;
+const publicKey = process.env.PUBLIC_KEY;
 
 const app = express();
 
 app.use(
   cors({
     origin: "http://localhost:5000",
-    methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization"],
   })
@@ -37,13 +24,140 @@ app.use(
 
 app.use(express.json());
 
+app.post(
+  "/send-message/:user",
+  upload.single("image_data"),
+  async (req, res) => {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res
+        .status(401)
+        .json({ message: "Authorization header is missing" });
+    }
+
+    const token = authHeader.split(" ")[1];
+    if (!token) {
+      return res.status(400).json({
+        message: "Token is not available in the authorization header",
+      });
+    }
+
+    try {
+      const auth = jwt.verify(token, publicKey, {
+        expiresIn: "12h",
+        algorithm: "RS256",
+      });
+      const sender = auth.username;
+      const receiver = req.params.user;
+      const message = req.body.message;
+      if (message != null) {
+        let message_id;
+        const q = await db.query(
+          "insert into conversation(sender, receiver, message) values ($1, $2, $3) returning message_id",
+          [sender, receiver, message]
+        );
+        if (q.rows[0].message_id) {
+          console.log("message id : ", q.rows[0].message_id);
+          message_id = q.rows[0].message_id;
+        }
+        const image = req.file.buffer;
+        const mimeType = req.file.mimetype;
+
+        if (!image) {
+          return res
+            .status(400)
+            .json({ message: "No presence of the image in the buffer" });
+        }
+
+        const iq = await db.query(
+          "insert into attachments(message_id, image_data, image_type) values ($1, $2, $3)",
+          [message_id, image, mimeType]
+        );
+
+        if (iq.rowCount > 0) {
+          return res.status(200).json({ message: "Message is sent" });
+        } else {
+          return res.status(400).json({ error: "Failed to send the message" });
+        }
+      } else if (message === null && req.file) {
+        let message_id;
+        const q = await db.query(
+          "insert into conversation(sender, receiver, message) values ($1, $2, $3) returning message_id",
+          [sender, receiver, null]
+        );
+        if (q.rows[0].message_id) {
+          message_id = q.rows[0].message_id;
+        }
+
+        const image = req.file.buffer;
+        const mimeType = req.file.mimetype;
+
+        if (!image) {
+          return res
+            .status(400)
+            .json({ message: "No presence of the image in the buffer" });
+        }
+
+        const iq = await db.query(
+          "insert into attachments(message_id, image_data, image_type) values ($1, $2, $3)",
+          [message_id, image, mimeType]
+        );
+
+        if (iq.rowCount > 0) {
+          return res.status(200).json({ message: "Message is sent" });
+        } else {
+          return res.status(400).json({ error: "Failed to send the message" });
+        }
+      }
+    } catch (err) {
+      return res.status(500).json({
+        error:
+          "Something is wrong with the /send-message/:user :\n " + err.stack,
+      });
+    }
+  }
+);
+
+app.post("/sign-in", async (req, res) => {
+  const payload = {
+    username: req.body.username,
+  };
+
+  const signOptions = {
+    expiresIn: "12h",
+    algorithm: "RS256",
+  };
+
+  const { username, password } = req.body;
+  const searchQuery = `select case when count(*) > 0 then TRUE else FALSE end as is_valid from users where username=$1 and password=$2;`;
+
+  try {
+    const result = await db.query(searchQuery, [username, password]);
+    var token = jwt.sign(payload, privateKey, signOptions);
+
+    if (result.rows[0].is_valid) {
+      return res
+        .status(200)
+        .send({ token: token, message: "Signin Successfull" });
+    } else {
+      return res.status(400).send({ error: "Signin Failed" });
+    }
+  } catch (err) {
+    return res
+      .status(500)
+      .json({ error: "Something is wrong with the /sign-in :\n " + err.stack });
+  }
+});
+
 app.get("/get-users", async (_, res) => {
   try {
-    const { rows } = await db.query("SELECT * FROM users");
-    return res.status(200).json({ users: rows });
+    const { rows } = await db.query("SELECT username,name,email FROM users");
+    return res.status(200).send({ users: rows });
   } catch (err) {
-    console.error("Error fetching users:", err.stack);
-    return res.status(500).json({ error: "Error while fetching data" });
+    return res.status(500).json({
+      error: "Something is wrong with the /get-users :\n " + err.stack,
+    });
   }
 });
 
@@ -55,7 +169,7 @@ app.post("/create-account", async (req, res) => {
       [username]
     );
     if (result.rows[0].exists) {
-      return res.status(400).send({message: "User already exists"});
+      return res.status(400).send({ message: "User already exists" });
     } else {
       const query = {
         text: "insert into users (username, name, email, gender, dob, password) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
@@ -74,7 +188,9 @@ app.post("/create-account", async (req, res) => {
       }
     }
   } catch (err) {
-    return res.status(500).json({ error: "Internal Server Error" });
+    return res.status(500).json({
+      error: "Something is wrong with the /create-account :\n " + err.stack,
+    });
   }
 });
 
@@ -105,10 +221,11 @@ app.get("/get-pictures/:username", async (req, res) => {
     );
     res.send(img);
   } catch (err) {
-    return res
-      .status(400)
-      .json({ message: "Error while fetching the picture : " + err });
-  } });
+    return res.status(500).json({
+      error: "Something is wrong with the /get-pictures :\n " + err.stack,
+    });
+  }
+});
 
 app.post("/edit-profile", upload.single("image"), async (req, res) => {
   const authHeader = req.headers.authorization;
@@ -126,8 +243,8 @@ app.post("/edit-profile", upload.single("image"), async (req, res) => {
   }
 
   try {
-    const auth = jwt.verify(token, publickey, {
-      expiresIn: "1h",
+    const auth = jwt.verify(token, publicKey, {
+      expiresIn: "12h",
       algorithm: "RS256",
     });
 
@@ -148,6 +265,7 @@ app.post("/edit-profile", upload.single("image"), async (req, res) => {
     }
 
     const image = req.file.buffer;
+    console.log("image : ", image);
 
     if (!image) {
       return res
@@ -155,19 +273,17 @@ app.post("/edit-profile", upload.single("image"), async (req, res) => {
         .json({ message: "No presence of the image in the buffer" });
     }
 
-    const result = await db.query(
-      "Update users SET image = $1 WHERE username = $2 RETURNING *;",
-      [image, username]
-    );
+    const result = db.query([image, username]);
 
-    if (result.rowCount) {
+    if (result.rowCount > 0) {
       return res.status(200).send({ message: "Image uploaded successfully" });
     } else {
-      return res
-        .send({ message: "Error while uploading the image" });
+      return res.send({ message: "Error while uploading the image" });
     }
   } catch (err) {
-    return res.status(400).send({ message: "Error while uploading the image" });
+    return res.status(500).json({
+      error: "Something is wrong with the /edit-profile :\n " + err.stack,
+    });
   }
 });
 
@@ -177,7 +293,7 @@ app.post("/user-login", async (req, res) => {
   };
 
   const signOptions = {
-    expiresIn: "1h",
+    expiresIn: "12h",
     algorithm: "RS256",
   };
 
@@ -186,7 +302,7 @@ app.post("/user-login", async (req, res) => {
 
   try {
     const result = await db.query(searchQuery, [username, password]);
-    var token = jwt.sign(payload, privatekey, signOptions);
+    var token = jwt.sign(payload, privateKey, signOptions);
 
     if (result.rows[0].is_valid) {
       return res
@@ -196,33 +312,35 @@ app.post("/user-login", async (req, res) => {
       return res.status(400).send({ error: "Login Failed" });
     }
   } catch (err) {
-    console.error("Error : ", err.stack);
+    return res.status(500).json({
+      error: "Something is wrong with the /user-login :\n " + err.stack,
+    });
   }
 });
 
 app.get("/current-user", async (req, res) => {
   const authHeader = req.headers.authorization;
-  if(!authHeader || !authHeader.startsWith("Bearer ")) {
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return res.status(401).json({ message: "Authorization header is missing" });
   }
   const token = authHeader.split(" ")[1];
 
-  if(!token) {
+  if (!token) {
     return res
       .status(400)
       .json({ message: "Token is not available in the authorization header" });
   }
 
   try {
-    const auth = jwt.verify(token, publickey, {
-      expiresIn: "1h",
+    const auth = jwt.verify(token, publicKey, {
+      expiresIn: "12h",
       algorithm: "RS256",
     });
     return res.json(auth.username);
   } catch (err) {
-    return res.status(400).send({ message: "Cannot get the username"});
+    return res.status(400).send({ message: "Cannot get the username" });
   }
-})
+});
 
 app.delete("/user-delete", async (req, res) => {
   const { username } = req.body;
@@ -238,7 +356,9 @@ app.delete("/user-delete", async (req, res) => {
       return res.status(400).send({ message: "Deletion failed" });
     }
   } catch (err) {
-    return res.status(400).send({ message: "Error while deletion" });
+    return res.status(500).json({
+      error: "Something is wrong with the /user-delete :\n " + err.stack,
+    });
   }
 });
 
@@ -257,12 +377,13 @@ app.put("/user-update", async (req, res) => {
       return res.status(400).send({ message: "Updation failed" });
     }
   } catch (err) {
-    return res.status(400).send({ message: "Error while updation" });
+    return res.status(500).json({
+      error: "Something is wrong with the /user-update :\n " + err.stack,
+    });
   }
 });
 
-const PORT = 50136;
-
+const PORT = process.env.PORT;
 app.listen(PORT, () => {
   console.log(`Server is Listening to port ${PORT}...`);
 });

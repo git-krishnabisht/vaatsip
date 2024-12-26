@@ -23,7 +23,7 @@ export default function SignIn() {
     try {
       const currentToken = localStorage.getItem("token");
 
-      const res = await fetch("http://localhost:50136/user-login", {
+      const res = await fetch("http://localhost:50136/sign-in", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -39,12 +39,12 @@ export default function SignIn() {
       if (data.token) {
         navigate('/');
         localStorage.setItem("token", data.token);
-        console.log("Login Successfull");
+        console.log("Signin Successfull");
       } else {
         console.log("Error :", data.error);
       }
     } catch (err) {
-      console.error("Error found in client login : ", err);
+      console.error("Error found in client signin : ", err);
     }
   };
 

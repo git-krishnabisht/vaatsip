@@ -44,7 +44,7 @@ export default function NavBar() {
       try {
         const token = localStorage.getItem("token");
         if(!token) {
-          console.error("Token is missing in localStorage.");
+          console.log("Token is missing in localStorage.");
           return;
         }
         const res = await fetch("http://localhost:50136/current-user", {
@@ -54,16 +54,14 @@ export default function NavBar() {
             Authorization: `Bearer ${token}`,
           },
         });
-
         if (!res.ok) {
           throw new Error("Error while fetching users from get-user endpoint");
         }
-
         const user = await res.json();
-        console.log("user" , user)
         setCurrUser(user);
       } catch (err) {
         console.log("Error while fetching the user from fetchUser");
+        return;
       }
     }
     fetchUser();
@@ -81,6 +79,7 @@ export default function NavBar() {
         });
         if(response.ok) {
           const imgBlob = await response.blob();
+
           const imgUrl = URL.createObjectURL(imgBlob);
           setImg(imgUrl);
         } else {

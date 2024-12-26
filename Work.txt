@@ -1,0 +1,12 @@
+Pending work - Chat-app
+	1 - Add Toasts
+	2 - Add navigation pages where user should fallback to after performing any task
+	
+Problems - 
+	1 - Profile is not getting refreshed after uploading the image
+
+To-Dos - 
+	1 - Add user cards and ( for now ) give two options; a - A button to see the users profile, b - A button to message him
+	2 - Add feature for real time chat
+    3 - 
+	
