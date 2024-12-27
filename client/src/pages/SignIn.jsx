@@ -12,40 +12,21 @@ import {
   VStack,
 } from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
+import { useStore } from "../helpers/useStore";
 
 export default function SignIn() {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+
   const navigate = useNavigate();
+  const [formData, setFormData] = useState({
+    username: "",
+    password: ""
+  })
+  const { signin } = useStore();
 
   const handleLogin = async (event) => {
     event.preventDefault();
-    try {
-      const currentToken = localStorage.getItem("token");
-
-      const res = await fetch("http://localhost:50136/sign-in", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ username, password }),
-      });
-
-      const data = await res.json();
-
-      if (currentToken && !data.token) {
-        localStorage.removeItem("token");
-      }
-      if (data.token) {
-        navigate('/');
-        localStorage.setItem("token", data.token);
-        console.log("Signin Successfull");
-      } else {
-        console.log("Error :", data.error);
-      }
-    } catch (err) {
-      console.error("Error found in client signin : ", err);
-    }
+    signin(formData);
+    navigate('/');
   };
 
   return (
@@ -74,7 +55,8 @@ export default function SignIn() {
               type="text"
               placeholder="Enter your username"
               focusBorderColor="blue.500"
-              onChange={(e) => setUsername(e.target.value)}
+              value={formData.username}
+              onChange={(e) => setFormData({...formData, username: e.target.value})}
             />
           </FormControl>
           <FormControl isRequired>
@@ -83,7 +65,8 @@ export default function SignIn() {
               type="password"
               placeholder="Enter your password"
               focusBorderColor="blue.500"
-              onChange={(e) => setPassword(e.target.value)}
+              value={formData.password}
+              onChange={(e) => setFormData({...formData, password: e.target.value})}
             />
           </FormControl>
           <Button onClick={handleLogin} colorScheme="teal" width="full" mt={4}>

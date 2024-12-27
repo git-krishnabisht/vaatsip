@@ -4,15 +4,15 @@ import jwt from "jsonwebtoken";
 import multer from "multer";
 import { fileTypeFromBuffer } from "file-type";
 import dotenv from "dotenv";
-dotenv.config();
 import db from "./lib/db.js";
+import { app, server } from "./lib/socket.js";
+
+dotenv.config();
 
 const upload = multer({ storage: multer.memoryStorage() });
 
 const privateKey = process.env.PRIVATE_KEY;
 const publicKey = process.env.PUBLIC_KEY;
-
-const app = express();
 
 app.use(
   cors({
@@ -24,10 +24,7 @@ app.use(
 
 app.use(express.json());
 
-app.post(
-  "/send-message/:user",
-  upload.single("image_data"),
-  async (req, res) => {
+app.post("/send-message/:user", upload.single("image_data"), async (req, res) => {
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -45,7 +42,7 @@ app.post(
 
     try {
       const auth = jwt.verify(token, publicKey, {
-        expiresIn: "12h",
+        expiresIn: "7d",
         algorithm: "RS256",
       });
       const sender = auth.username;
@@ -125,7 +122,7 @@ app.post("/sign-in", async (req, res) => {
   };
 
   const signOptions = {
-    expiresIn: "12h",
+    expiresIn: "7d",
     algorithm: "RS256",
   };
 
@@ -178,7 +175,7 @@ app.post("/create-account", async (req, res) => {
 
       const inc = await db.query(query);
       if (inc.rowCount) {
-        return res.status(201).json({
+        return res.status(200).json({
           message: "Registered successfully",
         });
       } else {
@@ -244,7 +241,7 @@ app.post("/edit-profile", upload.single("image"), async (req, res) => {
 
   try {
     const auth = jwt.verify(token, publicKey, {
-      expiresIn: "12h",
+      expiresIn: "7d",
       algorithm: "RS256",
     });
 
@@ -265,7 +262,6 @@ app.post("/edit-profile", upload.single("image"), async (req, res) => {
     }
 
     const image = req.file.buffer;
-    console.log("image : ", image);
 
     if (!image) {
       return res
@@ -273,7 +269,10 @@ app.post("/edit-profile", upload.single("image"), async (req, res) => {
         .json({ message: "No presence of the image in the buffer" });
     }
 
-    const result = db.query([image, username]);
+    const result = await db.query(
+      "Update users SET image = $1 WHERE username = $2 RETURNING *;",
+      [image, username]
+    );
 
     if (result.rowCount > 0) {
       return res.status(200).send({ message: "Image uploaded successfully" });
@@ -293,7 +292,7 @@ app.post("/user-login", async (req, res) => {
   };
 
   const signOptions = {
-    expiresIn: "12h",
+    expiresIn: "7d",
     algorithm: "RS256",
   };
 
@@ -333,7 +332,7 @@ app.get("/current-user", async (req, res) => {
 
   try {
     const auth = jwt.verify(token, publicKey, {
-      expiresIn: "12h",
+      expiresIn: "7d",
       algorithm: "RS256",
     });
     return res.json(auth.username);
@@ -384,6 +383,6 @@ app.put("/user-update", async (req, res) => {
 });
 
 const PORT = process.env.PORT;
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server is Listening to port ${PORT}...`);
 });

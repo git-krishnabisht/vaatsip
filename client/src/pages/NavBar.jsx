@@ -22,9 +22,7 @@ import {
 import { useEffect, useState } from "react";
 import { Link, NavLink } from "react-router-dom";
 
-
 export default function NavBar() {
-
   const {
     isOpen: isMenuOpen,
     onOpen: onMenuOpen,
@@ -38,6 +36,7 @@ export default function NavBar() {
   const [img, setImg] = useState();
   const [tempImg, setTempImg] = useState(null);
   const [currUser, setCurrUser] = useState('');
+  
 
   useEffect(() => {
     async function fetchUser() {
@@ -56,7 +55,7 @@ export default function NavBar() {
         });
         if (!res.ok) {
           throw new Error("Error while fetching users from get-user endpoint");
-        }
+        } 
         const user = await res.json();
         setCurrUser(user);
       } catch (err) {
