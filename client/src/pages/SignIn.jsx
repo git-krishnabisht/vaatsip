@@ -15,12 +15,11 @@ import { useNavigate } from "react-router-dom";
 import { useStore } from "../helpers/useStore";
 
 export default function SignIn() {
-
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     username: "",
-    password: ""
-  })
+    password: "",
+  });
   const { signin } = useStore();
 
   const handleLogin = async () => {
@@ -58,7 +57,9 @@ export default function SignIn() {
               placeholder="Enter your username"
               focusBorderColor="blue.500"
               value={formData.username}
-              onChange={(e) => setFormData({...formData, username: e.target.value})}
+              onChange={(e) =>
+                setFormData({ ...formData, username: e.target.value })
+              }
             />
           </FormControl>
           <FormControl isRequired>
@@ -68,7 +69,9 @@ export default function SignIn() {
               placeholder="Enter your password"
               focusBorderColor="blue.500"
               value={formData.password}
-              onChange={(e) => setFormData({...formData, password: e.target.value})}
+              onChange={(e) =>
+                setFormData({ ...formData, password: e.target.value })
+              }
             />
           </FormControl>
           <Button onClick={handleLogin} colorScheme="teal" width="full" mt={4}>

@@ -11,39 +11,20 @@ import {
   Stack,
   Text,
 } from "@chakra-ui/react";
+import { useStore } from "../helpers/useStore.js";
 import { useEffect, useState } from "react";
-
 export default function GetUsers() {
-  const [users, setUsers] = useState([]);
+  const [users, setUsers] = useState(null);
+  const { getusers } = useStore();
 
   useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        if (!token) {
-          console.log("No token in localstorage");
-          return;
-        }
-        const res = await fetch("http://localhost:50136/get-users", {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (!res.ok) {
-          throw new Error("Error while fetching users from get-user endpoint");
-        }
-
-        const data = await res.json();
-        setUsers(data.users);
-      } catch (err) {
-        console.error("Error fetching users: ", err);
-      }
-    };
-    fetchUsers();
-  }, []);
+    async function getUsers() {
+      await getusers();
+      const users  = useStore.getState().users;
+      setUsers(users);
+    }
+    getUsers();
+  },[getusers]);
 
   return (
     <>

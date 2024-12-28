@@ -5,7 +5,8 @@ import multer from "multer";
 import { fileTypeFromBuffer } from "file-type";
 import dotenv from "dotenv";
 import db from "./lib/db.js";
-import { app, server } from "./lib/socket.js";
+import { app, io, server } from "./lib/socket.js";
+import { reciverSocketId } from "./lib/socket.js"
 
 dotenv.config();
 
@@ -25,96 +26,69 @@ app.use(
 app.use(express.json());
 
 app.post("/send-message/:user", upload.single("image_data"), async (req, res) => {
-    const authHeader = req.headers.authorization;
+  const authHeader = req.headers.authorization;
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return res
-        .status(401)
-        .json({ message: "Authorization header is missing" });
-    }
-
-    const token = authHeader.split(" ")[1];
-    if (!token) {
-      return res.status(400).json({
-        message: "Token is not available in the authorization header",
-      });
-    }
-
-    try {
-      const auth = jwt.verify(token, publicKey, {
-        expiresIn: "7d",
-        algorithm: "RS256",
-      });
-      const sender = auth.username;
-      const receiver = req.params.user;
-      const message = req.body.message;
-      if (message != null) {
-        let message_id;
-        const q = await db.query(
-          "insert into conversation(sender, receiver, message) values ($1, $2, $3) returning message_id",
-          [sender, receiver, message]
-        );
-        if (q.rows[0].message_id) {
-          console.log("message id : ", q.rows[0].message_id);
-          message_id = q.rows[0].message_id;
-        }
-        const image = req.file.buffer;
-        const mimeType = req.file.mimetype;
-
-        if (!image) {
-          return res
-            .status(400)
-            .json({ message: "No presence of the image in the buffer" });
-        }
-
-        const iq = await db.query(
-          "insert into attachments(message_id, image_data, image_type) values ($1, $2, $3)",
-          [message_id, image, mimeType]
-        );
-
-        if (iq.rowCount > 0) {
-          return res.status(200).json({ message: "Message is sent" });
-        } else {
-          return res.status(400).json({ error: "Failed to send the message" });
-        }
-      } else if (message === null && req.file) {
-        let message_id;
-        const q = await db.query(
-          "insert into conversation(sender, receiver, message) values ($1, $2, $3) returning message_id",
-          [sender, receiver, null]
-        );
-        if (q.rows[0].message_id) {
-          message_id = q.rows[0].message_id;
-        }
-
-        const image = req.file.buffer;
-        const mimeType = req.file.mimetype;
-
-        if (!image) {
-          return res
-            .status(400)
-            .json({ message: "No presence of the image in the buffer" });
-        }
-
-        const iq = await db.query(
-          "insert into attachments(message_id, image_data, image_type) values ($1, $2, $3)",
-          [message_id, image, mimeType]
-        );
-
-        if (iq.rowCount > 0) {
-          return res.status(200).json({ message: "Message is sent" });
-        } else {
-          return res.status(400).json({ error: "Failed to send the message" });
-        }
-      }
-    } catch (err) {
-      return res.status(500).json({
-        error:
-          "Something is wrong with the /send-message/:user :\n " + err.stack,
-      });
-    }
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ message: "Authorization header is missing or invalid" });
   }
-);
+
+  const token = authHeader.split(" ")[1];
+  if (!token) {
+    return res.status(400).json({ message: "Token is not available in the authorization header" });
+  }
+
+  try {
+    const auth = jwt.verify(token, publicKey, { algorithm: "RS256" });
+    const sender = auth.username;
+    const receiver = req.params.user;
+
+    const message = req.body.message || null;
+    const file = req.file;
+    if (!message && !file) {
+      return res.status(400).json({ message: "Either message or an image must be provided" });
+    }
+
+    const conversationQuery = `
+      INSERT INTO conversation(sender, receiver, message)
+      VALUES ($1, $2, $3)
+      RETURNING message_id
+    `;
+    const conversationResult = await db.query(conversationQuery, [sender, receiver, message]);
+    const messageId = conversationResult.rows[0]?.message_id;
+
+
+    if (!messageId) {
+      return res.status(500).json({ message: "Failed to save conversation" });
+    }
+
+    const image = file.buffer;
+    const mimeType = file.mimetype;
+
+    if (!image) {
+      return res.status(400).json({ message: "Image file is invalid or missing" });
+    }
+
+    const attachmentQuery = `
+        INSERT INTO attachments(message_id, image_data, image_type)
+        VALUES ($1, $2, $3)
+      `;
+    const attachmentResult = await db.query(attachmentQuery, [messageId, image, mimeType]);
+
+    if (attachmentResult.rowCount === 0) {
+      return res.status(500).json({ message: "Failed to save attachment" });
+    }
+
+    // Real - time message emitting to the user
+    const socketId = reciverSocketId(receiver);
+    if (socketId) {
+      io.to(socketId).emit("newMessage", [message || null, image || null]);
+    }
+
+    return res.status(200).json({ message: "Message sent successfully" });
+  } catch (err) {
+    return res.status(500).json({ error: "Something is wrong with the send-messages \n " + err.stack || err });
+  }
+});
 
 app.post("/sign-in", async (req, res) => {
   const signOptions = {
@@ -123,7 +97,7 @@ app.post("/sign-in", async (req, res) => {
   };
 
   const { username, password } = req.body;
-  if(!username || !password) {
+  if (!username || !password) {
     return res.status(400).json({ error: "Fill out the credentials" });
   }
   const searchQuery = `select case when count(*) > 0 then TRUE else FALSE end as is_valid from users where username=$1 and password=$2;`;
@@ -142,14 +116,14 @@ app.post("/sign-in", async (req, res) => {
   } catch (err) {
     return res
       .status(500)
-      .json({ error: "Something is wrong with the /sign-in :\n " + err.stack });
+      .json({ error: "Something is wrong with the /sign-in :\n " + err.stack || err });
   }
 });
 
 app.get("/get-users", async (_, res) => {
   try {
     const { rows } = await db.query("SELECT username,name,email FROM users");
-    return res.status(200).send({ users: rows });
+    return res.status(200).json({ users: rows });
   } catch (err) {
     return res.status(500).json({
       error: "Something is wrong with the /get-users :\n " + err.stack,

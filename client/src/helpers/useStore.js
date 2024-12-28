@@ -4,12 +4,17 @@ import { io } from "socket.io-client";
 const baseURL = "http://localhost:50136";
 
 export const useStore = create(
+
   persist(
     (set, get) => ({
       isSignedIn: null,
       isSignedUp: null,
       user: null,
+      users: null,
+      receiver: null,
       userImage: null,
+      onlineUsers: [],
+      messages: [],
       socket: null,
 
       signin: async (credentials) => {
@@ -33,16 +38,18 @@ export const useStore = create(
           console.log(data.message);
           get().connectSocket();
         } catch (err) {
-          console.error("Error : ", err.stack || err.stack || "Unexpected error.");
+          console.error(
+            "Error : ",
+            err.stack || err.stack || "Unexpected error."
+          );
         }
       },
 
       signout: () => {
         set({ isSignedIn: false, user: null });
         get().disconnectSocket();
-        localStorage.clear();
+        ["states", "token"].forEach((key) => localStorage.removeItem(key));
       },
-      
 
       signup: async (credentials) => {
         try {
@@ -61,7 +68,10 @@ export const useStore = create(
             console.log(data.error);
           }
         } catch (err) {
-          console.error("Error : ", err.error || err.stack || "Unexpected error.");
+          console.error(
+            "Error : ",
+            err.error || err.stack || "Unexpected error."
+          );
         }
       },
 
@@ -87,7 +97,10 @@ export const useStore = create(
             console.log(res.message);
           }
         } catch (err) {
-          console.error("Error : ", err.error || err.stack || "Unexpected error.");
+          console.error(
+            "Error : ",
+            err.error || err.stack || "Unexpected error."
+          );
         }
       },
 
@@ -98,15 +111,15 @@ export const useStore = create(
             console.error("No token found. Please sign in again.");
             return;
           }
-      
+
           if (!img) {
             console.error("No image file provided.");
             return;
           }
-      
+
           const formData = new FormData();
           formData.append("image", img);
-      
+
           const req = await fetch(`${baseURL}/upload-profile`, {
             method: "POST",
             headers: {
@@ -114,27 +127,55 @@ export const useStore = create(
             },
             body: formData,
           });
-      
+
           const res = await req.json();
-      
+
           if (req.ok) {
             console.log(res.message || "Image uploaded successfully.");
           } else {
             console.error(res.error || "Failed to upload image.");
           }
         } catch (err) {
-          console.error("Error:", err.message || err.stack || "Unexpected error.");
+          console.error(
+            "Error:",
+            err.message || err.stack || "Unexpected error."
+          );
         }
       },
 
-      connectSocket:() => {
-        const isSignedIn = get().isSignedIn;
-        if(!isSignedIn || get().socket?.connected) return;
+      getusers: async () => {
+        try {
+          const req = await fetch(`${baseURL}/get-users`);
+          if(req.ok) {
+            const res = await req.json();
+            set({ users: res.users });
+          } else {
+            console.log("Error while fetching the users");
+          }
+        } catch(err) {
+          console.log("Error : ", err.stack || err.error || "Unexpected error");
+        }
+      },
 
-        const socket = io(baseURL)
+      // All Real time chat helpers
+
+      connectSocket: () => {
+        const isSignedIn = get().isSignedIn;
+        if (!isSignedIn || get().socket?.connected) return;
+
+        const socket = io(baseURL, {
+          query: {
+            username: get().user
+          },
+        });
         socket.connect();
         set({ socket: socket });
+
+        socket.on("getOnlineUsers", (user) => {
+          set({ onlineUsers: user });
+        });
       },
+
       disconnectSocket: async () => {
         const socket = get().socket;
         if (socket) {
@@ -142,7 +183,21 @@ export const useStore = create(
           set({ socket: null });
         }
       },
-      getusers: async () => {},
+
+      listenToMessages : () => {
+        const receiver = get().receiver;
+        if(!receiver) return;
+
+        const socket = get().socket;
+        socket.on("newMessage" , (msg) => {
+          set({ messages: [...get().messages, msg] });
+        });
+      },
+
+      muteMessages : () => {
+        const socket = get().socket;
+        socket.off("newMessage");
+      },
     }),
     {
       name: "states",

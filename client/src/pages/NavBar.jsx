@@ -41,6 +41,9 @@ export default function NavBar() {
   const user = useStore.getState().user;
   const isSignedIn = useStore.getState().isSignedIn;
 
+  const onlineUsers = useStore.getState().onlineUsers; //okay , it has all the online users we can work with :-)
+
+
   useEffect(() => {
     async function fetchImage() {
       try {
@@ -148,7 +151,7 @@ export default function NavBar() {
                         <FormLabel>Select Image</FormLabel>
                         <Input
                           type="file"
-                          accept="image/*" // Restrict file types to images
+                          accept="image/*" 
                           onChange={(e) => setImgToUpload(e.target.files[0])}
                         />
                         <Button
