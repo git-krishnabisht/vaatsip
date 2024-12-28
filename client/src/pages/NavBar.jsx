@@ -21,6 +21,7 @@ import {
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import { Link, NavLink } from "react-router-dom";
+import { useStore } from "../helpers/useStore";
 
 export default function NavBar() {
   const {
@@ -34,89 +35,44 @@ export default function NavBar() {
     onClose: onModalClose,
   } = useDisclosure();
   const [img, setImg] = useState();
-  const [tempImg, setTempImg] = useState(null);
-  const [currUser, setCurrUser] = useState('');
-  
+  const [imgToUpload, setImgToUpload] = useState(null);
+  const { signout, uploadprofile } = useStore();
 
-  useEffect(() => {
-    async function fetchUser() {
-      try {
-        const token = localStorage.getItem("token");
-        if(!token) {
-          console.log("Token is missing in localStorage.");
-          return;
-        }
-        const res = await fetch("http://localhost:50136/current-user", {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        if (!res.ok) {
-          throw new Error("Error while fetching users from get-user endpoint");
-        } 
-        const user = await res.json();
-        setCurrUser(user);
-      } catch (err) {
-        console.log("Error while fetching the user from fetchUser");
-        return;
-      }
-    }
-    fetchUser();
-  },[]);
+  const user = useStore.getState().user;
+  const isSignedIn = useStore.getState().isSignedIn;
 
   useEffect(() => {
     async function fetchImage() {
       try {
-        let user = currUser;
-        const response = await fetch(`http://localhost:50136/get-pictures/${user}`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-        if(response.ok) {
+        const response = await fetch(
+          `http://localhost:50136/get-pictures/${user}`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+        if (response.ok) {
           const imgBlob = await response.blob();
-
           const imgUrl = URL.createObjectURL(imgBlob);
           setImg(imgUrl);
         } else {
           console.error("Failed to fetch the image");
         }
-      } catch (error) {
-        console.error("Error fetching image:", error);
+      } catch (err) {
+        console.error("Error : ", err);
       }
     }
-    if(currUser) fetchImage();
-  }, [currUser]);
+    if (user) fetchImage();
+  }, [user]);
 
-  const handleProfileChange = async() => {
+  async function handleSignout() {
+    await signout();
+  }
 
-    const formData = new FormData();
-    formData.append("image", tempImg);
-
-    if(!tempImg) {
-      throw new Error("Select an Image");
-    }
-
-    const token = localStorage.getItem("token");
-    try {
-      const response = await fetch("http://localhost:50136/edit-profile/", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData
-      });
-      if(!response.ok) {
-        console.log("Failed to upload the image");
-      } else {
-        console.log("Image uploaded successfully");
-      }
-    } catch(err) {
-      console.error("Error: ", err);
-    }
+  async function handleProfileChange() {
+    await uploadprofile(imgToUpload);
   }
 
   const Links = {
@@ -153,48 +109,76 @@ export default function NavBar() {
             </HStack>
           </HStack>
           <Flex alignItems={"center"}>
-            <Avatar
-              as={"button"}
-              onClick={onModalOpen}
-              size={"md"}
-              src={img}
-              border={"2px"}
-              marginRight={"8px"}
-            />
-            <Button
-              as={Link}
-              to={"/sign-in"}
-              variant={"solid"}
-              colorScheme={"teal"}
-              size={"md"}
-              mr={4}
-            >
-              Sign-in
-            </Button>
+            {!isSignedIn ? (
+              <>
+                <Button
+                  as={Link}
+                  to={"/sign-in"}
+                  variant={"solid"}
+                  colorScheme={"teal"}
+                  size={"md"}
+                  mr={4}
+                >
+                  Sign-in
+                </Button>
+              </>
+            ) : (
+              <>
+                <Avatar
+                  as="button"
+                  onClick={onModalOpen}
+                  size="md"
+                  src={img}
+                  border="2px"
+                  marginRight="8px"
+                />
 
-            <Modal
-              isOpen={isModalOpen}
-              onClose={onModalClose}
-              isCentered
-              size={"xl"}
-            >
-              <ModalOverlay />
-              <ModalContent>
-                <ModalHeader>Edit-Profile</ModalHeader>
-                <ModalCloseButton />
-                <ModalBody>
-                  {/* need to add the feature for uploding picture easy will do in <30mins LFG*/}
-                  <FormControl>
-                    <FormLabel>Select Image</FormLabel>
-                  <Input type="file" onChange={(e) => setTempImg(e.target.files[0])}></Input>
-                  <Button onClick={handleProfileChange}> Update profile </Button>
-                  </FormControl>
-                </ModalBody>
-                <ModalFooter>
-                  <Button onClick={onModalClose}>Close</Button>
-                </ModalFooter>
-              </ModalContent>
-            </Modal>
+                <Modal
+                  isOpen={isModalOpen}
+                  onClose={onModalClose}
+                  isCentered
+                  size="xl"
+                >
+                  <ModalOverlay />
+                  <ModalContent>
+                    <ModalHeader>Edit Profile</ModalHeader>
+                    <ModalCloseButton />
+                    <ModalBody>
+                      <FormControl>
+                        <FormLabel>Select Image</FormLabel>
+                        <Input
+                          type="file"
+                          accept="image/*" // Restrict file types to images
+                          onChange={(e) => setImgToUpload(e.target.files[0])}
+                        />
+                        <Button
+                          onClick={handleProfileChange}
+                          colorScheme="teal"
+                          mt={4}
+                        >
+                          Update Profile
+                        </Button>
+                      </FormControl>
+                    </ModalBody>
+                    <ModalFooter>
+                      <Button onClick={onModalClose} colorScheme="gray">
+                        Close
+                      </Button>
+                    </ModalFooter>
+                  </ModalContent>
+                </Modal>
+
+                <Button
+                  onClick={handleSignout}
+                  variant="solid"
+                  colorScheme="teal"
+                  size="md"
+                  mr={4}
+                >
+                  Sign-out
+                </Button>
+              </>
+            )}
           </Flex>
         </Flex>
       </Box>

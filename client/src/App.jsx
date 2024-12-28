@@ -5,8 +5,7 @@ import NavBar from "./pages/NavBar";
 import SignIn from "./pages/SignIn";
 import GetUsers from "./pages/GetUsers";
 import { Box, useColorModeValue } from "@chakra-ui/react";
-import CreateAccount from "./pages/CreateAccount";
-import EditProfile from "./pages/EditProfile";
+import SignUp from "./pages/SignUp";
 
 function App() {
   return (
@@ -17,8 +16,7 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/tic-tac-toe" element={<Game />} />
           <Route path="/get-users" element={<GetUsers />} />
-          <Route path="/create-account" element={<CreateAccount />} />
-          <Route path="/edit-profile" element={<EditProfile />} />
+          <Route path="/create-account" element={<SignUp />} />
           <Route path="/sign-in" element={<SignIn />} />
         </Routes>
       </Box >

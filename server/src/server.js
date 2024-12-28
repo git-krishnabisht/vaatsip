@@ -117,28 +117,27 @@ app.post("/send-message/:user", upload.single("image_data"), async (req, res) =>
 );
 
 app.post("/sign-in", async (req, res) => {
-  const payload = {
-    username: req.body.username,
-  };
-
   const signOptions = {
     expiresIn: "7d",
     algorithm: "RS256",
   };
 
   const { username, password } = req.body;
+  if(!username || !password) {
+    return res.status(400).json({ error: "Fill out the credentials" });
+  }
   const searchQuery = `select case when count(*) > 0 then TRUE else FALSE end as is_valid from users where username=$1 and password=$2;`;
 
   try {
     const result = await db.query(searchQuery, [username, password]);
-    var token = jwt.sign(payload, privateKey, signOptions);
+    var token = jwt.sign({ username }, privateKey, signOptions);
 
     if (result.rows[0].is_valid) {
       return res
         .status(200)
-        .send({ token: token, message: "Signin Successfull" });
+        .send({ token: token, message: "Sign in Successfull" });
     } else {
-      return res.status(400).send({ error: "Signin Failed" });
+      return res.status(400).send({ error: "Sign in Failed" });
     }
   } catch (err) {
     return res
@@ -158,9 +157,14 @@ app.get("/get-users", async (_, res) => {
   }
 });
 
-app.post("/create-account", async (req, res) => {
+app.post("/sign-up", async (req, res) => {
   try {
     const { username, name, email, gender, dob, password } = req.body;
+    if(!username || !name || !email || !gender || !dob || !password) {
+      return res.status(400).json( {
+        error: "Fill out the credentials"
+      });
+    }
     const result = await db.query(
       "select exists (select 1 FROM users WHERE username = $1)",
       [username]
@@ -179,8 +183,8 @@ app.post("/create-account", async (req, res) => {
           message: "Registered successfully",
         });
       } else {
-        return res.status(500).json({
-          message: "Registration failed. Please try again later.",
+        return res.status(400).json( {
+          error: "Registration failed",
         });
       }
     }
@@ -224,20 +228,14 @@ app.get("/get-pictures/:username", async (req, res) => {
   }
 });
 
-app.post("/edit-profile", upload.single("image"), async (req, res) => {
+app.post("/upload-profile", upload.single("image"), async (req, res) => {
   const authHeader = req.headers.authorization;
 
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res.status(401).json({ message: "Authorization header is missing" });
+  if (!authHeader?.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "Authorization header is missing or invalid" });
   }
 
   const token = authHeader.split(" ")[1];
-
-  if (!token) {
-    return res
-      .status(400)
-      .json({ message: "Token is not available in the authorization header" });
-  }
 
   try {
     const auth = jwt.verify(token, publicKey, {
@@ -246,45 +244,42 @@ app.post("/edit-profile", upload.single("image"), async (req, res) => {
     });
 
     const username = auth.username;
+
     const checkUser = await db.query(
-      "Select exists (Select 1 FROM users Where username = $1);",
+      "SELECT EXISTS (SELECT 1 FROM users WHERE username = $1);",
       [username]
     );
 
     if (!checkUser.rows[0].exists) {
-      return res.status(400).json({ message: "User not exists" });
+      return res.status(404).json({ error: "User does not exist" });
     }
 
-    if (!req.file) {
-      return res
-        .status(400)
-        .json({ message: "No presence of the file in the request" });
+    if (!req.file?.buffer) {
+      return res.status(400).json({ error: "No image file found in the request" });
     }
 
     const image = req.file.buffer;
 
-    if (!image) {
-      return res
-        .status(400)
-        .json({ message: "No presence of the image in the buffer" });
-    }
-
     const result = await db.query(
-      "Update users SET image = $1 WHERE username = $2 RETURNING *;",
+      "UPDATE users SET image = $1 WHERE username = $2 RETURNING username;",
       [image, username]
     );
 
     if (result.rowCount > 0) {
-      return res.status(200).send({ message: "Image uploaded successfully" });
+      return res.status(200).json({
+        message: "Image uploaded successfully",
+        username: result.rows[0].username,
+      });
     } else {
-      return res.send({ message: "Error while uploading the image" });
+      return res.status(500).json({ error: "Failed to update user profile" });
     }
   } catch (err) {
     return res.status(500).json({
-      error: "Something is wrong with the /edit-profile :\n " + err.stack,
+      error: `Error processing the upload-profile request: ${err.message}`,
     });
   }
 });
+
 
 app.post("/user-login", async (req, res) => {
   const payload = {
@@ -317,7 +312,7 @@ app.post("/user-login", async (req, res) => {
   }
 });
 
-app.get("/current-user", async (req, res) => {
+app.get("/get-user", async (req, res) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return res.status(401).json({ message: "Authorization header is missing" });
@@ -335,9 +330,13 @@ app.get("/current-user", async (req, res) => {
       expiresIn: "7d",
       algorithm: "RS256",
     });
-    return res.json(auth.username);
+    if(auth) {
+      return res.status(200).json(auth.username);
+    } else {
+      return res.status(200).json({ error: "Failed to get the user" });
+    }
   } catch (err) {
-    return res.status(400).send({ message: "Cannot get the username" });
+    return res.status(400).send({ error: "Failed to get the user" });
   }
 });
 

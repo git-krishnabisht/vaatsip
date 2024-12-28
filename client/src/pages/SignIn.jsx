@@ -23,10 +23,12 @@ export default function SignIn() {
   })
   const { signin } = useStore();
 
-  const handleLogin = async (event) => {
-    event.preventDefault();
-    signin(formData);
-    navigate('/');
+  const handleLogin = async () => {
+    await signin(formData);
+    const isSignedIn = useStore.getState().isSignedIn;
+    if (isSignedIn) {
+      navigate("/");
+    }
   };
 
   return (
