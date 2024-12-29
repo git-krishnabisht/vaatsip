@@ -5,7 +5,7 @@ const baseURL = "http://localhost:50136";
 
 export const useStore = create(
 
-  persist(
+    persist(
     (set, get) => ({
       isSignedIn: null,
       isSignedUp: null,

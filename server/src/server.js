@@ -25,9 +25,24 @@ app.use(
 
 app.use(express.json());
 
-app.post("/get-messages/:user", async (req, res) => {
-  // To-do
-
+app.get("/get-messages/:user", async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if(!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ message: "Authorization header is missing or invalid" });
+    }
+    const token = authHeader.split(" ")[1];
+    if (!token) {
+      return res.status(400).json({ message: "Token is not available in the authorization header" });
+    }
+    const auth = jwt.verify(token, publicKey, { algorithm: "RS256" });
+    const sender = auth.username;
+    const receiver = req.params.user;
+    const query = await db.query("select c.message_id, c.sender, c.receiver, c.message, a.image_data, c.created_at from conversation c join users u1 on c.sender = u1.username join users u2 on c.receiver = u2.username join attachments a on c.message_id = a.message_id where (c.sender = $1 and c.receiver = $2) or (c.sender = $2 and c.receiver = $1) order by created_at;", [sender, receiver]);
+    console.log(query);
+  } catch(err) {
+    return res.status(500).json({ error: "Something is wrong with the get-messages \n " + err.stack || err });
+  }
 });
 
 app.post("/send-message/:user", upload.single("image_data"), async (req, res) => {

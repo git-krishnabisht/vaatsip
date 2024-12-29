@@ -26,14 +26,13 @@ export default function GetUsers() {
     const processUser = async () => {
       if (!Array.isArray(users)) return;
       const userPromises = users.map(async (user) => {
-        if (user.image?.data) {
+        if (user.image.data) {
           const imageBuffer = new Uint8Array(user.image.data);
           const mimeType = await fileTypeFromBuffer(imageBuffer);
           const blob = new Blob([imageBuffer], {
-            type: mimeType?.mime || "application/octet-stream",
+            type: mimeType.mime || "application/octet-stream",
           });
           const imageSrc = URL.createObjectURL(blob);
-
           return { ...user, imageSrc };
         }
         return user;
