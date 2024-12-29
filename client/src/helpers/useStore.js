@@ -10,7 +10,7 @@ export const useStore = create(
       isSignedIn: null,
       isSignedUp: null,
       user: null,
-      users: null,
+      users: {},
       receiver: null,
       userImage: null,
       onlineUsers: [],
@@ -145,20 +145,20 @@ export const useStore = create(
 
       getusers: async () => {
         try {
-          const req = await fetch(`${baseURL}/get-users`);
-          if(req.ok) {
-            const res = await req.json();
-            set({ users: res.users });
-          } else {
-            console.log("Error while fetching the users");
-          }
-        } catch(err) {
-          console.log("Error : ", err.stack || err.error || "Unexpected error");
+          const response = await fetch(`${baseURL}/get-users`);
+          const data = await response.json();
+          const users = data.map((user) => ({
+            username: user.username,
+            image: user.image
+          }));
+          set({ users });
+        } catch (err) {
+          console.error("Error:", err || err.messgae || err.stack || "Unexpected error.");
         }
       },
 
-      // All Real time chat helpers
 
+      // All Real time chat helpers
       connectSocket: () => {
         const isSignedIn = get().isSignedIn;
         if (!isSignedIn || get().socket?.connected) return;
@@ -184,17 +184,17 @@ export const useStore = create(
         }
       },
 
-      listenToMessages : () => {
+      listenToMessages: () => {
         const receiver = get().receiver;
-        if(!receiver) return;
+        if (!receiver) return;
 
         const socket = get().socket;
-        socket.on("newMessage" , (msg) => {
+        socket.on("newMessage", (msg) => {
           set({ messages: [...get().messages, msg] });
         });
       },
 
-      muteMessages : () => {
+      muteMessages: () => {
         const socket = get().socket;
         socket.off("newMessage");
       },

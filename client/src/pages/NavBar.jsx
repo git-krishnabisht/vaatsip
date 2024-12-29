@@ -43,7 +43,6 @@ export default function NavBar() {
 
   const onlineUsers = useStore.getState().onlineUsers; //okay , it has all the online users we can work with :-)
 
-
   useEffect(() => {
     async function fetchImage() {
       try {
@@ -76,6 +75,7 @@ export default function NavBar() {
 
   async function handleProfileChange() {
     await uploadprofile(imgToUpload);
+    window.location.reload();
   }
 
   const Links = {
@@ -151,7 +151,7 @@ export default function NavBar() {
                         <FormLabel>Select Image</FormLabel>
                         <Input
                           type="file"
-                          accept="image/*" 
+                          accept="image/*"
                           onChange={(e) => setImgToUpload(e.target.files[0])}
                         />
                         <Button

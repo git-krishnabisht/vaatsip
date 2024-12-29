@@ -25,6 +25,11 @@ app.use(
 
 app.use(express.json());
 
+app.post("/get-messages/:user", async (req, res) => {
+  // To-do
+
+});
+
 app.post("/send-message/:user", upload.single("image_data"), async (req, res) => {
   const authHeader = req.headers.authorization;
 
@@ -122,8 +127,8 @@ app.post("/sign-in", async (req, res) => {
 
 app.get("/get-users", async (_, res) => {
   try {
-    const { rows } = await db.query("SELECT username,name,email FROM users");
-    return res.status(200).json({ users: rows });
+    const { rows } = await db.query("SELECT username,image FROM users");
+    return res.status(200).json(rows);
   } catch (err) {
     return res.status(500).json({
       error: "Something is wrong with the /get-users :\n " + err.stack,
@@ -134,8 +139,8 @@ app.get("/get-users", async (_, res) => {
 app.post("/sign-up", async (req, res) => {
   try {
     const { username, name, email, gender, dob, password } = req.body;
-    if(!username || !name || !email || !gender || !dob || !password) {
-      return res.status(400).json( {
+    if (!username || !name || !email || !gender || !dob || !password) {
+      return res.status(400).json({
         error: "Fill out the credentials"
       });
     }
@@ -157,7 +162,7 @@ app.post("/sign-up", async (req, res) => {
           message: "Registered successfully",
         });
       } else {
-        return res.status(400).json( {
+        return res.status(400).json({
           error: "Registration failed",
         });
       }
@@ -168,6 +173,7 @@ app.post("/sign-up", async (req, res) => {
     });
   }
 });
+
 
 app.get("/get-pictures/:username", async (req, res) => {
   const { username } = req.params;
@@ -304,7 +310,7 @@ app.get("/get-user", async (req, res) => {
       expiresIn: "7d",
       algorithm: "RS256",
     });
-    if(auth) {
+    if (auth) {
       return res.status(200).json(auth.username);
     } else {
       return res.status(200).json({ error: "Failed to get the user" });
