@@ -2,21 +2,48 @@ import { useParams } from "react-router-dom";
 import { useStore } from "../helpers/useStore";
 import { useEffect, useState } from "react";
 import { fileTypeFromBuffer } from "file-type";
-import { Button, HStack, Input } from "@chakra-ui/react";
+import {
+  Button,
+  ButtonGroup,
+  FormControl,
+  FormLabel,
+  HStack,
+  Input,
+  Modal,
+  ModalBody,
+  ModalCloseButton,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  ModalOverlay,
+  useDisclosure,
+} from "@chakra-ui/react";
 import { ArrowBackIcon, AttachmentIcon } from "@chakra-ui/icons";
 
 export default function ChatContainer() {
+  const {
+    isOpen: isModalOpen,
+    onOpen: onModalOpen,
+    onClose: onModalClose,
+  } = useDisclosure();
   const { receiver } = useParams();
-  const { getMessages, listenToMessages, muteMessages } = useStore();
+  const { getMessages, listenToMessages, muteMessages, sendMessage } = useStore();
   const messages = useStore((state) => state.messages);
   const [incMessages, setMessage] = useState([]);
   const currentUser = useStore((state) => state.user);
+  const [outgoingMessages, setOutgoingMessage] = useState({
+    message: "",
+    image_data: {},
+  });
 
   useEffect(() => {
     getMessages(receiver);
 
+    listenToMessages();
+
     return () => muteMessages();
-  }, [receiver, getMessages, listenToMessages, muteMessages]);
+  }, [receiver, getMessages, listenToMessages, muteMessages, outgoingMessages]);
+
 
   useEffect(() => {
     const processMessages = async () => {
@@ -42,6 +69,10 @@ export default function ChatContainer() {
     };
     processMessages();
   }, [messages]);
+
+  function handleOutgoingMessages() {
+    sendMessage(outgoingMessages);
+  }
 
   return (
     <>
@@ -109,17 +140,67 @@ export default function ChatContainer() {
           }}
         >
           <HStack>
-            <Input placeholder="send-message" />
-            <Button>
-              <AttachmentIcon />
-            </Button>
-            <Button>
-              <ArrowBackIcon />
-            </Button>
+            <Input
+              type="text"
+              placeholder="send-message"
+              value={outgoingMessages.message}
+              onChange={(e) =>
+                setOutgoingMessage({
+                  ...outgoingMessages,
+                  message: e.target.value,
+                })
+              }
+            />
+
+            <ButtonGroup>
+              <Button onClick={onModalOpen}>
+                <AttachmentIcon />
+              </Button>
+              <Button onClick={handleOutgoingMessages} >
+                <ArrowBackIcon />
+              </Button>
+            </ButtonGroup>
+
           </HStack>
+
+          <Modal
+            isOpen={isModalOpen}
+            onClose={onModalClose}
+            isCentered
+            size="xl"
+          >
+            <ModalOverlay />
+            <ModalContent>
+              <ModalHeader>Upload attachments</ModalHeader>
+              <ModalCloseButton />
+              <ModalBody>
+                <FormControl>
+                  <FormLabel>Select file</FormLabel>
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        setOutgoingMessage({ ...outgoingMessages, image_data: file });
+                      }
+                    }}
+                  />
+                  <Button
+                    onClick={onModalClose}
+                    colorScheme="teal"
+                    mt={4}
+                  >
+                    Confirm
+                  </Button>
+                </FormControl>
+              </ModalBody>
+              <ModalFooter>
+              </ModalFooter>
+            </ModalContent>
+          </Modal>
         </div>
       </div>
     </>
   );
-  
 }

@@ -9,6 +9,7 @@ import { app, server } from "./lib/socket.js";
 import { receiverSocketId, io} from "./lib/socket.js"
 
 dotenv.config();
+app.use(express.json());
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -23,7 +24,6 @@ app.use(
   })
 );
 
-app.use(express.json());
 
 app.get("/get-messages/:user", async (req, res) => {
   try {
@@ -48,45 +48,96 @@ app.get("/get-messages/:user", async (req, res) => {
   }
 });
 
-app.post("/send-message/:user", upload.single("image_data"), async (req, res) => {
+app.post("/upload-profile", upload.single("image"), async (req, res) => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader?.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "Authorization header is missing or invalid" });
+  }
+
+  const token = authHeader.split(" ")[1];
 
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return res.status(401).json({ message: "Authorization header is missing or invalid" });
+    const username = jwt.verify(token, publicKey, { algorithm: "RS256" }).username
+
+    const checkUser = await db.query(
+      "SELECT EXISTS (SELECT 1 FROM users WHERE username = $1);",
+      [username]
+    );
+
+    if (!checkUser.rows[0].exists) {
+      return res.status(404).json({ error: "User does not exist" });
     }
-    const token = authHeader.split(" ")[1];
-    if (!token) {
-      return res.status(400).json({ message: "Token is not available in the authorization header" });
+
+    if (!req.file?.buffer) {
+      return res.status(400).json({ error: "No image file found in the request" });
     }
+
+    const image = req.file.buffer;
+
+    const result = await db.query(
+      "UPDATE users SET image = $1 WHERE username = $2 RETURNING username;",
+      [image, username]
+    );
+
+    if (result.rowCount > 0) {
+      return res.status(200).json({
+        message: "Image uploaded successfully",
+        username: result.rows[0].username,
+      });
+    } else {
+      return res.status(500).json({ error: "Failed to update user profile" });
+    }
+  } catch (err) {
+    return res.status(500).json({
+      error: `Error processing the upload-profile request: ${err.message}`,
+    });
+  }
+});
+
+app.post("/send-message/:receiver", upload.single("image_data"), async (req, res) => {
+
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ message: "Authorization header is missing or invalid" });
+  }
+  const token = authHeader.split(" ")[1];
+  if (!token) {
+    return res.status(400).json({ message: "Token is not available in the authorization header" });
+  }
+  try {
     const sender = jwt.verify(token, publicKey, { algorithm: "RS256" }).username;
-    const receiver = req.params.user;
+    const receiver = req.params.receiver;
     const message = req.body.message || null;
+
     const file = req.file;
     if (!message && !file) {
       return res.status(400).json({ message: "Either message or an image must be provided" });
     }
-    const conversationQuery = await db.query("INSERT INTO conversation(sender, receiver, message) VALUES ($1, $2, $3) RETURNING message_id", [sender, receiver, message || null]);
+    let conversationQuery;
+
+    if(message) {
+      conversationQuery = await db.query("INSERT INTO conversation(sender, receiver, message) VALUES ($1, $2, $3) RETURNING message_id", [sender, receiver, message || null]);
+    }
+
     const messageId = conversationQuery.rows[0]?.message_id;
     if (file) {
       const { buffer: image, mimetype: imagetype } = file;
+
       const attachmentQuery = await db.query("insert into attachments(message_id, image_data, image_type) values ($1, $2 ,$3);", [messageId, image, imagetype]);
       if (attachmentQuery.rowCount === 0) {
-        return res.status(500).json({ message: "Failed to save attachment" });
+        return res.status(400).json({ message: "Failed to save attachment" });
       }
     }
 
-    console.log("r :", receiver);
     const socketId = receiverSocketId(receiver);
-    console.log("s :", socketId);
-    console.log("b :", file.buffer);
     if (socketId) {
       io.to(socketId).emit("newMessage", [message || null, file.buffer || null]);
     }
 
     return res.status(200).json({ message: "Message sent successfully" });
   } catch (err) {
-    return res.status(500).json({ error: "Something is wrong with the send-messages \n " + err.stack || err });
+    return res.status(500).json({ error: "Something is wrong with the send-messages \n " + err });
   }
 });
 
@@ -202,52 +253,6 @@ app.get("/get-pictures/:username", async (req, res) => {
   }
 });
 
-app.post("/upload-profile", upload.single("image"), async (req, res) => {
-  const authHeader = req.headers.authorization;
-
-  if (!authHeader?.startsWith("Bearer ")) {
-    return res.status(401).json({ error: "Authorization header is missing or invalid" });
-  }
-
-  const token = authHeader.split(" ")[1];
-
-  try {
-    const username = jwt.verify(token, publicKey, { algorithm: "RS256" }).username
-
-    const checkUser = await db.query(
-      "SELECT EXISTS (SELECT 1 FROM users WHERE username = $1);",
-      [username]
-    );
-
-    if (!checkUser.rows[0].exists) {
-      return res.status(404).json({ error: "User does not exist" });
-    }
-
-    if (!req.file?.buffer) {
-      return res.status(400).json({ error: "No image file found in the request" });
-    }
-
-    const image = req.file.buffer;
-
-    const result = await db.query(
-      "UPDATE users SET image = $1 WHERE username = $2 RETURNING username;",
-      [image, username]
-    );
-
-    if (result.rowCount > 0) {
-      return res.status(200).json({
-        message: "Image uploaded successfully",
-        username: result.rows[0].username,
-      });
-    } else {
-      return res.status(500).json({ error: "Failed to update user profile" });
-    }
-  } catch (err) {
-    return res.status(500).json({
-      error: `Error processing the upload-profile request: ${err.message}`,
-    });
-  }
-});
 
 
 app.post("/user-login", async (req, res) => {

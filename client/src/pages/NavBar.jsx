@@ -41,7 +41,6 @@ export default function NavBar() {
   const user = useStore((state) => state.user);
   const isSignedIn = useStore((state) => state.isSignedIn);
   const onlineUsers = useStore((state) => state.onlineUsers);
-  console.log("online users :", onlineUsers);
 
   useEffect(() => {
     if (user) fetchImage();
@@ -177,9 +176,6 @@ export default function NavBar() {
                       </FormControl>
                     </ModalBody>
                     <ModalFooter>
-                      <Button onClick={onModalClose} colorScheme="gray">
-                        Close
-                      </Button>
                     </ModalFooter>
                   </ModalContent>
                 </Modal>

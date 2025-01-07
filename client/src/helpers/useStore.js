@@ -183,7 +183,8 @@ export const useStore = create(
 
         const socket = get().socket;
         socket.on("newMessage", (msg) => {
-          set({ messages: [...get().messages, msg] });
+          set((state) => ({ messages: [...state.messages, msg] }));
+          console.log("message sent");
         });
       },
 
@@ -193,8 +194,13 @@ export const useStore = create(
       },
 
       sendMessage: async (msg) => {
-        const receiver = get().receiver;
-        const messages = get().messages;
+        const formData = new FormData();
+        if (msg.message) formData.append("message", msg.message);
+        if (msg.image_data && msg.image_data instanceof File) {
+          formData.append("image_data", msg.image_data);
+        }
+        const receiver = get().receiver; 
+        const messages = get().messages || [];
         try{
           const token = localStorage.getItem("token");
           if (!token) {
@@ -205,15 +211,18 @@ export const useStore = create(
             method: "POST",
             headers: {
               Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json"
             },
-            body: JSON.stringify({ message: msg }) // to-do
+            body: formData,
           });
           const data = await response.json();
-          console.log(data);
-          set({ messages: [...messages, msg] });
+          if (response.ok) {
+            set({ messages: [...messages, data.message] });
+            console.log("Message sent successfully!");
+          } else {
+            console.error("Message sending failed", data);
+          }
         } catch(err) {
-          console.error("Error:", err || err.messgae || err.stack || "Unexpected error.");
+          console.error("Error:", err?.message || err.stack || "Unexpected error.");
         }
       },
 
