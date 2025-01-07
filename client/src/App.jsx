@@ -6,6 +6,7 @@ import SignIn from "./pages/SignIn";
 import GetUsers from "./pages/GetUsers";
 import { Box, useColorModeValue } from "@chakra-ui/react";
 import SignUp from "./pages/SignUp";
+import ChatContainer from "./pages/ChatContainer";
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
         <NavBar/>
         <Routes>
           <Route path="/" element={<HomePage />} />
+          <Route path="/chat/:receiver" element={<ChatContainer />} />
           <Route path="/tic-tac-toe" element={<Game />} />
           <Route path="/get-users" element={<GetUsers />} />
           <Route path="/create-account" element={<SignUp />} />

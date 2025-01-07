@@ -5,7 +5,7 @@ const baseURL = "http://localhost:50136";
 
 export const useStore = create(
 
-    persist(
+  persist(
     (set, get) => ({
       isSignedIn: null,
       isSignedUp: null,
@@ -83,7 +83,7 @@ export const useStore = create(
             return;
           }
           const req = await fetch(`${baseURL}/get-user`, {
-            method: "POST",
+            method: "GET",
             headers: {
               "Content-Type": "application/json",
               Authorization: `Bearer ${token}`,
@@ -93,8 +93,7 @@ export const useStore = create(
           if (!req.ok) {
             console.error(res.error);
           } else {
-            set({ user: res.username });
-            console.log(res.message);
+            set({ user: res });
           }
         } catch (err) {
           console.error(
@@ -157,7 +156,6 @@ export const useStore = create(
         }
       },
 
-
       // All Real time chat helpers
       connectSocket: () => {
         const isSignedIn = get().isSignedIn;
@@ -184,7 +182,7 @@ export const useStore = create(
         }
       },
 
-      listenToMessages: () => {
+      listenToMessages: async () => {
         const receiver = get().receiver;
         if (!receiver) return;
 
@@ -194,9 +192,41 @@ export const useStore = create(
         });
       },
 
-      muteMessages: () => {
+      muteMessages: async () => {
         const socket = get().socket;
         socket.off("newMessage");
+      },
+
+      sendMessage: () => { },
+      getMessages: async (receiver) => {
+        try {
+          if (!receiver) {
+            console.error("Receiver is not provided.");
+            return;
+          }
+          const token = localStorage.getItem("token");
+          if (!token) {
+            console.error("No token found. Please sign in again.");
+            return;
+          }
+          const response = await fetch(`${baseURL}/get-messages/${receiver}`, {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          });
+          if (!response.ok) {
+            console.log("Failed to fetch the messages");
+            return;
+          }
+          const data = await response.json();
+          set({ messages: data[0] });
+        } catch (err) {
+          console.error(
+            "Error:",
+            err.error || err.message || err.stack || "Unexpected error."
+          );
+        }
       },
     }),
     {

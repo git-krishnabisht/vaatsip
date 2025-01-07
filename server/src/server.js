@@ -28,77 +28,54 @@ app.use(express.json());
 app.get("/get-messages/:user", async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
-    if(!authHeader || !authHeader.startsWith("Bearer ")) {
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(400).json({ message: "Authorization header is missing or invalid" });
+    }
+    const token = authHeader.split(" ")[1];
+    if (!token) {
+      return res.status(400).json({ message: "Token is not available in the authorization header" });
+    }
+    const sender = jwt.verify(token, publicKey, { algorithm: "RS256" }).username
+
+    const receiver = req.params.user;
+    const query = await db.query("select c.message, a.image_data, c.sender, c.receiver, c.created_at from conversation c left join attachments a on c.message_id = a .message_id where (c.sender = $1 and c.receiver = $2) or (c.sender = $2 and c.receiver = $1) order by c.created_at;", [sender, receiver]);
+    if (query.rows <= 0) {
+      return res.status(400).json({ message: "No messages in the conversation yet" });
+    }
+    return res.status(200).json([query.rows, sender]);
+  } catch (err) {
+    return res.status(500).json({ error: "Something is wrong with the get-messages \n " + err.stack || err });
+  }
+});
+
+app.post("/send-message/:user", upload.single("image_data"), async (req, res) => {
+
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return res.status(401).json({ message: "Authorization header is missing or invalid" });
     }
     const token = authHeader.split(" ")[1];
     if (!token) {
       return res.status(400).json({ message: "Token is not available in the authorization header" });
     }
-    const auth = jwt.verify(token, publicKey, { algorithm: "RS256" });
-    const sender = auth.username;
+    const sender = jwt.verify(token, publicKey, { algorithm: "RS256" }).username;
     const receiver = req.params.user;
-    const query = await db.query("select c.message_id, c.sender, c.receiver, c.message, a.image_data, c.created_at from conversation c join users u1 on c.sender = u1.username join users u2 on c.receiver = u2.username join attachments a on c.message_id = a.message_id where (c.sender = $1 and c.receiver = $2) or (c.sender = $2 and c.receiver = $1) order by created_at;", [sender, receiver]);
-    console.log(query);
-  } catch(err) {
-    return res.status(500).json({ error: "Something is wrong with the get-messages \n " + err.stack || err });
-  }
-});
-
-app.post("/send-message/:user", upload.single("image_data"), async (req, res) => {
-  const authHeader = req.headers.authorization;
-
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res.status(401).json({ message: "Authorization header is missing or invalid" });
-  }
-
-  const token = authHeader.split(" ")[1];
-  if (!token) {
-    return res.status(400).json({ message: "Token is not available in the authorization header" });
-  }
-
-  try {
-    const auth = jwt.verify(token, publicKey, { algorithm: "RS256" });
-    const sender = auth.username;
-    const receiver = req.params.user;
-
     const message = req.body.message || null;
     const file = req.file;
     if (!message && !file) {
       return res.status(400).json({ message: "Either message or an image must be provided" });
     }
-
-    const conversationQuery = `
-      INSERT INTO conversation(sender, receiver, message)
-      VALUES ($1, $2, $3)
-      RETURNING message_id
-    `;
-    const conversationResult = await db.query(conversationQuery, [sender, receiver, message]);
-    const messageId = conversationResult.rows[0]?.message_id;
-
-
-    if (!messageId) {
-      return res.status(500).json({ message: "Failed to save conversation" });
+    const conversationQuery = await db.query("INSERT INTO conversation(sender, receiver, message) VALUES ($1, $2, $3) RETURNING message_id", [sender, receiver, message || null]);
+    const messageId = conversationQuery.rows[0]?.message_id;
+    if (file) {
+      const { buffer: image, mimetype: imagetype } = file;
+      const attachmentQuery = await db.query("insert into attachments(message_id, image_data, image_type) values ($1, $2 ,$3);", [messageId, image, imagetype]);
+      if (attachmentQuery.rowCount === 0) {
+        return res.status(500).json({ message: "Failed to save attachment" });
+      }
     }
 
-    const image = file.buffer;
-    const mimeType = file.mimetype;
-
-    if (!image) {
-      return res.status(400).json({ message: "Image file is invalid or missing" });
-    }
-
-    const attachmentQuery = `
-        INSERT INTO attachments(message_id, image_data, image_type)
-        VALUES ($1, $2, $3)
-      `;
-    const attachmentResult = await db.query(attachmentQuery, [messageId, image, mimeType]);
-
-    if (attachmentResult.rowCount === 0) {
-      return res.status(500).json({ message: "Failed to save attachment" });
-    }
-
-    // Real - time message emitting to the user
     const socketId = reciverSocketId(receiver);
     if (socketId) {
       io.to(socketId).emit("newMessage", [message || null, image || null]);
@@ -189,10 +166,8 @@ app.post("/sign-up", async (req, res) => {
   }
 });
 
-
 app.get("/get-pictures/:username", async (req, res) => {
   const { username } = req.params;
-
   try {
     if (!username) {
       return res.status(400).json({ message: "Username not found" });
@@ -201,14 +176,15 @@ app.get("/get-pictures/:username", async (req, res) => {
       "SELECT image FROM users where username = $1;",
       [username]
     );
-
+    if (result.rows[0].image === null) {
+      return res.status(400);
+    }
     const img = result.rows[0].image;
     if (!img) {
       return res
         .status(404)
         .json({ message: "No image found from the result query" });
     }
-
     const fileType = await fileTypeFromBuffer(img);
     res.setHeader("Content-Type", fileType.mime);
     res.setHeader(
@@ -233,12 +209,7 @@ app.post("/upload-profile", upload.single("image"), async (req, res) => {
   const token = authHeader.split(" ")[1];
 
   try {
-    const auth = jwt.verify(token, publicKey, {
-      expiresIn: "7d",
-      algorithm: "RS256",
-    });
-
-    const username = auth.username;
+    const username = jwt.verify(token, publicKey, { algorithm: "RS256" }).username
 
     const checkUser = await db.query(
       "SELECT EXISTS (SELECT 1 FROM users WHERE username = $1);",
@@ -308,28 +279,23 @@ app.post("/user-login", async (req, res) => {
 });
 
 app.get("/get-user", async (req, res) => {
+
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return res.status(401).json({ message: "Authorization header is missing" });
   }
   const token = authHeader.split(" ")[1];
-
   if (!token) {
     return res
       .status(400)
       .json({ message: "Token is not available in the authorization header" });
   }
-
   try {
-    const auth = jwt.verify(token, publicKey, {
+    const username = jwt.verify(token, publicKey, {
       expiresIn: "7d",
       algorithm: "RS256",
-    });
-    if (auth) {
-      return res.status(200).json(auth.username);
-    } else {
-      return res.status(200).json({ error: "Failed to get the user" });
-    }
+    }).username;
+    return res.status(201).json(username);
   } catch (err) {
     return res.status(400).send({ error: "Failed to get the user" });
   }
@@ -377,6 +343,7 @@ app.put("/user-update", async (req, res) => {
 });
 
 const PORT = process.env.PORT;
+
 server.listen(PORT, () => {
   console.log(`Server is Listening to port ${PORT}...`);
 });

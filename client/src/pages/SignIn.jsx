@@ -20,13 +20,14 @@ export default function SignIn() {
     username: "",
     password: "",
   });
-  const { signin } = useStore();
+  const { signin, getuser } = useStore();
 
   const handleLogin = async () => {
     await signin(formData);
     const isSignedIn = useStore.getState().isSignedIn;
     if (isSignedIn) {
       navigate("/");
+      await getuser();
     }
   };
 

@@ -38,44 +38,56 @@ export default function NavBar() {
   const [imgToUpload, setImgToUpload] = useState(null);
   const { signout, uploadprofile } = useStore();
 
-  const user = useStore.getState().user;
-  const isSignedIn = useStore.getState().isSignedIn;
-
-  const onlineUsers = useStore.getState().onlineUsers; //okay , it has all the online users we can work with :-)
+  const user = useStore((state) => state.user);
+  const isSignedIn = useStore((state) => state.isSignedIn);
+  const onlineUsers = useStore((state) => state.onlineUsers);
 
   useEffect(() => {
-    async function fetchImage() {
-      try {
-        const response = await fetch(
-          `http://localhost:50136/get-pictures/${user}`,
-          {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-            },
-          }
-        );
-        if (response.ok) {
-          const imgBlob = await response.blob();
-          const imgUrl = URL.createObjectURL(imgBlob);
-          setImg(imgUrl);
-        } else {
-          console.error("Failed to fetch the image");
-        }
-      } catch (err) {
-        console.error("Error : ", err);
-      }
-    }
     if (user) fetchImage();
   }, [user]);
+
+  async function fetchImage() {
+    try {
+      const response = await fetch(
+        `http://localhost:50136/get-pictures/${user}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.ok) {
+        const imgBlob = await response.blob();
+        const imgUrl = URL.createObjectURL(imgBlob);
+        setImg(imgUrl);
+      } else {
+        setImg("./default_profile.png");
+      }
+    } catch (err) {
+      console.error("Error fetching profile picture:", err);
+    }
+  }
 
   async function handleSignout() {
     await signout();
   }
 
   async function handleProfileChange() {
-    await uploadprofile(imgToUpload);
-    window.location.reload();
+    if (!imgToUpload) {
+      console.error("No image selected for upload.");
+      return;
+    }
+
+    try {
+      await uploadprofile(imgToUpload);
+      await fetchImage();
+      setImgToUpload(null);
+      onModalClose();
+    } catch (error) {
+      console.error("Error updating profile:", error);
+    }
   }
 
   const Links = {
