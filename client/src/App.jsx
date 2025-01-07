@@ -7,6 +7,8 @@ import GetUsers from "./pages/GetUsers";
 import { Box, useColorModeValue } from "@chakra-ui/react";
 import SignUp from "./pages/SignUp";
 import ChatContainer from "./pages/ChatContainer";
+import { connectSocket } from './helpers/useStore.js'
+connectSocket();
 
 function App() {
   return (

@@ -5,8 +5,8 @@ import multer from "multer";
 import { fileTypeFromBuffer } from "file-type";
 import dotenv from "dotenv";
 import db from "./lib/db.js";
-import { app, io, server } from "./lib/socket.js";
-import { reciverSocketId } from "./lib/socket.js"
+import { app, server } from "./lib/socket.js";
+import { receiverSocketId, io} from "./lib/socket.js"
 
 dotenv.config();
 
@@ -76,9 +76,12 @@ app.post("/send-message/:user", upload.single("image_data"), async (req, res) =>
       }
     }
 
-    const socketId = reciverSocketId(receiver);
+    console.log("r :", receiver);
+    const socketId = receiverSocketId(receiver);
+    console.log("s :", socketId);
+    console.log("b :", file.buffer);
     if (socketId) {
-      io.to(socketId).emit("newMessage", [message || null, image || null]);
+      io.to(socketId).emit("newMessage", [message || null, file.buffer || null]);
     }
 
     return res.status(200).json({ message: "Message sent successfully" });

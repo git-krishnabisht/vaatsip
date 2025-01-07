@@ -4,7 +4,6 @@ import { io } from "socket.io-client";
 const baseURL = "http://localhost:50136";
 
 export const useStore = create(
-
   persist(
     (set, get) => ({
       isSignedIn: null,
@@ -16,7 +15,7 @@ export const useStore = create(
       onlineUsers: [],
       messages: [],
       socket: null,
-
+      
       signin: async (credentials) => {
         try {
           const res = await fetch(`${baseURL}/sign-in`, {
@@ -35,7 +34,6 @@ export const useStore = create(
           const data = await res.json();
           localStorage.setItem("token", data.token);
           set({ isSignedIn: true, user: credentials.username });
-          console.log(data.message);
           get().connectSocket();
         } catch (err) {
           console.error(
@@ -166,6 +164,7 @@ export const useStore = create(
             username: get().user
           },
         });
+
         socket.connect();
         set({ socket: socket });
 
@@ -174,12 +173,8 @@ export const useStore = create(
         });
       },
 
-      disconnectSocket: async () => {
-        const socket = get().socket;
-        if (socket) {
-          socket.disconnect();
-          set({ socket: null });
-        }
+      disconnectSocket: () => {
+        if (get().socket?.connected) get().socket.disconnect();
       },
 
       listenToMessages: async () => {
@@ -192,18 +187,43 @@ export const useStore = create(
         });
       },
 
-      muteMessages: async () => {
+      muteMessages: async() => {
         const socket = get().socket;
         socket.off("newMessage");
       },
 
-      sendMessage: () => { },
+      sendMessage: async (msg) => {
+        const receiver = get().receiver;
+        const messages = get().messages;
+        try{
+          const token = localStorage.getItem("token");
+          if (!token) {
+            console.error("No token found. Please sign in again.");
+            return;
+          }
+          const response = await fetch(`${baseURL}/send-message/${receiver}`, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ message: msg }) // to-do
+          });
+          const data = await response.json();
+          console.log(data);
+          set({ messages: [...messages, msg] });
+        } catch(err) {
+          console.error("Error:", err || err.messgae || err.stack || "Unexpected error.");
+        }
+      },
+
       getMessages: async (receiver) => {
         try {
           if (!receiver) {
             console.error("Receiver is not provided.");
             return;
           }
+          set({ receiver: receiver });
           const token = localStorage.getItem("token");
           if (!token) {
             console.error("No token found. Please sign in again.");
@@ -239,3 +259,8 @@ export const useStore = create(
     }
   )
 );
+
+export const connectSocket = () => {
+  const { connectSocket } = useStore.getState();
+  connectSocket();
+};

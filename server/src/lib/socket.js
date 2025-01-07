@@ -13,7 +13,7 @@ const io = new Server(server, {
 
 const userSocketMap = {};
 
-export function reciverSocketId(username) {
+export function receiverSocketId(username) {
   return userSocketMap[username];
 }
 
