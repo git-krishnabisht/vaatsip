@@ -1,7 +1,6 @@
 import { useParams } from "react-router-dom";
 import { useStore } from "../helpers/useStore";
 import { useEffect, useState } from "react";
-import { fileTypeFromBuffer } from "file-type";
 import {
   Button,
   ButtonGroup,
@@ -26,53 +25,76 @@ export default function ChatContainer() {
     onOpen: onModalOpen,
     onClose: onModalClose,
   } = useDisclosure();
-  const { receiver } = useParams();
-  const { getMessages, listenToMessages, muteMessages, sendMessage } = useStore();
+  const { getMessages, subscribeToMessages, unsubscribeFromMessages, sendMessage } = useStore();
   const messages = useStore((state) => state.messages);
-  const [incMessages, setMessage] = useState([]);
   const currentUser = useStore((state) => state.user);
+  const { receiver } = useParams();
+
+  const [incMessages, setMessage] = useState([]);
   const [outgoingMessages, setOutgoingMessage] = useState({
     message: "",
     image_data: {},
   });
 
   useEffect(() => {
+    subscribeToMessages();
     getMessages(receiver);
-
-    listenToMessages();
-
-    return () => muteMessages();
-  }, [receiver, getMessages, listenToMessages, muteMessages, outgoingMessages]);
+    return () => unsubscribeFromMessages();
+  }, [getMessages,receiver, subscribeToMessages, unsubscribeFromMessages]);
 
 
   useEffect(() => {
     const processMessages = async () => {
       if (!Array.isArray(messages)) return;
-      const messagePromise = messages.map(async (msg) => {
-        let imageSrc = null;
+      const processed = await Promise.all(
+        messages.map(async (msg) => {
+          let imageSrc = null;
+          if (msg.image_data && msg.image_data.data) {
+            const imageBuffer = new Uint8Array(msg.image_data.data);
+            const blob = new Blob([imageBuffer], {
+              type: "application/octet-stream",
+            });
+            imageSrc = URL.createObjectURL(blob);
+          }
+          return {
+            ...msg,
+            imageSrc,
+          };
+        })
+      );
 
-        if (msg.image_data && msg.image_data.data) {
-          const imageBuffer = new Uint8Array(msg.image_data.data);
-          const mimeType = await fileTypeFromBuffer(imageBuffer);
-          const blob = new Blob([imageBuffer], {
-            type: mimeType.mime || "application/octet-stream",
-          });
-          imageSrc = URL.createObjectURL(blob);
-        }
-        return {
-          ...msg,
-          imageSrc,
-        };
-      });
-      const processed = await Promise.all(messagePromise);
       setMessage(processed);
+
+      return () => {
+        processed.forEach((msg) => {
+          if (msg.imageSrc) URL.revokeObjectURL(msg.imageSrc);
+        });
+      };
     };
     processMessages();
   }, [messages]);
 
-  function handleOutgoingMessages() {
-    sendMessage(outgoingMessages);
-  }
+  console.log(messages);
+
+
+  const handleOutgoingMessages = async () => {
+    if (!outgoingMessages.message.trim() && !outgoingMessages.image_data) {
+      console.error("Message or image must be provided");
+      return;
+    }
+
+    const newMessage = {
+      message: outgoingMessages.message,
+      image_data: outgoingMessages.image_data,
+      sender: currentUser,
+      receiver: receiver,
+      created_at: new Date().toISOString(),
+    };
+
+    sendMessage(newMessage);
+
+    setOutgoingMessage({ message: "", image_data: {} });
+  };
 
   return (
     <>
@@ -111,7 +133,8 @@ export default function ChatContainer() {
                 {msg.imageSrc && (
                   <div style={{ margin: "10px 0" }}>
                     <img
-                      src={msg.imageSrc}
+                      src={msg.imageSrc
+                      }
                       alt="Attached"
                       style={{ width: "100%", borderRadius: "5px" }}
                     />
@@ -156,11 +179,10 @@ export default function ChatContainer() {
               <Button onClick={onModalOpen}>
                 <AttachmentIcon />
               </Button>
-              <Button onClick={handleOutgoingMessages} >
+              <Button onClick={handleOutgoingMessages}>
                 <ArrowBackIcon />
               </Button>
             </ButtonGroup>
-
           </HStack>
 
           <Modal
@@ -182,21 +204,19 @@ export default function ChatContainer() {
                     onChange={(e) => {
                       const file = e.target.files[0];
                       if (file) {
-                        setOutgoingMessage({ ...outgoingMessages, image_data: file });
+                        setOutgoingMessage({
+                          ...outgoingMessages,
+                          image_data: file,
+                        });
                       }
                     }}
                   />
-                  <Button
-                    onClick={onModalClose}
-                    colorScheme="teal"
-                    mt={4}
-                  >
+                  <Button onClick={onModalClose} colorScheme="teal" mt={4}>
                     Confirm
                   </Button>
                 </FormControl>
               </ModalBody>
-              <ModalFooter>
-              </ModalFooter>
+              <ModalFooter></ModalFooter>
             </ModalContent>
           </Modal>
         </div>

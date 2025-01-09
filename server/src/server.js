@@ -10,8 +10,9 @@ import { receiverSocketId, io} from "./lib/socket.js"
 
 dotenv.config();
 app.use(express.json());
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
 
-const upload = multer({ storage: multer.memoryStorage() });
 
 const privateKey = process.env.PRIVATE_KEY;
 const publicKey = process.env.PUBLIC_KEY;
@@ -23,7 +24,6 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
-
 
 app.get("/get-messages/:user", async (req, res) => {
   try {
@@ -45,6 +45,50 @@ app.get("/get-messages/:user", async (req, res) => {
     return res.status(200).json([query.rows, sender]);
   } catch (err) {
     return res.status(500).json({ error: "Something is wrong with the get-messages \n " + err.stack || err });
+  }
+});
+
+app.post("/send-message/:receiver", upload.single("image_data"), async (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ message: "Authorization header is missing or invalid" });
+  }
+  const token = authHeader.split(" ")[1];
+  if (!token) {
+    return res.status(400).json({ message: "Token is not available in the authorization header" });
+  }
+  try {
+    const sender = jwt.verify(token, publicKey, { algorithm: "RS256" }).username;
+    const receiver = req.params.receiver;
+    const message = req.body.message;
+
+    const file = req.file;
+    if (!message && !file) {
+      return res.status(400).json({ message: "Either message or an image must be provided" });
+    }
+    const conversationQuery = await db.query("INSERT INTO conversation(sender, receiver, message) VALUES ($1, $2, $3) RETURNING message_id", [sender, receiver, message || null]);
+
+    const messageId = conversationQuery.rows[0]?.message_id;
+    let image = null;
+    let imagetype = null;
+    if (file) {
+      image = file.buffer;
+      imagetype = file.mimetype;
+      const attachmentQuery = await db.query("insert into attachments(message_id, image_data, image_type) values ($1, $2 ,$3);", [messageId, image, imagetype]);
+      if (attachmentQuery.rowCount === 0) {
+        return res.status(400).json({ message: "Failed to save attachment" });
+      }
+    }
+
+    const socketId = receiverSocketId(receiver);
+    if (socketId) {
+      io.to(socketId).emit("newMessage", { message, image , imagetype });
+      console.log("Message sent successfully from the socket's server");
+    }
+
+    return res.status(200).json({ message: "Message sent successfully" });
+  } catch (err) {
+    return res.status(500).json({ error: "Something is wrong with the send-messages \n " + err });
   }
 });
 
@@ -95,51 +139,6 @@ app.post("/upload-profile", upload.single("image"), async (req, res) => {
   }
 });
 
-app.post("/send-message/:receiver", upload.single("image_data"), async (req, res) => {
-
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res.status(401).json({ message: "Authorization header is missing or invalid" });
-  }
-  const token = authHeader.split(" ")[1];
-  if (!token) {
-    return res.status(400).json({ message: "Token is not available in the authorization header" });
-  }
-  try {
-    const sender = jwt.verify(token, publicKey, { algorithm: "RS256" }).username;
-    const receiver = req.params.receiver;
-    const message = req.body.message || null;
-
-    const file = req.file;
-    if (!message && !file) {
-      return res.status(400).json({ message: "Either message or an image must be provided" });
-    }
-    let conversationQuery;
-
-    if(message) {
-      conversationQuery = await db.query("INSERT INTO conversation(sender, receiver, message) VALUES ($1, $2, $3) RETURNING message_id", [sender, receiver, message || null]);
-    }
-
-    const messageId = conversationQuery.rows[0]?.message_id;
-    if (file) {
-      const { buffer: image, mimetype: imagetype } = file;
-
-      const attachmentQuery = await db.query("insert into attachments(message_id, image_data, image_type) values ($1, $2 ,$3);", [messageId, image, imagetype]);
-      if (attachmentQuery.rowCount === 0) {
-        return res.status(400).json({ message: "Failed to save attachment" });
-      }
-    }
-
-    const socketId = receiverSocketId(receiver);
-    if (socketId) {
-      io.to(socketId).emit("newMessage", [message || null, file.buffer || null]);
-    }
-
-    return res.status(200).json({ message: "Message sent successfully" });
-  } catch (err) {
-    return res.status(500).json({ error: "Something is wrong with the send-messages \n " + err });
-  }
-});
 
 app.post("/sign-in", async (req, res) => {
   const signOptions = {

@@ -36,11 +36,18 @@ export default function NavBar() {
   } = useDisclosure();
   const [img, setImg] = useState();
   const [imgToUpload, setImgToUpload] = useState(null);
-  const { signout, uploadprofile } = useStore();
+  const { signout, uploadprofile, connectSocket, disconnectSocket } = useStore();
 
   const user = useStore((state) => state.user);
   const isSignedIn = useStore((state) => state.isSignedIn);
   const onlineUsers = useStore((state) => state.onlineUsers);
+  useEffect(() => {
+    connectSocket();
+
+    return () => {
+      disconnectSocket();
+    };
+  }, [isSignedIn]); 
 
   useEffect(() => {
     if (user) fetchImage();
@@ -97,103 +104,104 @@ export default function NavBar() {
 
   return (
     <>
-      <Box bg={useColorModeValue("blackAlpha.100", "blackAlpha.900")} px={4}>
-        <Flex h={16} alignItems={"center"} justifyContent={"space-between"}>
-          <IconButton
-            size={"sm"}
-            icon={isMenuOpen ? <CloseIcon /> : <HamburgerIcon />}
-            aria-label={"Open-menu"}
-            display={{ md: "none" }}
-            onClick={isMenuOpen ? onMenuClose : onMenuClose}
-          />
+      <div>
+        <Box bg={useColorModeValue("blackAlpha.100", "blackAlpha.900")} px={4}>
+          <Flex h={16} alignItems={"center"} justifyContent={"space-between"}>
+            <IconButton
+              size={"sm"}
+              icon={isMenuOpen ? <CloseIcon /> : <HamburgerIcon />}
+              aria-label={"Open-menu"}
+              display={{ md: "none" }}
+              onClick={isMenuOpen ? onMenuClose : onMenuClose}
+            />
 
-          {/*for now this icon menu is not working , we will work on this later*/}
+            {/*for now this icon menu is not working , we will work on this later*/}
 
-          <HStack spacing={8} alignItems={"center"}>
-            <NavLink to="/"> Home </NavLink>
-            <HStack
-              as={"nav"}
-              spacing={4}
-              display={{ base: "none", md: "flex" }}
-            >
-              {Object.entries(Links).map(([key, link]) => (
-                <NavLink key={key} to={link}>
-                  {key}
-                </NavLink>
-              ))}
+            <HStack spacing={8} alignItems={"center"}>
+              <NavLink to="/"> Home </NavLink>
+              <HStack
+                as={"nav"}
+                spacing={4}
+                display={{ base: "none", md: "flex" }}
+              >
+                {Object.entries(Links).map(([key, link]) => (
+                  <NavLink key={key} to={link}>
+                    {key}
+                  </NavLink>
+                ))}
+              </HStack>
             </HStack>
-          </HStack>
-          <Flex alignItems={"center"}>
-            {!isSignedIn ? (
-              <>
-                <Button
-                  as={Link}
-                  to={"/sign-in"}
-                  variant={"solid"}
-                  colorScheme={"teal"}
-                  size={"md"}
-                  mr={4}
-                >
-                  Sign-in
-                </Button>
-              </>
-            ) : (
-              <>
-                <Avatar
-                  as="button"
-                  onClick={onModalOpen}
-                  size="md"
-                  src={img}
-                  border="2px"
-                  marginRight="8px"
-                />
+            <Flex alignItems={"center"}>
+              {!isSignedIn ? (
+                <>
+                  <Button
+                    as={Link}
+                    to={"/sign-in"}
+                    variant={"solid"}
+                    colorScheme={"teal"}
+                    size={"md"}
+                    mr={4}
+                  >
+                    Sign-in
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Avatar
+                    as="button"
+                    onClick={onModalOpen}
+                    size="md"
+                    src={img}
+                    border="2px"
+                    marginRight="8px"
+                  />
 
-                <Modal
-                  isOpen={isModalOpen}
-                  onClose={onModalClose}
-                  isCentered
-                  size="xl"
-                >
-                  <ModalOverlay />
-                  <ModalContent>
-                    <ModalHeader>Edit Profile</ModalHeader>
-                    <ModalCloseButton />
-                    <ModalBody>
-                      <FormControl>
-                        <FormLabel>Select Image</FormLabel>
-                        <Input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => setImgToUpload(e.target.files[0])}
-                        />
-                        <Button
-                          onClick={handleProfileChange}
-                          colorScheme="teal"
-                          mt={4}
-                        >
-                          Update Profile
-                        </Button>
-                      </FormControl>
-                    </ModalBody>
-                    <ModalFooter>
-                    </ModalFooter>
-                  </ModalContent>
-                </Modal>
+                  <Modal
+                    isOpen={isModalOpen}
+                    onClose={onModalClose}
+                    isCentered
+                    size="xl"
+                  >
+                    <ModalOverlay />
+                    <ModalContent>
+                      <ModalHeader>Edit Profile</ModalHeader>
+                      <ModalCloseButton />
+                      <ModalBody>
+                        <FormControl>
+                          <FormLabel>Select Image</FormLabel>
+                          <Input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => setImgToUpload(e.target.files[0])}
+                          />
+                          <Button
+                            onClick={handleProfileChange}
+                            colorScheme="teal"
+                            mt={4}
+                          >
+                            Update Profile
+                          </Button>
+                        </FormControl>
+                      </ModalBody>
+                      <ModalFooter></ModalFooter>
+                    </ModalContent>
+                  </Modal>
 
-                <Button
-                  onClick={handleSignout}
-                  variant="solid"
-                  colorScheme="teal"
-                  size="md"
-                  mr={4}
-                >
-                  Sign-out
-                </Button>
-              </>
-            )}
+                  <Button
+                    onClick={handleSignout}
+                    variant="solid"
+                    colorScheme="teal"
+                    size="md"
+                    mr={4}
+                  >
+                    Sign-out
+                  </Button>
+                </>
+              )}
+            </Flex>
           </Flex>
-        </Flex>
-      </Box>
+        </Box>
+      </div>
     </>
   );
 }

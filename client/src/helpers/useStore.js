@@ -157,7 +157,10 @@ export const useStore = create(
       // All Real time chat helpers
       connectSocket: () => {
         const isSignedIn = get().isSignedIn;
-        if (!isSignedIn || get().socket?.connected) return;
+        if (!isSignedIn || get().socket?.connected) {
+          console.log("Socket is already connected or user is not signed in.");
+          return;
+        }
 
         const socket = io(baseURL, {
           query: {
@@ -177,36 +180,35 @@ export const useStore = create(
         if (get().socket?.connected) get().socket.disconnect();
       },
 
-      listenToMessages: async () => {
+      subscribeToMessages: async () => {
         const receiver = get().receiver;
         if (!receiver) return;
 
         const socket = get().socket;
+
         socket.on("newMessage", (msg) => {
           set((state) => ({ messages: [...state.messages, msg] }));
-          console.log("message sent");
         });
       },
 
-      muteMessages: async() => {
+      unsubscribeFromMessages: async() => {
         const socket = get().socket;
         socket.off("newMessage");
       },
 
       sendMessage: async (msg) => {
         const formData = new FormData();
-        if (msg.message) formData.append("message", msg.message);
-        if (msg.image_data && msg.image_data instanceof File) {
+        if (msg.message?.trim()) formData.append("message", msg.message.trim());
+        if (msg.image_data?.size) {
           formData.append("image_data", msg.image_data);
         }
-        const receiver = get().receiver; 
-        const messages = get().messages || [];
-        try{
-          const token = localStorage.getItem("token");
-          if (!token) {
-            console.error("No token found. Please sign in again.");
-            return;
-          }
+        const receiver = get().receiver;
+        const token = localStorage.getItem("token");
+        if (!token) {
+          console.error("No token found. Please sign in again.");
+          return;
+        }
+        try {
           const response = await fetch(`${baseURL}/send-message/${receiver}`, {
             method: "POST",
             headers: {
@@ -215,17 +217,30 @@ export const useStore = create(
             body: formData,
           });
           const data = await response.json();
-          if (response.ok) {
-            set({ messages: [...messages, data.message] });
-            console.log("Message sent successfully!");
-          } else {
-            console.error("Message sending failed", data);
-          }
+
+          if (!response.ok) throw new Error(data.error || 'Failed to send message');
+          const convertFileToBinary = async (file) => {
+            const arrayBuffer = await file.arrayBuffer();
+            const data = new Uint8Array(arrayBuffer);
+            return { data, type: file.type };
+          };
+          const temp = await convertFileToBinary(msg.image_data);
+          const newMessage = {
+            message: msg.message,
+            sender: msg.sender,
+            receiver: msg.receiver,
+            created_at: new Date().toISOString(), 
+            image_data: temp
+          };
+          set((state) => ({ 
+            messages: [...state.messages, newMessage]
+          }));
         } catch(err) {
-          console.error("Error:", err?.message || err.stack || "Unexpected error.");
+          console.error("Error:", err?.message || "Failed to send message");
+          throw err;
         }
       },
-
+      
       getMessages: async (receiver) => {
         try {
           if (!receiver) {
@@ -273,3 +288,8 @@ export const connectSocket = () => {
   const { connectSocket } = useStore.getState();
   connectSocket();
 };
+
+export const disconnectSocket = () => {
+  const { disconnectSocket } = useStore.getState();
+  disconnectSocket();
+}
