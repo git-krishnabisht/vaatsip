@@ -192,6 +192,7 @@ export const useStore = create(
         const socket = get().socket;
 
         socket.on("newMessage", (msg) => {
+          get().getMessages(rece);
           set((state) => ({ messages: [...state.messages, msg] }));
         });
       },
