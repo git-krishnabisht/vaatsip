@@ -126,9 +126,9 @@ export const useStore = create(
           });
 
           const res = await req.json();
-
           if (req.ok) {
             console.log(res.message || "Image uploaded successfully.");
+            return res.image;
           } else {
             console.error(res.error || "Failed to upload image.");
           }

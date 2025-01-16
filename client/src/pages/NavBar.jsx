@@ -49,53 +49,54 @@ export default function NavBar() {
     };
   }, [isSignedIn]); 
 
+  let flag = false;
+
   useEffect(() => {
     if (user) fetchImage();
+    return () => {
+      if (img) {
+        URL.revokeObjectURL(img);
+      }
+    };
   }, [user]);
 
   async function fetchImage() {
-
     try {
-      const response = await fetch(
-        `http://localhost:50136/get-pictures/${user}`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
+      const response = await fetch(`http://localhost:50136/get-pictures/${user}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+  
       if (response.ok) {
         const imgBlob = await response.blob();
+        if (img) {
+          URL.revokeObjectURL(img); 
+        }
         const imgUrl = URL.createObjectURL(imgBlob);
         setImg(imgUrl);
       } else {
-        setImg("./default_profile.png");
+        setImg("./default_profile.png"); 
       }
     } catch (err) {
       console.error("Error fetching profile picture:", err);
+      setImg("./default_profile.png"); 
     }
   }
-
+  
   async function handleSignout() {
     await signout();
   }
 
-  async function handleProfileChange() {
+  function handleProfileChange() {
     if (!imgToUpload) {
       console.error("No image selected for upload.");
       return;
     }
-
-    try {
-      await uploadprofile(imgToUpload);
-      await fetchImage();
-      setImgToUpload(null);
-      onModalClose();
-    } catch (error) {
-      console.error("Error updating profile:", error);
-    }
+    uploadprofile(imgToUpload);
+    onModalClose();
+    window.location.reload();
   }
 
   const Links = {
@@ -113,7 +114,7 @@ export default function NavBar() {
               icon={isMenuOpen ? <CloseIcon /> : <HamburgerIcon />}
               aria-label={"Open-menu"}
               display={{ md: "none" }}
-              onClick={isMenuOpen ? onMenuClose : onMenuClose}
+              onClick={isMenuOpen ? onMenuClose : onMenuOpen}
             />
 
             {/*for now this icon menu is not working , we will work on this later*/}
@@ -179,12 +180,12 @@ export default function NavBar() {
                             onClick={handleProfileChange}
                             colorScheme="teal"
                             mt={4}
+                            isDisabled={!imgToUpload}
                           >
                             Update Profile
                           </Button>
                         </FormControl>
                       </ModalBody>
-                      <ModalFooter></ModalFooter>
                     </ModalContent>
                   </Modal>
 
