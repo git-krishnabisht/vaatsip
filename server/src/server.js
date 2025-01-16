@@ -73,7 +73,6 @@ app.post("/send-message/:receiver", upload.single("image_data"), is_valid, async
     const sender = req.username;
     const receiver = req.params.receiver;
     const message = req.body.message;
-
     const file = req.file;
     if (!message && !file) {
       return res.status(400).json({ message: "Either message or an image must be provided" });
@@ -92,10 +91,11 @@ app.post("/send-message/:receiver", upload.single("image_data"), is_valid, async
       }
     }
 
+
     const socketId = receiverSocketId(receiver);
     if (socketId) {
       io.to(socketId).emit("newMessage", { message, image, imagetype });
-      console.log("Message sent successfully from the socket's server");
+      console.log("Message sent successfully from the socket's server to :", receiver);
     }
 
     return res.status(200).json({ message: "Message sent successfully" });
@@ -257,7 +257,7 @@ app.get("/get-pictures/:username", async (req, res) => {
 app.get("/get-user", is_valid,  async (req, res) => {
   try {
     const username = req.username;
-    return res.status(201).json({ username: username });
+    return res.status(201).json(username);
   } catch (err) {
     return res.status(400).send({ error: "Failed to get the user" });
   }

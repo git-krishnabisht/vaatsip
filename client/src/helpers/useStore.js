@@ -142,7 +142,13 @@ export const useStore = create(
 
       getusers: async () => {
         try {
-          const response = await fetch(`${baseURL}/get-users`);
+          const token = localStorage.getItem("token");
+          const response = await fetch(`${baseURL}/get-users`, {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            }
+          });
           const data = await response.json();
           const users = data.map((user) => ({
             username: user.username,
@@ -180,9 +186,8 @@ export const useStore = create(
         if (get().socket?.connected) get().socket.disconnect();
       },
 
-      subscribeToMessages: async () => {
-        const receiver = get().receiver;
-        if (!receiver) return;
+      subscribeToMessages: async (rece) => {
+        if (!rece) return;
 
         const socket = get().socket;
 

@@ -41,7 +41,7 @@ export default function ChatContainer() {
   });
 
   useEffect(() => {
-    subscribeToMessages();
+    subscribeToMessages(receiver);
     getMessages(receiver);
     return () => unsubscribeFromMessages();
   }, [getMessages, receiver, subscribeToMessages, unsubscribeFromMessages]);
