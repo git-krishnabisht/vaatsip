@@ -25,11 +25,15 @@ export default function ChatContainer() {
     onOpen: onModalOpen,
     onClose: onModalClose,
   } = useDisclosure();
-  const { getMessages, subscribeToMessages, unsubscribeFromMessages, sendMessage } = useStore();
+  const {
+    getMessages,
+    subscribeToMessages,
+    unsubscribeFromMessages,
+    sendMessage,
+  } = useStore();
   const messages = useStore((state) => state.messages);
   const currentUser = useStore((state) => state.user);
   const { receiver } = useParams();
-
   const [incMessages, setMessage] = useState([]);
   const [outgoingMessages, setOutgoingMessage] = useState({
     message: "",
@@ -40,8 +44,7 @@ export default function ChatContainer() {
     subscribeToMessages();
     getMessages(receiver);
     return () => unsubscribeFromMessages();
-  }, [getMessages,receiver, subscribeToMessages, unsubscribeFromMessages]);
-
+  }, [getMessages, receiver, subscribeToMessages, unsubscribeFromMessages]);
 
   useEffect(() => {
     const processMessages = async () => {
@@ -74,18 +77,18 @@ export default function ChatContainer() {
     processMessages();
   }, [messages]);
 
-  console.log(messages);
-
-
   const handleOutgoingMessages = async () => {
     if (!outgoingMessages.message.trim() && !outgoingMessages.image_data) {
       console.error("Message or image must be provided");
       return;
     }
 
+    const img = outgoingMessages.image_data;
+    if (!img) img = null;
+
     const newMessage = {
       message: outgoingMessages.message,
-      image_data: outgoingMessages.image_data,
+      image_data: img,
       sender: currentUser,
       receiver: receiver,
       created_at: new Date().toISOString(),
@@ -133,8 +136,7 @@ export default function ChatContainer() {
                 {msg.imageSrc && (
                   <div style={{ margin: "10px 0" }}>
                     <img
-                      src={msg.imageSrc
-                      }
+                      src={msg.imageSrc}
                       alt="Attached"
                       style={{ width: "100%", borderRadius: "5px" }}
                     />

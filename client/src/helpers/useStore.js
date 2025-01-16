@@ -196,10 +196,21 @@ export const useStore = create(
         socket.off("newMessage");
       },
 
+      convertFileToBinary: async (file) => {
+        let aBuffer;
+        if(file.arrayBuffer) {
+          aBuffer = await file.arrayBuffer();
+        } else if(!file.arrayBuffer) {
+          return { data: null, type: null };
+        }
+        const data = new Uint8Array(aBuffer);
+        return { data, type: file.type };
+      },
+
       sendMessage: async (msg) => {
         const formData = new FormData();
-        if (msg.message?.trim()) formData.append("message", msg.message.trim());
-        if (msg.image_data?.size) {
+        if (msg.message) formData.append("message", msg.message);
+        if (msg.image_data) {
           formData.append("image_data", msg.image_data);
         }
         const receiver = get().receiver;
@@ -219,18 +230,13 @@ export const useStore = create(
           const data = await response.json();
 
           if (!response.ok) throw new Error(data.error || 'Failed to send message');
-          const convertFileToBinary = async (file) => {
-            const arrayBuffer = await file.arrayBuffer();
-            const data = new Uint8Array(arrayBuffer);
-            return { data, type: file.type };
-          };
-          const temp = await convertFileToBinary(msg.image_data);
+          let temp = await get().convertFileToBinary(msg.image_data);
           const newMessage = {
             message: msg.message,
+            image_data: temp,
             sender: msg.sender,
             receiver: msg.receiver,
             created_at: new Date().toISOString(), 
-            image_data: temp
           };
           set((state) => ({ 
             messages: [...state.messages, newMessage]

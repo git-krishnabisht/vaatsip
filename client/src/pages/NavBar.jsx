@@ -41,9 +41,9 @@ export default function NavBar() {
   const user = useStore((state) => state.user);
   const isSignedIn = useStore((state) => state.isSignedIn);
   const onlineUsers = useStore((state) => state.onlineUsers);
+
   useEffect(() => {
     connectSocket();
-
     return () => {
       disconnectSocket();
     };
@@ -54,6 +54,7 @@ export default function NavBar() {
   }, [user]);
 
   async function fetchImage() {
+
     try {
       const response = await fetch(
         `http://localhost:50136/get-pictures/${user}`,
