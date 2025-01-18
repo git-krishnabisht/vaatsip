@@ -1,6 +1,6 @@
 import { useParams } from "react-router-dom";
 import { useStore } from "../helpers/useStore";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Button,
   ButtonGroup,
@@ -46,6 +46,8 @@ export default function ChatContainer() {
     return () => unsubscribeFromMessages();
   }, [getMessages, receiver, subscribeToMessages, unsubscribeFromMessages]);
 
+  const messageEndRef = useRef(null);
+
   useEffect(() => {
     const processMessages = async () => {
       if (!Array.isArray(messages)) return;
@@ -83,7 +85,7 @@ export default function ChatContainer() {
       return;
     }
 
-    const img = outgoingMessages.image_data;
+    let img = outgoingMessages.image_data;
     if (!img) img = null;
 
     const newMessage = {
@@ -98,6 +100,12 @@ export default function ChatContainer() {
 
     setOutgoingMessage({ message: "", image_data: {} });
   };
+
+  useEffect(() => {
+    if(messageEndRef.current && incMessages) {
+      messageEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [incMessages]);
 
   return (
     <>
@@ -120,7 +128,9 @@ export default function ChatContainer() {
                 textAlign: msg.sender === currentUser ? "right" : "left",
                 marginLeft: msg.sender === currentUser ? "auto" : "0",
                 marginRight: msg.sender === currentUser ? "0" : "auto",
+
               }}
+              ref={messageEndRef}
             >
               <div
                 style={{

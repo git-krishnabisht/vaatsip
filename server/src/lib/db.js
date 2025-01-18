@@ -1,9 +1,14 @@
 import pg from "pg";
 import dotenv from "dotenv";
 dotenv.config();
-const { Client } = pg;
+const { Pool } = pg;
 
-const db = new Client({ connectionString: process.env.DB_URI });
+const db = new Pool({ 
+  connectionString: process.env.DB_URI,
+  ssl: {
+    rejectUnauthorized: false,
+  }
+});
 
 (async () => {
   try {

@@ -1,5 +1,4 @@
 import { Route, Routes } from "react-router-dom";
-import Game from "./pages/TicTacToe";
 import HomePage from "./pages/HomePage";
 import NavBar from "./pages/NavBar";
 import SignIn from "./pages/SignIn";
@@ -16,7 +15,6 @@ function App() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/chat/:receiver" element={<ChatContainer />} />
-          <Route path="/tic-tac-toe" element={<Game />} />
           <Route path="/get-users" element={<GetUsers />} />
           <Route path="/create-account" element={<SignUp />} />
           <Route path="/sign-in" element={<SignIn />} />

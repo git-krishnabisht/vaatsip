@@ -49,7 +49,6 @@ export default function NavBar() {
     };
   }, [isSignedIn]); 
 
-  let flag = false;
 
   useEffect(() => {
     if (user) fetchImage();
@@ -62,7 +61,7 @@ export default function NavBar() {
 
   async function fetchImage() {
     try {
-      const response = await fetch(`http://localhost:50136/get-pictures/${user}`, {
+      const response = await fetch(`http://localhost:50136/api/auth/get-pictures/${user}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -101,7 +100,6 @@ export default function NavBar() {
 
   const Links = {
     Users: "/get-users",
-    Game: "/tic-tac-toe",
   };
 
   return (

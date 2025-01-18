@@ -18,7 +18,7 @@ export const useStore = create(
       
       signin: async (credentials) => {
         try {
-          const res = await fetch(`${baseURL}/sign-in`, {
+          const res = await fetch(`${baseURL}/api/auth/sign-in`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -51,7 +51,7 @@ export const useStore = create(
 
       signup: async (credentials) => {
         try {
-          const res = await fetch(`${baseURL}/sign-up`, {
+          const res = await fetch(`${baseURL}/api/auth/sign-up`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -80,7 +80,7 @@ export const useStore = create(
             console.error("No token found. Please sign in again.");
             return;
           }
-          const req = await fetch(`${baseURL}/get-user`, {
+          const req = await fetch(`${baseURL}/api/auth/get-user`, {
             method: "GET",
             headers: {
               "Content-Type": "application/json",
@@ -117,7 +117,7 @@ export const useStore = create(
           const formData = new FormData();
           formData.append("image", img);
 
-          const req = await fetch(`${baseURL}/upload-profile`, {
+          const req = await fetch(`${baseURL}/api/auth/upload-profile`, {
             method: "POST",
             headers: {
               Authorization: `Bearer ${token}`,
@@ -143,7 +143,7 @@ export const useStore = create(
       getusers: async () => {
         try {
           const token = localStorage.getItem("token");
-          const response = await fetch(`${baseURL}/get-users`, {
+          const response = await fetch(`${baseURL}/api/auth/get-users`, {
             method: "GET",
             headers: {
               Authorization: `Bearer ${token}`,
@@ -226,7 +226,7 @@ export const useStore = create(
           return;
         }
         try {
-          const response = await fetch(`${baseURL}/send-message/${receiver}`, {
+          const response = await fetch(`${baseURL}/api/messages/send-message/${receiver}`, {
             method: "POST",
             headers: {
               Authorization: `Bearer ${token}`,
@@ -265,7 +265,7 @@ export const useStore = create(
             console.error("No token found. Please sign in again.");
             return;
           }
-          const response = await fetch(`${baseURL}/get-messages/${receiver}`, {
+          const response = await fetch(`${baseURL}/api/messages/get-messages/${receiver}`, {
             method: "GET",
             headers: {
               Authorization: `Bearer ${token}`
