@@ -40,7 +40,8 @@ export default function NavBar() {
 
   const user = useStore((state) => state.user);
   const isSignedIn = useStore((state) => state.isSignedIn);
-  const onlineUsers = useStore((state) => state.onlineUsers);
+
+  const baseURL = import.meta.env.MODE === "development" ? "http://localhost:50136" : "";
 
   useEffect(() => {
     connectSocket();
@@ -61,7 +62,7 @@ export default function NavBar() {
 
   async function fetchImage() {
     try {
-      const response = await fetch(`http://localhost:50136/api/auth/get-pictures/${user}`, {
+      const response = await fetch(`${baseURL}/api/auth/get-pictures/${user}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",

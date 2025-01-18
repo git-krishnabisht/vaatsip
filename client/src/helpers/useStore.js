@@ -1,7 +1,8 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { io } from "socket.io-client";
-const baseURL = "http://localhost:50136";
+
+const baseURL = import.meta.env.MODE === "development" ? "http://localhost:50136" : ""; 
 
 export const useStore = create(
   persist(

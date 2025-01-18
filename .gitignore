@@ -24,3 +24,5 @@ dist-ssr
 *.sw?
 psql
 Work.txt
+/server/.env
+/client/public
