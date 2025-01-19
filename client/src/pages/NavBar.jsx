@@ -1,18 +1,15 @@
-import { CloseIcon, HamburgerIcon } from "@chakra-ui/icons";
 import {
   Avatar,
   Box,
   Button,
   Flex,
   HStack,
-  IconButton,
   useColorModeValue,
   useDisclosure,
   Modal,
   ModalOverlay,
   ModalContent,
   ModalHeader,
-  ModalFooter,
   ModalBody,
   ModalCloseButton,
   Input,
@@ -24,11 +21,6 @@ import { Link, NavLink } from "react-router-dom";
 import { useStore } from "../helpers/useStore";
 
 export default function NavBar() {
-  const {
-    isOpen: isMenuOpen,
-    onOpen: onMenuOpen,
-    onClose: onMenuClose,
-  } = useDisclosure();
   const {
     isOpen: isModalOpen,
     onOpen: onModalOpen,
@@ -48,8 +40,7 @@ export default function NavBar() {
     return () => {
       disconnectSocket();
     };
-  }, [isSignedIn]); 
-
+  }, [isSignedIn]);
 
   useEffect(() => {
     if (user) fetchImage();
@@ -72,16 +63,16 @@ export default function NavBar() {
       if (response.ok) {
         const imgBlob = await response.blob();
         if (img) {
-          URL.revokeObjectURL(img); 
+          URL.revokeObjectURL(img);
         }
         const imgUrl = URL.createObjectURL(imgBlob);
         setImg(imgUrl);
       } else {
-        setImg("./default_profile.png"); 
+        setImg("./default_profile.png");
       }
     } catch (err) {
       console.error("Error fetching profile picture:", err);
-      setImg("./default_profile.png"); 
+      setImg("./default_profile.png");
     }
   }
   
@@ -104,105 +95,100 @@ export default function NavBar() {
   };
 
   return (
-    <>
-      <div>
-        <Box bg={useColorModeValue("blackAlpha.100", "blackAlpha.900")} px={4}>
-          <Flex h={16} alignItems={"center"} justifyContent={"space-between"}>
-            <IconButton
-              size={"sm"}
-              icon={isMenuOpen ? <CloseIcon /> : <HamburgerIcon />}
-              aria-label={"Open-menu"}
-              display={{ md: "none" }}
-              onClick={isMenuOpen ? onMenuClose : onMenuOpen}
-            />
-
-            {/*for now this icon menu is not working , we will work on this later*/}
-
-            <HStack spacing={8} alignItems={"center"}>
-              <NavLink to="/"> Home </NavLink>
-              <HStack
-                as={"nav"}
-                spacing={4}
-                display={{ base: "none", md: "flex" }}
-              >
-                {Object.entries(Links).map(([key, link]) => (
-                  <NavLink key={key} to={link}>
-                    {key}
-                  </NavLink>
-                ))}
-              </HStack>
+    <Box bg={useColorModeValue("gray.50", "gray.900")} px={6} borderBottom="1px" borderColor={useColorModeValue("gray.200", "gray.700")}>
+      <Flex h={16} alignItems="center" justifyContent="space-between" mx="auto">
+        <HStack spacing={8} alignItems="center">
+          <NavLink 
+            to="/"
+            style={({ isActive }) => ({
+              fontWeight: isActive ? 'bold' : 'normal',
+              color: isActive ? '#319795' : 'inherit'
+            })}
+          >
+            Home
+          </NavLink>
+          {isSignedIn && (
+            <HStack as="nav" spacing={4} display={{ base: "none", md: "flex" }}>
+              {Object.entries(Links).map(([key, link]) => (
+                <NavLink
+                  key={key}
+                  to={link}
+                  style={({ isActive }) => ({
+                    fontWeight: isActive ? 'bold' : 'normal',
+                    color: isActive ? '#319795' : 'inherit'
+                  })}
+                >
+                  {key}
+                </NavLink>
+              ))}
             </HStack>
-            <Flex alignItems={"center"}>
-              {!isSignedIn ? (
-                <>
-                  <Button
-                    as={Link}
-                    to={"/sign-in"}
-                    variant={"solid"}
-                    colorScheme={"teal"}
-                    size={"md"}
-                    mr={4}
-                  >
-                    Sign-in
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Avatar
-                    as="button"
-                    onClick={onModalOpen}
-                    size="md"
-                    src={img}
-                    border="2px"
-                    marginRight="8px"
-                  />
+          )}
+        </HStack>
 
-                  <Modal
-                    isOpen={isModalOpen}
-                    onClose={onModalClose}
-                    isCentered
-                    size="xl"
-                  >
-                    <ModalOverlay />
-                    <ModalContent>
-                      <ModalHeader>Edit Profile</ModalHeader>
-                      <ModalCloseButton />
-                      <ModalBody>
-                        <FormControl>
-                          <FormLabel>Select Image</FormLabel>
-                          <Input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => setImgToUpload(e.target.files[0])}
-                          />
-                          <Button
-                            onClick={handleProfileChange}
-                            colorScheme="teal"
-                            mt={4}
-                            isDisabled={!imgToUpload}
-                          >
-                            Update Profile
-                          </Button>
-                        </FormControl>
-                      </ModalBody>
-                    </ModalContent>
-                  </Modal>
+        <HStack spacing={4}>
+          {!isSignedIn ? (
+            <Button
+              as={Link}
+              to="/sign-in"
+              colorScheme="teal"
+              size="md"
+            >
+              Sign-in
+            </Button>
+          ) : (
+            <>
+              <Avatar
+                as="button"
+                onClick={onModalOpen}
+                size="sm"
+                src={img}
+                cursor="pointer"
+                _hover={{ opacity: 0.8 }}
+              />
+              <Button
+                onClick={handleSignout}
+                colorScheme="teal"
+                size="md"
+              >
+                Sign-out
+              </Button>
+            </>
+          )}
+        </HStack>
+      </Flex>
 
-                  <Button
-                    onClick={handleSignout}
-                    variant="solid"
-                    colorScheme="teal"
-                    size="md"
-                    mr={4}
-                  >
-                    Sign-out
-                  </Button>
-                </>
-              )}
-            </Flex>
-          </Flex>
-        </Box>
-      </div>
-    </>
+      <Modal
+        isOpen={isModalOpen}
+        onClose={onModalClose}
+        isCentered
+        size="md"
+      >
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Edit Profile Picture</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody pb={6}>
+            <FormControl>
+              <FormLabel>Upload new image</FormLabel>
+              <Input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setImgToUpload(e.target.files[0])}
+                py={1}
+              />
+              <Button
+                onClick={handleProfileChange}
+                colorScheme="teal"
+                mt={4}
+                isDisabled={!imgToUpload}
+                w="full"
+              >
+                Update Profile
+              </Button>
+            </FormControl>
+          </ModalBody>
+        </ModalContent>
+      </Modal>
+    </Box>
   );
 }
