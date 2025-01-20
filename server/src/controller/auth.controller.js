@@ -9,7 +9,7 @@ export const signIn = async (req, res) => {
   };
   const { username, password } = req.body;
   if (!username || !password) {
-    return res.status(400).json({ error: "Fill out the credentials" });
+    return res.status(400).json({ message: "Fill out the credentials" });
   }
   const searchQuery = `select case when count(*) > 0 then TRUE else FALSE end as is_valid from users where username=$1 and password=$2;`;
 
@@ -22,7 +22,7 @@ export const signIn = async (req, res) => {
         .status(200)
         .send({ token: token, message: "Sign in Successfull" });
     } else {
-      return res.status(400).send({ error: "Sign in Failed" });
+      return res.status(400).send({ message: "Sign in Failed" });
     }
   } catch (err) {
     return res

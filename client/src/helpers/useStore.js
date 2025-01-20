@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { io } from "socket.io-client";
+import toast from "react-hot-toast";
 
 const baseURL = import.meta.env.MODE === "development" ? "http://localhost:50136" : ""; 
 
@@ -29,14 +30,16 @@ export const useStore = create(
 
           if (!res.ok) {
             let data = await res.json();
-            console.error(data.error);
+            console.error(data.message);
             return;
           }
           const data = await res.json();
           localStorage.setItem("token", data.token);
           set({ isSignedIn: true, user: credentials.username });
           get().connectSocket();
+          toast.success("Signed in successfully");
         } catch (err) {
+          toast.error(err.message);
           console.error(
             "Error : ",
             err.stack || err.stack || "Unexpected error."
@@ -46,6 +49,7 @@ export const useStore = create(
 
       signout: () => {
         set({ isSignedIn: false, user: null });
+        toast.success("Signed out successfully");
         get().disconnectSocket();
         ["states", "token"].forEach((key) => localStorage.removeItem(key));
       },
@@ -62,11 +66,14 @@ export const useStore = create(
           const data = await res.json();
           if (res.ok) {
             set({ isSignedUp: true });
+            toast.success("Account created successfully");
             console.log(data.message);
           } else {
+            toast.error(data.error);
             console.log(data.error);
           }
         } catch (err) {
+          toast.error(err.error);
           console.error(
             "Error : ",
             err.error || err.stack || "Unexpected error."
@@ -92,6 +99,7 @@ export const useStore = create(
           if (!req.ok) {
             console.error(res.error);
           } else {
+          toast.success("Signed in successfully");
             set({ user: res });
           }
         } catch (err) {
@@ -129,11 +137,14 @@ export const useStore = create(
           const res = await req.json();
           if (req.ok) {
             console.log(res.message || "Image uploaded successfully.");
+            toast.success(req.message);
             return res.image;
           } else {
+            toast.error(res.error);
             console.error(res.error || "Failed to upload image.");
           }
         } catch (err) {
+          toast.error(err.error);
           console.error(
             "Error:",
             err.message || err.stack || "Unexpected error."
@@ -248,8 +259,10 @@ export const useStore = create(
           set((state) => ({ 
             messages: [...state.messages, newMessage]
           }));
+          toast.success(data.message);
         } catch(err) {
           console.error("Error:", err?.message || "Failed to send message");
+          toast.error(err.error);
           throw err;
         }
       },

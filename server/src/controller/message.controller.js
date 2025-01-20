@@ -47,6 +47,7 @@ export const sendMessages = async (req, res) => {
       const msg = conversationQuery.rows[0].message;
       io.to(socketId).emit("newMessage", { msg , image, sender, receiver, created_at });
       console.log("Message sent successfully from the socket's server to :", receiver);
+      return res.status(200).json({ message: "Message sendt successfully" });
     }
 
     return res.status(200).json({ message: "Message sent successfully" });

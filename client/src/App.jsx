@@ -6,12 +6,16 @@ import GetUsers from "./pages/GetUsers";
 import { Box, useColorModeValue } from "@chakra-ui/react";
 import SignUp from "./pages/SignUp";
 import ChatContainer from "./pages/ChatContainer";
+import { Toaster } from "react-hot-toast";
 
 function App() {
   return (
     <>
-      <Box minH={"100vh"} bg={useColorModeValue('blackAlpha.100', 'blackAlpha.900')}>
-        <NavBar/>
+      <Box
+        minH={"100vh"}
+        bg={useColorModeValue("blackAlpha.100", "blackAlpha.900")}
+      >
+        <NavBar />
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/chat/:receiver" element={<ChatContainer />} />
@@ -19,7 +23,8 @@ function App() {
           <Route path="/create-account" element={<SignUp />} />
           <Route path="/sign-in" element={<SignIn />} />
         </Routes>
-      </Box >
+        <Toaster position="bottom-center" reverseOrder={false} />
+      </Box>
     </>
   );
 }
