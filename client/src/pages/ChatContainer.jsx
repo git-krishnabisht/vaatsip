@@ -81,6 +81,7 @@ export default function ChatContainer() {
 
   const handleOutgoingMessages = async () => {
     if (!outgoingMessages.message.trim() && !outgoingMessages.image_data) {
+      toast.error("Message or image must be provided");
       console.error("Message or image must be provided");
       return;
     }

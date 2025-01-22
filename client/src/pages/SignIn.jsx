@@ -28,6 +28,9 @@ export default function SignIn() {
     if (isSignedIn) {
       navigate("/");
       await getuser();
+      toast.success("Signed-in successfully");
+    } else {
+      toast.error("Signed-in failed");
     }
   };
 

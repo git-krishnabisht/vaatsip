@@ -87,7 +87,6 @@ export default function NavBar() {
     }
     uploadprofile(imgToUpload);
     onModalClose();
-    window.location.reload();
   }
 
   const Links = {

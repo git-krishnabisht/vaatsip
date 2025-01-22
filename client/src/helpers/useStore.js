@@ -39,7 +39,7 @@ export const useStore = create(
           get().connectSocket();
           toast.success("Signed in successfully");
         } catch (err) {
-          toast.error(err.message);
+          toast.error("Something is wrong");
           console.error(
             "Error : ",
             err.stack || err.stack || "Unexpected error."
@@ -49,9 +49,9 @@ export const useStore = create(
 
       signout: () => {
         set({ isSignedIn: false, user: null });
-        toast.success("Signed out successfully");
         get().disconnectSocket();
         ["states", "token"].forEach((key) => localStorage.removeItem(key));
+        toast.success("Signed out successfully");
       },
 
       signup: async (credentials) => {
@@ -69,11 +69,11 @@ export const useStore = create(
             toast.success("Account created successfully");
             console.log(data.message);
           } else {
-            toast.error(data.error);
+            toast.error("Failed");
             console.log(data.error);
           }
         } catch (err) {
-          toast.error(err.error);
+          toast.error("Something is wrong");
           console.error(
             "Error : ",
             err.error || err.stack || "Unexpected error."
@@ -137,14 +137,14 @@ export const useStore = create(
           const res = await req.json();
           if (req.ok) {
             console.log(res.message || "Image uploaded successfully.");
-            toast.success(req.message);
+            toast.success("Profile uploaded successfully");
             return res.image;
           } else {
-            toast.error(res.error);
+            toast.error("Failed");
             console.error(res.error || "Failed to upload image.");
           }
         } catch (err) {
-          toast.error(err.error);
+          toast.error("Something is wrong");
           console.error(
             "Error:",
             err.message || err.stack || "Unexpected error."
@@ -172,7 +172,6 @@ export const useStore = create(
         }
       },
 
-      // All Real time chat helpers
       connectSocket: () => {
         const isSignedIn = get().isSignedIn;
         if (!isSignedIn || get().socket?.connected) {
@@ -259,10 +258,10 @@ export const useStore = create(
           set((state) => ({ 
             messages: [...state.messages, newMessage]
           }));
-          toast.success(data.message);
+          toast.success("Message sent successfully");
         } catch(err) {
           console.error("Error:", err?.message || "Failed to send message");
-          toast.error(err.error);
+          toast.error("Something is wrong");
           throw err;
         }
       },

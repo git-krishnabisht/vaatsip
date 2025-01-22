@@ -39,6 +39,9 @@ export default function SignUp() {
     const isSignedUp = useStore.getState().isSignedUp;
     if (isSignedUp) {
       navigate("/");
+      toast.success("You have signed-up sucessfully");
+    } else {
+      toast.error("Sign-up failed");
     }
   };
 
