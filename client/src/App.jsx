@@ -7,6 +7,7 @@ import { Box, useColorModeValue } from "@chakra-ui/react";
 import SignUp from "./pages/SignUp";
 import ChatContainer from "./pages/ChatContainer";
 import { Toaster } from "react-hot-toast";
+import UsersProfile from "./pages/UsersProfile";
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
           <Route path="/get-users" element={<GetUsers />} />
           <Route path="/create-account" element={<SignUp />} />
           <Route path="/sign-in" element={<SignIn />} />
+          <Route path="/user/:user" element={<UsersProfile />} />
         </Routes>
         <Toaster position="bottom-center" reverseOrder={false} />
       </Box>

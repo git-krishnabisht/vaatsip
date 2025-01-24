@@ -1,7 +1,7 @@
 import express from "express";
 import multer from "multer";
 import { protectedRoute } from "../middleware/auth.middleware.js";
-import { signIn, signUp, uploadProfile, getPictures, getUsers, getUser, userDelete, userUpdate } from "../controller/auth.controller.js";
+import { signIn, signUp, uploadProfile, getPictures, getUsers, getUser, userDelete, userUpdate, userDetails } from "../controller/auth.controller.js";
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
@@ -15,5 +15,6 @@ router.get("/get-users", protectedRoute, getUsers);
 router.get("/get-user", protectedRoute, getUser);
 router.delete("/user-delete", userDelete); //No use for now
 router.put("/user-update", userUpdate); //No use for now
+router.get("/user-details/:user", protectedRoute, userDetails);
 
 export default router;

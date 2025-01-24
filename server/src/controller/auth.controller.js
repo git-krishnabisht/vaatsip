@@ -2,6 +2,19 @@ import jwt from "jsonwebtoken";
 import { fileTypeFromBuffer } from "file-type";
 import db from "../lib/db.js";
 
+export const userDetails = async (req, res) => {
+  try {
+    const { user } = req.params;
+    if (!user) {
+      return res.status(400).json({ message: "User not found" });
+    }
+    const details = await db.query("select * from users where username = $1;", [ user ]);
+    return res.status(200).json({ details: details.rows[0] });
+  } catch (err) {
+    return res.status(500).json({ error: "Something is wrong with the /user-details : " + err.stack || err });
+  }
+};
+
 export const signIn = async (req, res) => {
   const signOptions = {
     expiresIn: "7d",

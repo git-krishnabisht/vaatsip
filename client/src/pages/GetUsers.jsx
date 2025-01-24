@@ -3,13 +3,11 @@ import { useEffect, useState } from "react";
 import { fileTypeFromBuffer } from "file-type";
 import { ChatIcon, AtSignIcon } from "@chakra-ui/icons";
 import {
-  Button,
   Card,
   CardBody,
   CardFooter,
   Divider,
   Image,
-  Text,
 } from "@chakra-ui/react";
 import { Link } from "react-router-dom";
 
@@ -85,7 +83,7 @@ export default function GetUsers() {
               <Link to={`/chat/${user.username}`}>
                 <ChatIcon marginRight="30px" />
               </Link>
-              <Link to="/">
+              <Link to={`/user/${user.username}`}>
                 <AtSignIcon />
               </Link>
             </CardFooter>

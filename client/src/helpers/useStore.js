@@ -17,6 +17,7 @@ export const useStore = create(
       onlineUsers: [],
       messages: [],
       socket: null,
+      userDetails: [],
       
       signin: async (credentials) => {
         try {
@@ -169,6 +170,30 @@ export const useStore = create(
           set({ users });
         } catch (err) {
           console.error("Error:", err || err.messgae || err.stack || "Unexpected error.");
+        }
+      },
+
+      getuserdetails: async() => {
+        try {
+          const token = localStorage.getItem("token");
+          if(!token) {
+            console.error("No token found in the localstorage");
+          }
+
+          const response = await fetch(`${baseURL}/api/auth/user-details/${get().user}`, {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            }
+          });
+
+          if(!response.ok) {
+            console.error("Something is wrong with the response");
+          }
+          const details = await response.json();
+          set({ userDetails: details });
+        } catch(err) {
+          console.error(err);
         }
       },
 
