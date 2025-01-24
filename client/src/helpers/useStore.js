@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { io } from "socket.io-client";
 import toast from "react-hot-toast";
+import { useParams } from "react-router-dom";
 
 const baseURL = import.meta.env.MODE === "development" ? "http://localhost:50136" : ""; 
 
@@ -17,7 +18,7 @@ export const useStore = create(
       onlineUsers: [],
       messages: [],
       socket: null,
-      userDetails: [],
+      userDetails: null,
       
       signin: async (credentials) => {
         try {
@@ -100,7 +101,6 @@ export const useStore = create(
           if (!req.ok) {
             console.error(res.error);
           } else {
-          toast.success("Signed in successfully");
             set({ user: res });
           }
         } catch (err) {
@@ -173,14 +173,14 @@ export const useStore = create(
         }
       },
 
-      getuserdetails: async() => {
+      getuserdetails: async(user) => {
         try {
           const token = localStorage.getItem("token");
           if(!token) {
             console.error("No token found in the localstorage");
           }
 
-          const response = await fetch(`${baseURL}/api/auth/user-details/${get().user}`, {
+          const response = await fetch(`${baseURL}/api/auth/user-details/${user}`, {
             method: "GET",
             headers: {
               Authorization: `Bearer ${token}`,
@@ -191,7 +191,7 @@ export const useStore = create(
             console.error("Something is wrong with the response");
           }
           const details = await response.json();
-          set({ userDetails: details });
+          set({ userDetails: details.details });
         } catch(err) {
           console.error(err);
         }

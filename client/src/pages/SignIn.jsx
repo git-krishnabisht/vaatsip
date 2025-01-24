@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Box,
   Button,
@@ -21,24 +21,28 @@ export default function SignIn() {
     password: "",
   });
   const { signin, getuser } = useStore();
+  const isSignedIn = useStore((state) => state.isSignedIn);
+
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      if (isSignedIn) {
+        navigate("/");
+        await getuser();
+      }
+    };
+    fetchUser();
+  }, [isSignedIn, navigate, getuser]);
 
   const handleLogin = async () => {
     await signin(formData);
-    const isSignedIn = useStore.getState().isSignedIn;
-    if (isSignedIn) {
-      navigate("/");
-      await getuser();
-      toast.success("Signed-in successfully");
-    } else {
-      toast.error("Signed-in failed");
-    }
   };
 
   return (
     <Container maxW="md" centerContent>
       <Box
         p={8}
-        width={"120%"}
+        width="100%"
         borderWidth={1}
         borderRadius="lg"
         boxShadow="lg"
