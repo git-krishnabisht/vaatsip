@@ -2,7 +2,6 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { io } from "socket.io-client";
 import toast from "react-hot-toast";
-import { useParams } from "react-router-dom";
 
 const baseURL = import.meta.env.MODE === "development" ? "http://localhost:50136" : ""; 
 

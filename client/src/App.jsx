@@ -1,32 +1,23 @@
-import { Route, Routes } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import HomePage from "./pages/HomePage";
 import NavBar from "./pages/NavBar";
-import SignIn from "./pages/SignIn";
-import GetUsers from "./pages/GetUsers";
-import { Box, useColorModeValue } from "@chakra-ui/react";
-import SignUp from "./pages/SignUp";
-import ChatContainer from "./pages/ChatContainer";
-import { Toaster } from "react-hot-toast";
-import UsersProfile from "./pages/UsersProfile";
+import AboutUsPage from "./pages/AboutUsPage";
+import { Container } from "@chakra-ui/react";
+import SignInPage from "./pages/SignInPage";
 
 function App() {
   return (
     <>
-      <Box
-        minH={"100vh"}
-        bg={useColorModeValue("blackAlpha.100", "blackAlpha.900")}
-      >
-        <NavBar />
+    <Container>
+      <NavBar />
+      <Container fluid>
         <Routes>
           <Route path="/" element={<HomePage />} />
-          <Route path="/chat/:receiver" element={<ChatContainer />} />
-          <Route path="/get-users" element={<GetUsers />} />
-          <Route path="/create-account" element={<SignUp />} />
-          <Route path="/sign-in" element={<SignIn />} />
-          <Route path="/user/:user" element={<UsersProfile />} />
+          <Route path="/about" element={<AboutUsPage />} />
+          <Route path="/sign-in" element={<SignInPage />} />
         </Routes>
-        <Toaster position="bottom-center" reverseOrder={false} />
-      </Box>
+      </Container>
+    </Container>
     </>
   );
 }
