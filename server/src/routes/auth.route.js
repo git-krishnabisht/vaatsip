@@ -13,8 +13,8 @@ router.post("/upload-profile", upload.single("image"), protectedRoute, uploadPro
 router.get("/get-pictures/:username", getPictures);
 router.get("/get-users", protectedRoute, getUsers);
 router.get("/get-user", protectedRoute, getUser);
-router.delete("/user-delete", userDelete); //No use for now
-router.put("/user-update", userUpdate); //No use for now
+router.delete("/user-delete", userDelete); 
+router.put("/user-update", userUpdate); 
 router.get("/user-details/:user", protectedRoute, userDetails);
 
 export default router;

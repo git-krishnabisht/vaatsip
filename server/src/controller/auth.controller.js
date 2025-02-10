@@ -31,6 +31,7 @@ export const signIn = async (req, res) => {
     var token = jwt.sign({ username }, process.env.PRIVATE_KEY, signOptions);
 
     if (result.rows[0].is_valid) {
+      console.log("signed in bitch");
       return res
         .status(200)
         .send({ token: token, message: "Sign in Successfull" });

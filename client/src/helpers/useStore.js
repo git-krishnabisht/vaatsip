@@ -3,7 +3,7 @@ import { persist } from "zustand/middleware";
 import { io } from "socket.io-client";
 import toast from "react-hot-toast";
 
-const baseURL = import.meta.env.MODE === "development" ? "http://localhost:50136" : ""; 
+const baseURL = import.meta.env.MODE === "development" ? "http://localhost:50136" : "";
 
 export const useStore = create(
   persist(
@@ -18,7 +18,7 @@ export const useStore = create(
       messages: [],
       socket: null,
       userDetails: null,
-      
+
       signin: async (credentials) => {
         try {
           const res = await fetch(`${baseURL}/api/auth/sign-in`, {
@@ -29,22 +29,26 @@ export const useStore = create(
             body: JSON.stringify(credentials),
           });
 
+          const data = await res.json();
+
           if (!res.ok) {
-            let data = await res.json();
-            console.error(data.message);
+            console.error(data.message || "Sign-in failed");
+            toast.error(data.message || "Sign-in failed");
             return;
           }
-          const data = await res.json();
-          localStorage.setItem("token", data.token);
-          set({ isSignedIn: true, user: credentials.username });
-          get().connectSocket();
-          toast.success("Signed in successfully");
+
+          if (data.token) {
+            localStorage.setItem("token", data.token);
+            set({ isSignedIn: true, user: credentials.username });
+            get().connectSocket();
+            toast.success("Signed in successfully");
+          } else {
+            console.error("No token received from server");
+            toast.error("Authentication failed");
+          }
         } catch (err) {
           toast.error("Something is wrong");
-          console.error(
-            "Error : ",
-            err.stack || err.stack || "Unexpected error."
-          );
+          console.error("Error:", err.message || err.stack || "Unexpected error.");
         }
       },
 
@@ -172,10 +176,10 @@ export const useStore = create(
         }
       },
 
-      getuserdetails: async(user) => {
+      getuserdetails: async (user) => {
         try {
           const token = localStorage.getItem("token");
-          if(!token) {
+          if (!token) {
             console.error("No token found in the localstorage");
           }
 
@@ -186,12 +190,12 @@ export const useStore = create(
             }
           });
 
-          if(!response.ok) {
+          if (!response.ok) {
             console.error("Something is wrong with the response");
           }
           const details = await response.json();
           set({ userDetails: details.details });
-        } catch(err) {
+        } catch (err) {
           console.error(err);
         }
       },
@@ -232,16 +236,16 @@ export const useStore = create(
         });
       },
 
-      unsubscribeFromMessages: async() => {
+      unsubscribeFromMessages: async () => {
         const socket = get().socket;
         socket.off("newMessage");
       },
 
       convertFileToBinary: async (file) => {
         let aBuffer;
-        if(file.arrayBuffer) {
+        if (file.arrayBuffer) {
           aBuffer = await file.arrayBuffer();
-        } else if(!file.arrayBuffer) {
+        } else if (!file.arrayBuffer) {
           return { data: null, type: null };
         }
         const data = new Uint8Array(aBuffer);
@@ -277,19 +281,19 @@ export const useStore = create(
             image_data: temp,
             sender: msg.sender,
             receiver: msg.receiver,
-            created_at: new Date().toISOString(), 
+            created_at: new Date().toISOString(),
           };
-          set((state) => ({ 
+          set((state) => ({
             messages: [...state.messages, newMessage]
           }));
           toast.success("Message sent successfully");
-        } catch(err) {
+        } catch (err) {
           console.error("Error:", err?.message || "Failed to send message");
           toast.error("Something is wrong");
           throw err;
         }
       },
-      
+
       getMessages: async (receiver) => {
         try {
           if (!receiver) {
