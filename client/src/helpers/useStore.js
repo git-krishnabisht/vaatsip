@@ -2,7 +2,6 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { io } from "socket.io-client";
 import toast from "react-hot-toast";
-
 const baseURL = import.meta.env.MODE === "development" ? "http://localhost:50136" : "";
 
 export const useStore = create(
@@ -11,7 +10,7 @@ export const useStore = create(
       isSignedIn: null,
       isSignedUp: null,
       user: null,
-      users: {},
+      users: [],
       receiver: null,
       userImage: null,
       onlineUsers: [],

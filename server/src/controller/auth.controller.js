@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import { fileTypeFromBuffer } from "file-type";
 import db from "../lib/db.js";
+import imageType from "image-type";
 
 export const userDetails = async (req, res) => {
   try {
@@ -100,7 +101,6 @@ export const uploadProfile =  async (req, res) => {
     }
 
     const image = req.file.buffer;
-
     const result = await db.query(
       "UPDATE users SET image = $1 WHERE username = $2 RETURNING username;",
       [image, username]
@@ -157,7 +157,13 @@ export const getPictures = async (req, res) => {
 export const getUsers = async (_, res) => {
   try {
     const { rows } = await db.query("SELECT username,image FROM users");
-    return res.status(200).json(rows);
+    const usersWithBase64 = rows.map((user) => {
+      if(!user.image) return { username: user.username, image: null };
+      const type = imageType(user.image)?.mime || "image/jpeg";
+      const base64Image = `data:${type};base64,${user.image.toString("base64")}`;
+      return { username: user.username, image: base64Image };
+    });
+    res.json(usersWithBase64);
   } catch (err) {
     return res.status(500).json({
       error: "Something is wrong with the /get-users :\n " + err.stack,
