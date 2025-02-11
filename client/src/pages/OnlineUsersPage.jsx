@@ -7,8 +7,6 @@ import {
   Text,
   VStack,
   Container,
-  Heading,
-  Badge,
 } from "@chakra-ui/react";
 
 function OnlineUsersPage() {
@@ -24,17 +22,16 @@ function OnlineUsersPage() {
 
   return (
     <Container maxW="container.md" py={8}>
-      <VStack spacing={6} align="stretch">
+      <VStack spacing={6} align="stretch" >
         {users.map((user, index) => (
           <Box
             key={user.username || index}
-            bg="gray.50"
-            borderRadius="lg"
+            borderRadius="20px"
             boxShadow="sm"
             transition="all 0.2s"
             _hover={{
-              transform: "translateY(-2px)",
-              boxShadow: "md",
+              transform: "translateY(-1px)",
+              boxShadow: "sm",
               bg: "gray.100",
             }}
           >
@@ -48,10 +45,10 @@ function OnlineUsersPage() {
                   src={user.image}
                   alt={user.username}
                   boxSize="50px"
-                  borderRadius="full"
+                  borderRadius="20px"
                   objectFit="cover"
-                  border="2px solid"
-                  borderColor="gray.400"
+                  border="3px solid"
+                  borderColor={"green.500"}
                 />
                 <Box
                   position="absolute"
@@ -59,15 +56,15 @@ function OnlineUsersPage() {
                   right="0"
                   w="12px"
                   h="12px"
-                  bg="green.400"
+                  bg="green.500"
                   borderRadius="full"
                   border="2px solid white"
                 />
               </Box>
-              <VStack align="start" spacing={1} flex={1}>
+              <VStack align="start">
                 <Text
                   fontWeight="500"
-                  fontSize="sm"
+                  fontSize="md"
                   textTransform="uppercase"
                 >
                   {user.username}

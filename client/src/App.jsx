@@ -10,9 +10,8 @@ import { Toaster } from "react-hot-toast";
 function App() {
   return (
     <>
-    <Container>
-      <NavBar />
       <Container fluid>
+        <NavBar />
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/about" element={<AboutUsPage />} />
@@ -21,7 +20,6 @@ function App() {
         </Routes>
         <Toaster position="bottom-center" reverseOrder={false} />
       </Container>
-    </Container>
     </>
   );
 }

@@ -7,7 +7,7 @@ const BeforeSignInLinks = {
 };
 
 const AfterSignInLinks = {
-  "Users" : "/online-users",
+  "Users": "/online-users",
   "About us": "/about",
 };
 
@@ -19,6 +19,33 @@ function NavBar() {
     signout();
   }
 
+  const NavLink = ({ href, children }) => (
+    <Box
+      as="a"
+      href={href}
+      position="relative"
+      style={{ textDecoration: "none", color: "inherit" }}
+      _after={{
+        content: '""',
+        position: "absolute",
+        width: "0%",
+        height: "2px",
+        bottom: "-4px",
+        left: "50%",
+        backgroundColor: "green.500",
+        transition: "all 0.3s ease",
+        transform: "translateX(-50%)",
+      }}
+      _hover={{
+        _after: {
+          width: "100%"
+        }
+      }}
+    >
+      {children}
+    </Box>
+  );
+
   return (
     <>
       <Box
@@ -26,30 +53,31 @@ function NavBar() {
         height="50px"
         display="flex"
         alignItems="center"
-        borderBottom={"1px solid"}
-        borderBottomColor={"black"}
+        borderBottom="1px solid"
+        borderBottomColor="black"
         gap={5}
-        px={"4px"}
+        px="4px"
       >
         <h2>
-          {" "} <a href="/" style={{ textDecoration: "none", color: "inherit" }}> {" "} Home{" "} </a>{" "}
+          <a href="/" style={{ textDecoration: "none", color: "inherit" }}>Home</a>
         </h2>
-
+        
         {!isSignedIn ? 
           Object.entries(BeforeSignInLinks).map(([tag, path]) => (
-            <a key={tag} href={path} style={{ textDecoration: "none", color: "inherit" }} > {" "}{tag}{" "} </a>
+            <NavLink key={tag} href={path}>{tag}</NavLink>
           ))
           : 
           Object.entries(AfterSignInLinks).map(([tag, path]) => (
-            <a key={tag} href={path} style={{ textDecoration: "none", color: "inherit" }} > {" "}{tag}{" "} </a>
+            <NavLink key={tag} href={path}>{tag}</NavLink>
           ))
         }
-
+        
         <Spacer />
-        { !isSignedIn ? 
-          <Button as={Link} to="/sign-in" size={"sm"}> Sign-in </Button>
+        
+        {!isSignedIn ? 
+          <Button as={Link} to="/sign-in" size="sm" >Sign-in</Button>
           : 
-          <Button onClick={handleSignout} size={"sm"}> Sign-out</Button>
+          <Button onClick={handleSignout} size="sm">Sign-out</Button>
         }
       </Box>
     </>
