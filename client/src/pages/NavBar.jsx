@@ -1,5 +1,5 @@
-import { Box, Button, Spacer } from "@chakra-ui/react";
-import { Link } from "react-router-dom";
+import { Box, Button, Spacer, Spinner } from "@chakra-ui/react";
+import { Link, useNavigate } from "react-router-dom";
 import { useStore } from "../helpers/useStore";
 
 const BeforeSignInLinks = {
@@ -7,16 +7,18 @@ const BeforeSignInLinks = {
 };
 
 const AfterSignInLinks = {
-  "Users": "/online-users",
+  Users: "/users",
   "About us": "/about",
 };
 
 function NavBar() {
   const { signout } = useStore();
   const isSignedIn = useStore((state) => state.isSignedIn);
+  const navigate = useNavigate();
 
   function handleSignout() {
     signout();
+    navigate("/");
   }
 
   const NavLink = ({ href, children }) => (
@@ -38,8 +40,8 @@ function NavBar() {
       }}
       _hover={{
         _after: {
-          width: "100%"
-        }
+          width: "100%",
+        },
       }}
     >
       {children}
@@ -59,26 +61,34 @@ function NavBar() {
         px="4px"
       >
         <h2>
-          <a href="/" style={{ textDecoration: "none", color: "inherit" }}>Home</a>
+          <a href="/" style={{ textDecoration: "none", color: "inherit" }}>
+            Home
+          </a>
         </h2>
-        
+
         {!isSignedIn ? 
           Object.entries(BeforeSignInLinks).map(([tag, path]) => (
-            <NavLink key={tag} href={path}>{tag}</NavLink>
+            <NavLink key={tag} href={path}>
+              {tag}
+            </NavLink>
           ))
-          : 
-          Object.entries(AfterSignInLinks).map(([tag, path]) => (
-            <NavLink key={tag} href={path}>{tag}</NavLink>
-          ))
-        }
-        
+        : Object.entries(AfterSignInLinks).map(([tag, path]) => (
+            <NavLink key={tag} href={path}>
+              {tag}
+            </NavLink>
+        ))}
+
         <Spacer />
-        
-        {!isSignedIn ? 
-          <Button as={Link} to="/sign-in" size="sm" >Sign-in</Button>
-          : 
-          <Button onClick={handleSignout} size="sm">Sign-out</Button>
-        }
+
+        {!isSignedIn ? (
+          <Button as={Link} to="/sign-in" size="sm">
+            Sign-in
+          </Button>
+        ) : (
+          <Button onClick={handleSignout} size="sm">
+            Sign-out
+          </Button>
+        )}
       </Box>
     </>
   );

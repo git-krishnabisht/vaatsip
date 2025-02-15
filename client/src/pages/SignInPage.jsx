@@ -3,9 +3,12 @@ import { Button, Container, Input, Stack } from "@chakra-ui/react";
 import { Field } from "@/components/ui/field";
 import { useNavigate } from "react-router-dom";
 import { useStore } from "../helpers/useStore";
+import {
+  PasswordInput,
+  PasswordStrengthMeter,
+} from "@/components/ui/password-input"
 
 function SignInPage() {
-
   const navigate = useNavigate();
   const { signin } = useStore();
   const isSignedIn = useStore((state) => state.isSignedIn);
@@ -20,7 +23,7 @@ function SignInPage() {
 
   useEffect(() => {
     if (isSignedIn) {
-      navigate("/online-users");
+      navigate("/");
     }
   }, [isSignedIn, navigate]);
 
@@ -40,7 +43,7 @@ function SignInPage() {
           />
         </Field>
         <Field label="Password" required marginBottom="10px">
-          <Input
+          <PasswordInput
             placeholder="Password"
             minWidth={320}
             type="password"

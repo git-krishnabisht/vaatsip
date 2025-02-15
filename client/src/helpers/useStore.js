@@ -48,7 +48,7 @@ export const useStore = create(
         } catch (err) {
           toast.error("Something is wrong");
           console.error("Error:", err.message || err.stack || "Unexpected error.");
-        }
+        } 
       },
 
       signout: () => {
