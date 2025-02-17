@@ -7,7 +7,7 @@ import SignInPage from "./pages/SignInPage";
 import UsersPage from "./pages/UsersPage";
 import { Toaster } from "react-hot-toast";
 import ChatPage from "./pages/ChatPage";
-import ProfilePage from "./pages/ProfilePage";
+import ProfileDetailsPage from "./pages/ProfileDetailsPage";
 
 function App() {
   return (
@@ -20,7 +20,7 @@ function App() {
           <Route path="/sign-in" element={<SignInPage />} />
           <Route path="/users" element={<UsersPage />} />
           <Route path="/chat" element={<ChatPage />} />
-          <Route path="/profile/:username" element={<ProfilePage />} />
+          <Route path="/profile/:username" element={<ProfileDetailsPage />} />
         </Routes>
         <Toaster position="bottom-center" reverseOrder={false} />
       </Container>

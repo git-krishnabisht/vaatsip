@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import db from "../lib/db.js";
+
 export const protectedRoute = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;

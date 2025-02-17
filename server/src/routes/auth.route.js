@@ -15,6 +15,6 @@ router.get("/get-users", protectedRoute, getUsers);
 router.get("/get-user", protectedRoute, getUser);
 router.delete("/user-delete", userDelete); 
 router.put("/user-update", userUpdate); 
-router.get("/user-details/:user", protectedRoute, userDetails);
+router.get("/user-details/:username", protectedRoute, userDetails);
 
 export default router;

@@ -3,18 +3,74 @@ import { fileTypeFromBuffer } from "file-type";
 import db from "../lib/db.js";
 import imageType from "image-type";
 
+export const getPictures = async (req, res) => {
+  const { username } = req.params;
+  try {
+    if (!username) {
+      return res.status(400).json({ message: "Username not found" });
+    }
+    const result = await db.query(
+      "SELECT image FROM users where username = $1;",
+      [username]
+    );
+    if (result.rows[0].image === null) {
+      return res.status(400);
+    }
+    const img = result.rows[0].image;
+    if (!img) {
+      return res
+        .status(404)
+        .json({ message: "No image found from the result query" });
+    }
+    const fileType = await fileTypeFromBuffer(img);
+    res.setHeader("Content-Type", fileType.mime);
+    res.setHeader(
+      "Content-Disposition",
+      `inline; filename="${username}-img.${fileType.ext}"`
+    );
+    res.send(img);
+  } catch (err) {
+    return res.status(500).json({
+      error: "Something is wrong with the /get-pictures :\n " + err.stack,
+    });
+  }
+};
+
 export const userDetails = async (req, res) => {
   try {
-    const { user } = req.params;
-    if (!user) {
+    const { username } = req.params;
+    if (!username) {
       return res.status(400).json({ message: "User not found" });
     }
-    const details = await db.query("select * from users where username = $1;", [ user ]);
-    return res.status(200).json({ details: details.rows[0] });
+    const details = await db.query("select * from users where username = $1;", [ username ]);
+    const _details = details.rows[0];
+    if(!_details.image) return res.status(200).json({ details: _details });
+    const type = imageType(_details.image)?.mime || "image/jpeg";
+    const base64Image = `data:${type};base64,${_details.image.toString("base64")}`;
+    const userdetails = { ..._details, image: base64Image };
+    return res.status(200).json({ details: userdetails });
   } catch (err) {
     return res.status(500).json({ error: "Something is wrong with the /user-details : " + err.stack || err });
   }
 };
+
+export const getUsers = async (_, res) => {
+  try {
+    const { rows } = await db.query("SELECT username,image FROM users");
+    const usersWithBase64 = rows.map((user) => {
+      if(!user.image) return { username: user.username, image: null };
+      const type = imageType(user.image)?.mime || "image/jpeg";
+      const base64Image = `data:${type};base64,${user.image.toString("base64")}`;
+      return { username: user.username, image: base64Image };
+    });
+    res.json(usersWithBase64);
+  } catch (err) {
+    return res.status(500).json({
+      error: "Something is wrong with the /get-users :\n " + err.stack,
+    });
+  }
+};
+
 
 export const signIn = async (req, res) => {
   const signOptions = {
@@ -38,7 +94,7 @@ export const signIn = async (req, res) => {
         .send({ token: token, message: "Sign in Successfull" });
     } else {
       return res.status(400).send({ message: "Sign in Failed" });
-    }
+}
   } catch (err) {
     return res
       .status(500)
@@ -121,55 +177,7 @@ export const uploadProfile =  async (req, res) => {
   }
 };
 
-export const getPictures = async (req, res) => {
-  const { username } = req.params;
-  try {
-    if (!username) {
-      return res.status(400).json({ message: "Username not found" });
-    }
-    const result = await db.query(
-      "SELECT image FROM users where username = $1;",
-      [username]
-    );
-    if (result.rows[0].image === null) {
-      return res.status(400);
-    }
-    const img = result.rows[0].image;
-    if (!img) {
-      return res
-        .status(404)
-        .json({ message: "No image found from the result query" });
-    }
-    const fileType = await fileTypeFromBuffer(img);
-    res.setHeader("Content-Type", fileType.mime);
-    res.setHeader(
-      "Content-Disposition",
-      `inline; filename="${username}-img.${fileType.ext}"`
-    );
-    res.send(img);
-  } catch (err) {
-    return res.status(500).json({
-      error: "Something is wrong with the /get-pictures :\n " + err.stack,
-    });
-  }
-};
 
-export const getUsers = async (_, res) => {
-  try {
-    const { rows } = await db.query("SELECT username,image FROM users");
-    const usersWithBase64 = rows.map((user) => {
-      if(!user.image) return { username: user.username, image: null };
-      const type = imageType(user.image)?.mime || "image/jpeg";
-      const base64Image = `data:${type};base64,${user.image.toString("base64")}`;
-      return { username: user.username, image: base64Image };
-    });
-    res.json(usersWithBase64);
-  } catch (err) {
-    return res.status(500).json({
-      error: "Something is wrong with the /get-users :\n " + err.stack,
-    });
-  }
-};
 
 export const getUser = async (req, res) => {
   try {
@@ -187,7 +195,6 @@ export const userDelete = async (req, res) => {
   }
   try {
     const result = await db.query(`delete from users where username=$1;`, [username]);
-    console.log("res", result);
     if (result.rowCount > 0) {
       return res.status(200).send({ message: "User deleted sucessfully" });
     } else {
