@@ -9,8 +9,16 @@ import { Provider } from "./components/ui/provider.jsx";
 ReactDom.createRoot(document.getElementById("root")).render(
   <BrowserRouter basename={import.meta.env.BASE_URL}>
     <Provider>
-      <ChakraProvider value={defaultSystem}>
-        <ColorModeProvider>
+      <ChakraProvider 
+        value={defaultSystem}
+        resetCSS 
+      >
+        <ColorModeProvider
+          options={{
+            initialColorMode: "system", 
+            useSystemColorMode: true, 
+          }}
+        >
           <App />
         </ColorModeProvider>
       </ChakraProvider>

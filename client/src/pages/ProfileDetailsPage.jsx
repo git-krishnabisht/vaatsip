@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useStore } from "../helpers/useStore";
+import { useStore } from "../services/useStore";
 import { useParams } from "react-router-dom";
 import {
   Container,

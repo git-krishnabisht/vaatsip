@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useStore } from "../helpers/useStore";
+import { useStore } from "../services/useStore";
 import {
   Box,
   HStack,
@@ -45,9 +45,13 @@ function UsersPage() {
 
   return (
     <>
-      { users ? (
-        <Container maxW="container.md" py={8}>
-          <VStack spacing={6} align="stretch">
+      {users ? (
+        <Container
+          maxW={{ base: "100%", md: "90%", lg: "100vh" }}
+          py={{ base: 4, md: 8 }}
+          px={{ base: 2, md: 4 }}
+        >
+          <VStack spacing={{ base: 4, md: 6 }} align="stretch">
             {users.map((user, index) => (
               <Box
                 key={user.username || index}
@@ -60,7 +64,11 @@ function UsersPage() {
                   bg: "gray.100",
                 }}
               >
-                <HStack spacing={4} p={4} align="center">
+                <HStack
+                  spacing={{ base: 2, md: 4 }}
+                  p={{ base: 2, md: 4 }}
+                  align="center"
+                >
                   <Box position="relative">
                     <DialogRoot
                       placement="center"
@@ -70,41 +78,52 @@ function UsersPage() {
                         <Image
                           src={user.image}
                           alt={user.username}
-                          boxSize="50px"
+                          boxSize={{ base: "40px", md: "50px" }}
                           borderRadius="20px"
                           objectFit="cover"
                           border="3px solid"
-                          borderColor={"green.500"}
+                          borderColor="green.500"
                           cursor="pointer"
                         />
                       </DialogTrigger>
-                      <DialogContent width="80%" height="30%">
+                      <DialogContent
+                        width={{ base: "90%", md: "80%" }}
+                        height={{ base: "auto", md: "30%" }}
+                      >
                         <DialogHeader>
-                          <DialogTitle textTransform="uppercase">
-                            {" "}
-                            {user.username}{" "}
+                          <DialogTitle
+                            textTransform="uppercase"
+                            fontSize={{ base: "sm", md: "md" }}
+                          >
+                            {user.username}
                           </DialogTitle>
                         </DialogHeader>
                         <DialogBody>
-                          <VStack spacing={4}>
+                          <VStack spacing={{ base: 2, md: 4 }}>
                             <DialogRoot placement="center">
                               <DialogTrigger asChild>
-                                <Button width={"100%"}>
+                                <Button
+                                  width="100%"
+                                  size={{ base: "sm", md: "md" }}
+                                >
                                   View Profile Picture
                                 </Button>
                               </DialogTrigger>
                               <DialogContent
-                                width="90vw"
-                                maxWidth="500px"
+                                width={{ base: "95vw", md: "90vw" }}
+                                maxWidth={{ base: "90%", md: "500px" }}
                                 maxHeight="80vh"
                               >
                                 <DialogHeader>
-                                  <DialogTitle textTransform="uppercase">
+                                  <DialogTitle
+                                    textTransform="uppercase"
+                                    fontSize={{ base: "sm", md: "md" }}
+                                  >
                                     {user.username}'s Profile Picture
                                   </DialogTitle>
                                 </DialogHeader>
                                 <DialogBody
-                                  m="10px"
+                                  m={{ base: "5px", md: "10px" }}
                                   display="flex"
                                   justifyContent="center"
                                 >
@@ -117,20 +136,26 @@ function UsersPage() {
                                       src={user.image}
                                       alt={user.username}
                                       maxWidth="100%"
-                                      maxHeight="60vh"
+                                      maxHeight={{ base: "50vh", md: "60vh" }}
                                       objectFit="contain"
                                     />
                                   </Box>
                                 </DialogBody>
                                 <DialogFooter>
                                   <DialogActionTrigger asChild>
-                                    <Button variant="outline">Close</Button>
+                                    <Button
+                                      variant="outline"
+                                      size={{ base: "sm", md: "md" }}
+                                    >
+                                      Close
+                                    </Button>
                                   </DialogActionTrigger>
                                 </DialogFooter>
                               </DialogContent>
                             </DialogRoot>
                             <Button
-                              width={"100%"}
+                              width="100%"
+                              size={{ base: "sm", md: "md" }}
                               onClick={() => handleViewProfile(user.username)}
                             >
                               View Profile Details
@@ -139,7 +164,12 @@ function UsersPage() {
                         </DialogBody>
                         <DialogFooter>
                           <DialogActionTrigger asChild>
-                            <Button variant="outline">Close</Button>
+                            <Button
+                              variant="outline"
+                              size={{ base: "sm", md: "md" }}
+                            >
+                              Close
+                            </Button>
                           </DialogActionTrigger>
                         </DialogFooter>
                       </DialogContent>
@@ -148,8 +178,8 @@ function UsersPage() {
                       position="absolute"
                       bottom="0"
                       right="0"
-                      w="12px"
-                      h="12px"
+                      w={{ base: "10px", md: "12px" }}
+                      h={{ base: "10px", md: "12px" }}
                       bg="green.500"
                       borderRadius="full"
                       border="2px solid white"
@@ -158,19 +188,20 @@ function UsersPage() {
                   <Stack align="start">
                     <Text
                       fontWeight="500"
-                      fontSize="md"
+                      fontSize={{ base: "sm", md: "md" }}
                       textTransform="uppercase"
                     >
                       {user.username}
                     </Text>
-                    <Text fontSize="sm" color="gray.500">
+                    <Text fontSize={{ base: "xs", md: "sm" }} color="gray.500">
                       Active now
                     </Text>
                   </Stack>
                   <Spacer />
                   <Button
-                    variant={"subtle"}
-                    rounded={"10px"}
+                    variant="subtle"
+                    rounded="10px"
+                    size={{ base: "sm", md: "md" }}
                     onClick={handleClickOne}
                   >
                     Chat

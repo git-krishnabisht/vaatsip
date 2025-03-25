@@ -28,14 +28,13 @@ export const useStore = create(
             body: JSON.stringify(credentials),
           });
 
-          const data = await res.json();
-
           if (!res.ok) {
             console.error(data.message || "Sign-in failed");
             toast.error(data.message || "Sign-in failed");
             return;
           }
 
+          const data = await res.json();
           if (data.token) {
             localStorage.setItem("token", data.token);
             set({ isSignedIn: true, user: credentials.username });

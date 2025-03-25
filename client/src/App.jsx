@@ -12,7 +12,11 @@ import ProfileDetailsPage from "./pages/ProfileDetailsPage";
 function App() {
   return (
     <>
-      <Container fluid>
+      <Container 
+        maxW={{ base: "full", md: "95%", lg: "container.xl" }} 
+        px={{ base: 2, md: 4 }} 
+        minH="100vh" u
+      >
         <NavBar />
         <Routes>
           <Route path="/" element={<HomePage />} />
@@ -22,7 +26,9 @@ function App() {
           <Route path="/chat" element={<ChatPage />} />
           <Route path="/profile/:username" element={<ProfileDetailsPage />} />
         </Routes>
-        <Toaster position="bottom-center" reverseOrder={false} />
+        <Toaster 
+          position="bottom-center" 
+        />
       </Container>
     </>
   );

@@ -1,4 +1,3 @@
-// theme.js
 import { defineConfig, createSystem } from "@chakra-ui/react";
 
 const config = defineConfig({

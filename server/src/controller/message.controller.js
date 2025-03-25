@@ -1,6 +1,6 @@
-import { receiverSocketId } from "../lib/socket.js";
+import { receiverSocketId } from "../socket/socket.js";
 import db from "../lib/db.js";
-import { io } from "../lib/socket.js";
+import { io } from "../socket/socket.js";
 
 export const getMessages = async (req, res) => {
   try {

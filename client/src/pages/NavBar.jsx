@@ -1,6 +1,6 @@
 import { Box, Button, Spacer, Spinner } from "@chakra-ui/react";
 import { Link, useNavigate } from "react-router-dom";
-import { useStore } from "../helpers/useStore";
+import { useStore } from "../services/useStore";
 
 const BeforeSignInLinks = {
   "About us": "/about",

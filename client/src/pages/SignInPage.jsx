@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Button, Container, Input, Stack } from "@chakra-ui/react";
 import { Field } from "@/components/ui/field";
 import { useNavigate } from "react-router-dom";
-import { useStore } from "../helpers/useStore";
+import { useStore } from "../services/useStore";
 import { PasswordInput } from "@/components/ui/password-input"
 
 function SignInPage() {
