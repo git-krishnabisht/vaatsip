@@ -81,11 +81,11 @@ function NavBar() {
         <Spacer />
 
         {!isSignedIn ? (
-          <Button as={Link} to="/sign-in" size="sm">
+          <Button as={Link} to="/sign-in" size="md">
             Sign-in
           </Button>
         ) : (
-          <Button onClick={handleSignout} size="sm">
+          <Button onClick={handleSignout} size="md">
             Sign-out
           </Button>
         )}

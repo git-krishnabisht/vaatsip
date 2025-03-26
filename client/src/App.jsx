@@ -23,7 +23,7 @@ function App() {
           <Route path="/about" element={<AboutUsPage />} />
           <Route path="/sign-in" element={<SignInPage />} />
           <Route path="/users" element={<UsersPage />} />
-          <Route path="/chat" element={<ChatPage />} />
+          <Route path="/chat/:username" element={<ChatPage />} />
           <Route path="/profile/:username" element={<ProfileDetailsPage />} />
         </Routes>
         <Toaster 

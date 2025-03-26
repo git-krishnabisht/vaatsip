@@ -24,12 +24,6 @@ export const getMessages = async (req, res) => {
     `, [sender, receiver]);
 
     const rows = query.rows;
-    if (rows.length === 0) {
-      return res.status(200).json({ 
-        message: "No messages in the conversation yet",
-        data: []
-      });
-    }
 
     console.log("point 1");
     const messagesWithBase64 = rows.map(row => {
@@ -54,10 +48,9 @@ export const getMessages = async (req, res) => {
       };
     });
 
-    return res.status(200).json({
-      success: true,
-      data: messagesWithBase64
-    });
+    return res.status(200).json(
+      messagesWithBase64
+    );
 
   } catch (err) {
     console.error("Get messages error:", err);

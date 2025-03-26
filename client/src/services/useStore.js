@@ -250,14 +250,13 @@ export const useStore = create(
         return { data, type: file.type };
       },
 
-      sendMessage: async (msg) => {
+      sendMessage: async (msg, receiver) => {
         try {
           const formData = new FormData();
           if (msg.message) formData.append("message", msg.message);
           if (msg.image_data) {
             formData.append("image_data", msg.image_data);
           }
-          const receiver = get().receiver;
           const token = localStorage.getItem("token");
           if (!token) {
             console.error("No token found. Please sign in again.");
@@ -270,12 +269,10 @@ export const useStore = create(
             },
             body: formData,
           });
-          if (!response.ok) throw new Error(data.error || 'Failed to send message');
-          const data = await response.json();
-          let temp = await get().convertFileToBinary(msg.image_data);
+          if (!response.ok) throw new Error('Failed to send message');
           const newMessage = {
             message: msg.message,
-            image_data: temp,
+            image_data: msg.image_data,
             sender: msg.sender,
             receiver: msg.receiver,
             created_at: new Date().toISOString(),
