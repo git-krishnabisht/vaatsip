@@ -251,18 +251,18 @@ export const useStore = create(
       },
 
       sendMessage: async (msg) => {
-        const formData = new FormData();
-        if (msg.message) formData.append("message", msg.message);
-        if (msg.image_data) {
-          formData.append("image_data", msg.image_data);
-        }
-        const receiver = get().receiver;
-        const token = localStorage.getItem("token");
-        if (!token) {
-          console.error("No token found. Please sign in again.");
-          return;
-        }
         try {
+          const formData = new FormData();
+          if (msg.message) formData.append("message", msg.message);
+          if (msg.image_data) {
+            formData.append("image_data", msg.image_data);
+          }
+          const receiver = get().receiver;
+          const token = localStorage.getItem("token");
+          if (!token) {
+            console.error("No token found. Please sign in again.");
+            return;
+          }
           const response = await fetch(`${baseURL}/api/messages/send-message/${receiver}`, {
             method: "POST",
             headers: {
@@ -270,9 +270,8 @@ export const useStore = create(
             },
             body: formData,
           });
-          const data = await response.json();
-
           if (!response.ok) throw new Error(data.error || 'Failed to send message');
+          const data = await response.json();
           let temp = await get().convertFileToBinary(msg.image_data);
           const newMessage = {
             message: msg.message,

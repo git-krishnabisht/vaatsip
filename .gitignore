@@ -26,3 +26,4 @@ psql
 Work.txt
 /server/.env
 /client/public
+.vscode
