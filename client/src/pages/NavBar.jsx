@@ -1,6 +1,6 @@
-import { Box, Button, Spacer, Spinner } from "@chakra-ui/react";
+import { Box, Button, Container, Spacer, Spinner } from "@chakra-ui/react";
 import { Link, useNavigate } from "react-router-dom";
-import { useStore } from "../services/useStore";
+import { authService } from "../services/authService";
 
 const BeforeSignInLinks = {
   "About us": "/about",
@@ -12,8 +12,8 @@ const AfterSignInLinks = {
 };
 
 function NavBar() {
-  const { signout } = useStore();
-  const isSignedIn = useStore((state) => state.isSignedIn);
+  const { signout } = authService();
+  const isSignedIn = authService((state) => state.isSignedIn);
   const navigate = useNavigate();
 
   function handleSignout() {
@@ -50,46 +50,55 @@ function NavBar() {
 
   return (
     <>
-      <Box
-        width="100%"
-        height="50px"
-        display="flex"
-        alignItems="center"
-        borderBottom="1px solid"
-        borderBottomColor="black"
-        gap={5}
-        px="4px"
-      >
-        <h2>
-          <a href="/" style={{ textDecoration: "none", color: "inherit" }}>
-            Home
-          </a>
-        </h2>
+      <Container>
+        <Box
+          width="100%"
+          height="50px"
+          display="flex"
+          alignItems="center"
+          borderBottom="1px solid"
+          borderBottomColor="black"
+          maxHeight={"20%"}
+          gap={5}
+          px="2%"
+          position="fixed"
+          top={0}
+          left={0}
+          right={0}
+          zIndex={10}
+          bg="white"
+        >
+          <h2>
+            <a href="/" style={{ textDecoration: "none", color: "inherit" }}>
+              Home
+            </a>
+          </h2>
 
-        {!isSignedIn ? 
-          Object.entries(BeforeSignInLinks).map(([tag, path]) => (
-            <NavLink key={tag} href={path}>
-              {tag}
-            </NavLink>
-          ))
-        : Object.entries(AfterSignInLinks).map(([tag, path]) => (
-            <NavLink key={tag} href={path}>
-              {tag}
-            </NavLink>
-        ))}
+          {!isSignedIn
+            ? Object.entries(BeforeSignInLinks).map(([tag, path]) => (
+                <NavLink key={tag} href={path}>
+                  {tag}
+                </NavLink>
+              ))
+            : Object.entries(AfterSignInLinks).map(([tag, path]) => (
+                <NavLink key={tag} href={path}>
+                  {tag}
+                </NavLink>
+              ))}
 
-        <Spacer />
+          <Spacer />
 
-        {!isSignedIn ? (
-          <Button as={Link} to="/sign-in" size="md">
-            Sign-in
-          </Button>
-        ) : (
-          <Button onClick={handleSignout} size="md">
-            Sign-out
-          </Button>
-        )}
-      </Box>
+          {!isSignedIn ? (
+            <Button as={Link} to="/sign-in" size="md">
+              Sign-in
+            </Button>
+          ) : (
+            <Button onClick={handleSignout} size="md">
+              Sign-out
+            </Button>
+          )}
+        </Box>
+      </Container>
     </>
   );
 }

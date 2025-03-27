@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useStore } from "../services/useStore";
+import { userService } from "../services/userService";
 import { useParams } from "react-router-dom";
 import {
   Container,
@@ -13,8 +13,8 @@ import {
 import { Mail, Calendar, User } from "lucide-react";
 
 function ProfileDetailsPage() {
-  const userDetails = useStore((state) => state.userDetails);
-  const getuserdetails = useStore((state) => state.getuserdetails);
+  const userDetails = userService((state) => state.userDetails);
+  const getuserdetails = userService((state) => state.getuserdetails);
   const { username } = useParams();
 
   useEffect(() => {

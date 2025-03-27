@@ -1,6 +1,4 @@
-import { receiverSocketId } from "../socket/socket.js";
 import db from "../lib/db.js";
-import { io } from "../socket/socket.js";
 import imageType from "image-type";
 
 export const getMessages = async (req, res) => {
@@ -93,17 +91,7 @@ export const sendMessages = async (req, res) => {
           image = attachmentQuery.rows[0].image_data;
       }
       await db.query('COMMIT');
-      const socketId = receiverSocketId(receiver); 
-      if (socketId) {
-          const msg = conversationQuery.rows[0].message;
-          io.to(socketId).emit("newMessage", { 
-              msg, 
-              image: image ? true : false, 
-              sender, 
-              receiver, 
-              created_at 
-          });
-      }
+      //TODO: sending through the socket
 
       return res.status(200).json({
           success: true,

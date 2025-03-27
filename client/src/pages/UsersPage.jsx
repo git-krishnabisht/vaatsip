@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useStore } from "../services/useStore";
+import { userService } from "../services/userService";
 import {
   Box,
   HStack,
@@ -24,9 +24,9 @@ import {
 } from "@/components/ui/dialog";
 
 function UsersPage() {
-  const { getusers, getuser } = useStore();
-  const users = useStore((state) => state.users);
-  const _user = useStore((state) => state.user);
+  const { getusers, getuser } = userService();
+  const users = userService((state) => state.users);
+  const _user = userService((state) => state.user);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -50,8 +50,8 @@ function UsersPage() {
       {users ? (
         <Container
           maxW={{ base: "100%", md: "90%", lg: "100vh" }}
-          py={{ base: 4, md: 8 }}
-          px={{ base: 2, md: 4 }}
+          py={{ base: 20, md: 20 }}
+          px={{ base: 2, md: 2 }}
         >
           <VStack spacing={{ base: 4, md: 6 }} align="stretch">
             {users

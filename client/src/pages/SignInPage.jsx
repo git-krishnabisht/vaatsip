@@ -2,13 +2,13 @@ import { useEffect, useState } from "react";
 import { Button, Container, Input, Stack } from "@chakra-ui/react";
 import { Field } from "@/components/ui/field";
 import { useNavigate } from "react-router-dom";
-import { useStore } from "../services/useStore";
+import { authService } from "../services/authService";
 import { PasswordInput } from "@/components/ui/password-input"
 
 function SignInPage() {
   const navigate = useNavigate();
-  const { signin } = useStore();
-  const isSignedIn = useStore((state) => state.isSignedIn);
+  const { signin } = authService();
+  const isSignedIn = authService((state) => state.isSignedIn);
   const [formParams, setFormParams] = useState({
     username: "",
     password: ""
