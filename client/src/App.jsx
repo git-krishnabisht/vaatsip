@@ -8,8 +8,20 @@ import UsersPage from "./pages/UsersPage";
 import { Toaster } from "react-hot-toast";
 import ChatPage from "./pages/ChatPage";
 import ProfileDetailsPage from "./pages/ProfileDetailsPage";
+import { socketService } from "./services/socketService";
+import { userService } from "./services/userService";
+import { useEffect } from "react";
+
 
 function App() {
+  const user = userService((state) => state.user);
+  const { initializeSocket, connectSocket } = socketService();
+
+  useEffect(() => {
+    initializeSocket(user);
+    connectSocket();
+  }, [user, initializeSocket, connectSocket]);
+
   return (
     <>
       <Container 

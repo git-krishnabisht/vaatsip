@@ -105,7 +105,7 @@ export const sendMessages = async (req, res) => {
           created_at
         }));
       } else {
-        console.log("Receiver socket not available or not open:", receiver);
+        console.log("Receiver socket not available or not open:", receiver);undefined,,,
       }
 
       return res.status(200).json({

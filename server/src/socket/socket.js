@@ -1,38 +1,102 @@
-import { Server } from "socket.io";
 import http from "http";
 import express from "express";
+import { WebSocketServer } from "ws";
+import cors from "cors";
+import { URL } from "url";
+import WebSocket from 'ws';
 
 const app = express();
 const server = http.createServer(app);
 
-const io = new Server(server, {
-  cors: {
-    origin: process.env.NODE_ENV === 'production' 
-      ? false 
-      : ["http://localhost:5000"],
-    methods: ["GET", "POST", "PUT", "DELETE"]
-  },
-});
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production'
+    ? false
+    : ["http://localhost:5000"],
+  methods: ["GET", "POST", "PUT", "DELETE"]
+}));
 
-const userSocketMap = {};
+app.use(express.json());
 
-export function receiverSocketId(username) {
-  return userSocketMap[username];
+const wss = new WebSocketServer({ server });
+
+const userSocketMap = new Map();
+
+export function receiverSocket(username) {
+  return userSocketMap.get(username);
 }
 
-io.on("connection", (socket) => {
-  console.log("A user has connected", socket.id);
+wss.on("connection", (socket, request) => {
+  console.log("New client connected");
+  const query = new URL(request.url, 'http://localhost').searchParams;
+  const username = query.get('username');
 
-  const username = socket.handshake.query.username;
-  if (username) userSocketMap[username] = socket.id;
+  if (!username) {
+    console.log('No username provided, closing connection');
+    socket.send(JSON.stringify({ type: 'error', text: 'Username is required' }));
+    socket.close(1008, 'Username is required');
+    return;
+  }
 
-  io.emit("getOnlineUsers", Object.keys(userSocketMap));
+  userSocketMap.set(username, socket);
 
-  socket.on("disconnect", () => {
-    console.log("A user has disconnected", socket.id);
-    delete userSocketMap[username];
-    io.emit("getOnlineUsers", Object.keys(userSocketMap));
+  socket.send(JSON.stringify({ type: 'connection', text: 'Connected successfully' }));
+  socket.send(JSON.stringify({ type: 'username', username }));
+
+  broadcastUserList();
+
+  // Handle messages from clients
+  socket.on('message', (data) => {
+    try {
+      const message = JSON.parse(data);
+      console.log('Received message:', message);
+      
+      if (message.type === 'message' && message.receiver) {
+        const receiverWs = userSocketMap.get(message.receiver);
+        if (receiverWs && receiverWs.readyState === WebSocket.OPEN) {
+          console.log(`Sending message to ${message.receiver}`);
+          receiverWs.send(JSON.stringify({
+            type: 'message',
+            sender: message.sender,
+            receiver: message.receiver,
+            message: message.message || '',
+            created_at: message.created_at || new Date().toISOString()
+          }));
+        } else {
+          console.log(`Receiver ${message.receiver} is not connected or socket not open`);
+        }
+      }
+    } catch (error) {
+      console.error('Error processing message:', error);
+    }
+  });
+
+  socket.on('close', (code, reason) => {
+    console.log(`User ${username} disconnected with code ${code} and reason ${reason}`);
+    userSocketMap.delete(username);
+    broadcastUserList();
+  });
+
+  socket.on('error', (error) => {
+    console.error(`Error for user ${username}:`, error);
+    userSocketMap.delete(username);
+    broadcastUserList();
   });
 });
 
-export { io, app, server };
+function broadcastUserList() {
+  const onlineUsers = Array.from(userSocketMap.keys());
+  userSocketMap.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(JSON.stringify({
+        type: 'userList',
+        users: onlineUsers
+      }));
+    }
+  });
+}
+
+wss.on('error', (error) => {
+  console.error('WebSocket server error:', error);
+});
+
+export { wss as io, app, server };
