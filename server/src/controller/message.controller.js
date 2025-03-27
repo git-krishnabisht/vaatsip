@@ -1,5 +1,7 @@
 import db from "../lib/db.js";
 import imageType from "image-type";
+import { io } from "../socket/socket.js";
+import { receiverSocket } from "../socket/socket.js";
 
 export const getMessages = async (req, res) => {
   try {
@@ -23,7 +25,6 @@ export const getMessages = async (req, res) => {
 
     const rows = query.rows;
 
-    console.log("point 1");
     const messagesWithBase64 = rows.map(row => {
       if (!row.image_data) {
         return {
@@ -91,7 +92,21 @@ export const sendMessages = async (req, res) => {
           image = attachmentQuery.rows[0].image_data;
       }
       await db.query('COMMIT');
-      //TODO: sending through the socket
+      
+      const receiverWs = receiverSocket(receiver);
+      if (receiverWs && receiverWs.readyState === 1) { 
+        console.log("Sending message via WebSocket to", receiver);
+        receiverWs.send(JSON.stringify({
+          type: 'message',
+          sender,
+          receiver,
+          message: message || '',
+          image: image ? true : false,
+          created_at
+        }));
+      } else {
+        console.log("Receiver socket not available or not open:", receiver);
+      }
 
       return res.status(200).json({
           success: true,
