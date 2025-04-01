@@ -1,13 +1,15 @@
 import { Box, Button, Container, Spacer, Spinner } from "@chakra-ui/react";
 import { Link, useNavigate } from "react-router-dom";
 import { authService } from "../services/authService";
+import { useEffect } from "react";
+import { socketService } from "../services/socketService";
 
 const BeforeSignInLinks = {
   "About us": "/about",
 };
 
 const AfterSignInLinks = {
-  Users: "/users",
+  "Users" : "/users",
   "About us": "/about",
 };
 
@@ -15,16 +17,25 @@ function NavBar() {
   const { signout } = authService();
   const isSignedIn = authService((state) => state.isSignedIn);
   const navigate = useNavigate();
+  const { connectSocket } = authService();
 
-  function handleSignout() {
+  useEffect(() => {
+    if(isSignedIn) {
+      connectSocket();
+    }
+  },[isSignedIn]);
+
+
+  const handleSignout = (e) => {
+    e.preventDefault();
     signout();
     navigate("/");
   }
 
   const NavLink = ({ href, children }) => (
     <Box
-      as="a"
-      href={href}
+      as={Link}
+      to={href}
       position="relative"
       style={{ textDecoration: "none", color: "inherit" }}
       _after={{
@@ -69,19 +80,19 @@ function NavBar() {
           bg="white"
         >
           <h2>
-            <a href="/" style={{ textDecoration: "none", color: "inherit" }}>
+            <Link href="/" style={{ textDecoration: "none", color: "inherit" }}>
               Home
-            </a>
+            </Link>
           </h2>
 
           {!isSignedIn
             ? Object.entries(BeforeSignInLinks).map(([tag, path]) => (
-                <NavLink key={tag} href={path}>
+                <NavLink key={tag} href={path} preventDefault>
                   {tag}
                 </NavLink>
               ))
             : Object.entries(AfterSignInLinks).map(([tag, path]) => (
-                <NavLink key={tag} href={path}>
+                <NavLink key={tag} href={path} preventDefault>
                   {tag}
                 </NavLink>
               ))}

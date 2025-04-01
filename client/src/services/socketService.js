@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { authService } from "../services/authService";
 const baseURL = import.meta.env.MODE === "development" ? "http://localhost:50136" : "";
 
-export const socketService  = create((set, get) => ({
+export const socketService = create((set, get) => ({
   messages: [],
   users: [],
 
@@ -29,7 +29,7 @@ export const socketService  = create((set, get) => ({
   getmessages: async (receiver) => {
     try {
       const token = localStorage.getItem("token");
-      if(!token) console.error("Token is missing");
+      if (!token) console.error("Token is missing");
       const query = await fetch(`${baseURL}/api/messages/get-messages/${receiver}`, {
         method: "GET",
         headers: {
@@ -68,18 +68,21 @@ export const socketService  = create((set, get) => ({
     }
   },
 
-  subscribeToMessages: async (rece) => {
-    if (!rece) return;
+  // The socket is null here, hence not message getting transfered through the socket event, need to debug this
+  subscribeToMessages: async (receiver) => {
+    if (!receiver) return;
 
     const socket = authService.getState().socket;
-    console.log("Socket : ", socket);
-    if (!socket) {
+    
+    console.log("Socket in subscribeToMessages:", socket);
+
+    if (!socket || !socket.connected) {
       console.error("Socket is not connected");
       return;
     }
+
     socket.on("newMessage", (msg) => {
-      console.log("Getting the message from the socket server", msg);
-      get().getmessages(rece);
+      get().getmessages(receiver);
       set((state) => ({ messages: [...state.messages, msg] }));
     });
   },
@@ -87,8 +90,7 @@ export const socketService  = create((set, get) => ({
   unsubscribeFromMessages: async () => {
     const socket = authService.getState().socket;
     if (!socket) return;
-    
+
     socket.off("newMessage");
   },
-  setSelectedUser: (selectedUser) => set({ selectedUser }),
 }));

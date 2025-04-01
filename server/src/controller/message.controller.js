@@ -61,6 +61,7 @@ export const getMessages = async (req, res) => {
 
 export const sendMessages = async (req, res) => {
   try {
+      console.log("Entering");
       const { username: sender, params: { receiver }, body: { message }, file } = req;
       
       if (!sender || !receiver) {
@@ -89,7 +90,6 @@ export const sendMessages = async (req, res) => {
               [messageId, image, imagetype]
           );
           image = attachmentQuery.rows[0].image_data;
-
           const type = imageType(image)?.mime || "image/jpeg";
           const temp = `data:${type};base64,${image.toString("base64")}`;
           base64Image = temp;
@@ -97,7 +97,9 @@ export const sendMessages = async (req, res) => {
       await db.query('COMMIT');
       //TODO: sending through the socket
       const socketId = getReceiverSocketId(receiver);
+      console.log("socket id: ", socketId);
       if (socketId) {
+        console.log("hitting");
         const msg = conversationQuery.rows[0].message;
         io.to(socketId).emit("newMessage", { msg , base64Image, sender, receiver, created_at });
         console.log("Message sent successfully from the socket's server to :", receiver);

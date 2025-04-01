@@ -25,21 +25,24 @@ export const authService = create(
             },
             body: JSON.stringify(credentials),
           });
-
+      
           if (!res.ok) {
-            console.error(data.message || "Sign-in failed");
-            toast.error(data.message || "Sign-in failed");
+            console.error("Sign-in failed");
+            toast.error("Sign-in failed");
             return;
           }
-
+      
           const data = await res.json();
           if (data.token) {
             localStorage.setItem("token", data.token);
-            set({ isSignedIn: true, user: credentials.username });
-            get().connectSocket();
+            set({ isSignedIn: true, user: credentials.username }, false);  // Update user first
+      
+            setTimeout(() => {
+              get().connectSocket();  // Ensure socket is initialized after state update
+            }, 0);
+      
             toast.success("Signed in successfully");
           } else {
-            console.error("No token received from server");
             toast.error("Authentication failed");
           }
         } catch (err) {
@@ -83,18 +86,27 @@ export const authService = create(
 
       connectSocket: () => {
         const { user } = get();
-        console.log(user);
-        if (!user || get().socket?.connected) return;
-    
+        console.log("Attempting to connect socket for user:", user);
+      
+      
+        if (get().socket) {
+          console.log("Socket already exists. Reusing the existing instance.");
+          return;
+        }
+      
         const socket = io(baseURL, {
           query: {
-            userId: user,
+            username: user,
           },
         });
-
-        socket.connect();
-        set({ socket: socket });
+      
+        socket.on("connect", () => console.log("Socket connected:", socket.id));
+        socket.on("disconnect", () => console.log("Socket disconnected"));
+        
+        set({ socket });
+      
         socket.on("getOnlineUsers", (users) => {
+          console.log("Online users:", users);
           set({ onlineUsers: users });
         });
       },
@@ -107,6 +119,7 @@ export const authService = create(
       name: "auth_states",
       partialize: (states) => ({
         isSignedIn: states.isSignedIn,
+        user: states.user,
       })
     }
   )

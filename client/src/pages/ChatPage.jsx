@@ -6,6 +6,7 @@ import { useParams } from "react-router-dom"
 function ChatPage() {
   const { sendmessage, unsubscribeFromMessages, subscribeToMessages, getmessages } = socketService();
   const { username: receiver}  = useParams();
+  const messages = socketService((state) => state.messages);
 
   const [outgoingMessages, setOutgoingMessages] = useState({
     message: "",
