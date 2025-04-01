@@ -62,7 +62,7 @@ export const socketService = create((set, get) => ({
         body: formData
       });
       const response = await query.json();
-      set({ messages: [...messages, response] });
+      set({ messages: [...messages, response]});
     } catch (error) {
       console.error(error);
     }
@@ -76,14 +76,14 @@ export const socketService = create((set, get) => ({
     
     console.log("Socket in subscribeToMessages:", socket);
 
-    if (!socket || !socket.connected) {
+    if (!socket) {
       console.error("Socket is not connected");
       return;
     }
 
     socket.on("newMessage", (msg) => {
+      console.log("message", msg);
       get().getmessages(receiver);
-      set((state) => ({ messages: [...state.messages, msg] }));
     });
   },
 
