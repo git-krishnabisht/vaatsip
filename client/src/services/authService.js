@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import toast from "react-hot-toast";
+import { io } from "socket.io-client";
 const baseURL = import.meta.env.MODE === "development" ? "http://localhost:50136" : "";
 
 export const authService = create(
@@ -12,6 +13,8 @@ export const authService = create(
       users: [],
       userImage: null,
       userDetails: null,
+      onlineUsers: null,
+      socket: null,
 
       signin: async (credentials) => {
         try {
@@ -33,6 +36,7 @@ export const authService = create(
           if (data.token) {
             localStorage.setItem("token", data.token);
             set({ isSignedIn: true, user: credentials.username });
+            get().connectSocket();
             toast.success("Signed in successfully");
           } else {
             console.error("No token received from server");
@@ -40,7 +44,7 @@ export const authService = create(
           }
         } catch (err) {
           toast.error("Something is wrong");
-          console.error("Error:", err.message || err.stack || "Unexpected error.");
+          console.error("Error", err);
         }
       },
 
@@ -75,6 +79,28 @@ export const authService = create(
             err.error || err.stack || "Unexpected error."
           );
         }
+      },
+
+      connectSocket: () => {
+        const { user } = get();
+        console.log(user);
+        if (!user || get().socket?.connected) return;
+    
+        const socket = io(baseURL, {
+          query: {
+            userId: user,
+          },
+        });
+
+        socket.connect();
+        set({ socket: socket });
+        socket.on("getOnlineUsers", (users) => {
+          set({ onlineUsers: users });
+        });
+      },
+
+      disconnectSocket: () => {
+        if (get().socket?.connected) get().socket.disconnect();
       },
     }),
     {

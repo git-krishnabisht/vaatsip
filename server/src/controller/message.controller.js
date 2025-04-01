@@ -1,14 +1,12 @@
 import db from "../lib/db.js";
 import imageType from "image-type";
-import { io } from "../socket/socket.js";
-import { receiverSocket } from "../socket/socket.js";
+import { getReceiverSocketId, io } from "../socket/socket.js";
 
 export const getMessages = async (req, res) => {
   try {
     const sender = req.username;
     const receiver = req.params.user;
     
-    console.log("point 0");
     const query = await db.query(`
       SELECT 
         c.message, 
@@ -64,7 +62,7 @@ export const getMessages = async (req, res) => {
 export const sendMessages = async (req, res) => {
   try {
       const { username: sender, params: { receiver }, body: { message }, file } = req;
-
+      
       if (!sender || !receiver) {
           return res.status(400).json({ error: "Sender and receiver are required" });
       }
@@ -81,6 +79,7 @@ export const sendMessages = async (req, res) => {
       const { created_at, message_id: messageId } = conversationQuery.rows[0];
       let image = null;
       let imagetype = null;
+      let base64Image = null;
 
       if (file) {
           image = file.buffer;
@@ -90,27 +89,22 @@ export const sendMessages = async (req, res) => {
               [messageId, image, imagetype]
           );
           image = attachmentQuery.rows[0].image_data;
+
+          const type = imageType(image)?.mime || "image/jpeg";
+          const temp = `data:${type};base64,${image.toString("base64")}`;
+          base64Image = temp;
       }
       await db.query('COMMIT');
-      
-      const receiverWs = receiverSocket(receiver);
-      if (receiverWs && receiverWs.readyState === 1) { 
-        console.log("Sending message via WebSocket to", receiver);
-        receiverWs.send(JSON.stringify({
-          type: 'message',
-          sender,
-          receiver,
-          message: message || '',
-          image: image ? true : false,
-          created_at
-        }));
-      } else {
-        console.log("Receiver socket not available or not open:", receiver);undefined,,,
+      //TODO: sending through the socket
+      const socketId = getReceiverSocketId(receiver);
+      if (socketId) {
+        const msg = conversationQuery.rows[0].message;
+        io.to(socketId).emit("newMessage", { msg , base64Image, sender, receiver, created_at });
+        console.log("Message sent successfully from the socket's server to :", receiver);
       }
 
       return res.status(200).json({
-          success: true,
-          data: { messageId, sender, receiver, message, image: !!image, created_at }
+          sender, receiver, message, image: base64Image, created_at 
       });
 
   } catch (err) {

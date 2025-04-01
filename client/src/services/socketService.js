@@ -1,110 +1,94 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { authService } from "../services/authService";
 const baseURL = import.meta.env.MODE === "development" ? "http://localhost:50136" : "";
-const wsURL = import.meta.env.MODE === "development" 
-  ? "ws://localhost:50136" 
-  : `ws://${window.location.host}`;
 
-export const socketService = create(
-  persist((set, get) => ({
-    socket: null,
-    message: [],
+export const socketService  = create((set, get) => ({
+  messages: [],
+  users: [],
 
-    initializeSocket: (user) => {
-      try {
-        if (!user) {
-          console.error("User is required to connect to the webSocket");
-          return;
+  getusers: async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const query = await fetch(`${baseURL}/api/users/get-users`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
         }
-        const ws = new WebSocket(`${wsURL}?username=${encodeURIComponent(user)}`);
-        set({ socket: ws });
-        
-        // Add message event handler
-        ws.onmessage = (event) => {
-          const data = JSON.parse(event.data);
-          if (data.type === 'message') {
-            set((state) => ({ message: [...state.message, data] }));
-          }
-        };
-      } catch (error) {
-        console.error("Failed to initializing the webSocket", error);
-      }
-    },
+      });
+      const data = await query.json();
+      const users = data.map((user) => ({
+        username: user.username,
+        image: user.image
+      }));
+      set({ users: users });
+    } catch (err) {
+      console.error("Error:", err || err.messgae || err.stack || "Unexpected error.");
+    }
+  },
 
-    connectSocket: () => {
-      try {
-        const socket = get().socket;
-        if (!socket) return;
-        
-        socket.onopen = () => {
-          console.log("Connected to webSocket");
+  getmessages: async (receiver) => {
+    try {
+      const token = localStorage.getItem("token");
+      if(!token) console.error("Token is missing");
+      const query = await fetch(`${baseURL}/api/messages/get-messages/${receiver}`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`
         }
-        
-        socket.onerror = (error) => {
-          console.error("WebSocket error:", error);
-        }
-        
-        return;
-      } catch (error) {
-        console.log("Failed to connect to the webSocket", error);
-      }
-    },
+      });
+      const messages = await query.json();
+      set({ messages: messages });
+    } catch (error) {
+      console.error(error);
+    }
+  },
 
-    disconnectSocket: () => {
-      const socket = get().socket;
-      if (!socket) return;
-      
-      socket.onclose = () => {
-        console.log("Disconnected from webSocket");
-      }
-      
-      // Actually close the socket
-      socket.close();
-      set({ socket: null });
-    },
+  sendmessage: async (messageData, receiver) => {
+    try {
+      const formData = new FormData();
+      formData.append("message", messageData.message);
+      formData.append("image_data", messageData.image_data);
+      formData.append("sender", messageData.sender);
+      formData.append("receiver", messageData.receiver);
+      formData.append("created_at", messageData.created_at);
 
-    sendMessage: async (message, receiver) => {
-      try {
-        // First send through socket for real-time delivery
-        const socket = get().socket;
-        if (socket && socket.readyState === WebSocket.OPEN) {
-          const messageToSend = {
-            type: 'message',
-            message: message.message || '',
-            receiver: receiver,
-            sender: message.sender || '',
-            created_at: message.created_at || new Date().toISOString()
-          };
-          socket.send(JSON.stringify(messageToSend));
-        }
-        
-        // Then persist via HTTP API
-        const formData = new FormData();
+      const { messages } = get();
+      const token = localStorage.getItem("token");
+      const query = await fetch(`${baseURL}/api/messages/send-message/${receiver}`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData
+      });
+      const response = await query.json();
+      set({ messages: [...messages, response] });
+    } catch (error) {
+      console.error(error);
+    }
+  },
 
-        formData.append('message', message.message || '');
-        formData.append('image_data', message.image_data || '{}');
-        formData.append('sender', message.sender || '');
-        formData.append('receiver', message.receiver || receiver);
-        formData.append('created_at', message.created_at || '');
-        const token = localStorage.getItem("token");
-        if (!token) throw new Error("No token found");
-        const query = await fetch(`${baseURL}/api/messages/send-message/${receiver}`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          body: formData
-        });
-        if (!query) throw new Error("Failed to complete the query");
-      } catch (error) {
-        console.error("Failed to send message", error);
-      }
-    },
+  subscribeToMessages: async (rece) => {
+    if (!rece) return;
+
+    const socket = authService.getState().socket;
+    console.log("Socket : ", socket);
+    if (!socket) {
+      console.error("Socket is not connected");
+      return;
+    }
+    socket.on("newMessage", (msg) => {
+      console.log("Getting the message from the socket server", msg);
+      get().getmessages(rece);
+      set((state) => ({ messages: [...state.messages, msg] }));
+    });
+  },
+
+  unsubscribeFromMessages: async () => {
+    const socket = authService.getState().socket;
+    if (!socket) return;
     
-    // Add a new function to get messages
-    getMessages: () => get().message,
-    
-    getSocket: () => get().socket,
-  })
-  )
-);
+    socket.off("newMessage");
+  },
+  setSelectedUser: (selectedUser) => set({ selectedUser }),
+}));
