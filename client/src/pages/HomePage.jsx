@@ -1,7 +1,11 @@
+import { Box } from "@chakra-ui/react";
+
 function HomePage() {
   return (
     <>
-      <p>Home</p>
+      <p className="text-red 500" >
+        hellow
+      </p>
     </>
   );
 }

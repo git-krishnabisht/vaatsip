@@ -99,14 +99,13 @@ export const sendMessages = async (req, res) => {
       const socketId = getReceiverSocketId(receiver);
       console.log("socket id: ", socketId);
       if (socketId) {
-        console.log("hitting");
         const msg = conversationQuery.rows[0].message;
         io.to(socketId).emit("newMessage", { msg , base64Image, sender, receiver, created_at });
         console.log("Message sent successfully from the socket's server to :", receiver);
       }
 
       return res.status(200).json({
-          sender, receiver, message, image: base64Image, created_at 
+          sender, receiver, message, image_data: base64Image, created_at 
       });
 
   } catch (err) {

@@ -1,8 +1,7 @@
-import { Box, Button, Container, Spacer, Spinner } from "@chakra-ui/react";
+import { Box, Button, Container, Spacer } from "@chakra-ui/react";
 import { Link, useNavigate } from "react-router-dom";
 import { authService } from "../services/authService";
 import { useEffect } from "react";
-import { socketService } from "../services/socketService";
 
 const BeforeSignInLinks = {
   "About us": "/about",
@@ -80,7 +79,7 @@ function NavBar() {
           bg="white"
         >
           <h2>
-            <Link href="/" style={{ textDecoration: "none", color: "inherit" }}>
+            <Link to="/" style={{ textDecoration: "none", color: "inherit" }}>
               Home
             </Link>
           </h2>

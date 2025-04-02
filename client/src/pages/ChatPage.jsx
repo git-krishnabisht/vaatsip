@@ -1,9 +1,17 @@
-import { Box, Button, Container, Flex, HStack, Input } from "@chakra-ui/react";
+import {
+  Box,
+  Button,
+  Container,
+  Flex,
+  HStack,
+  Input,
+  useSteps,
+} from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import { socketService } from "../services/socketService";
 import { useParams } from "react-router-dom";
 import { authService } from "../services/authService";
-import ChatSection from "../components/ui/chatSection";
+import ChatSection from "../components/chatSection";
 
 function ChatPage() {
   const {
@@ -52,38 +60,40 @@ function ChatPage() {
 
   return (
     <>
-        <ChatSection messages={messages} currentUser={currentUser} />
-        <Container
-          padding="2vh"
-          position="fixed"
-          bottom={0}
-          left={0}
-          right={0}
-          zIndex={1000}
-          bg="white"
-          boxShadow="md"
-          maxWidth={"100%"}
-        >
-          <HStack>
-            <Input
-              placeholder="send message"
-              value={outgoingMessages.message}
-              onChange={(e) => {
-                setOutgoingMessages({
-                  ...outgoingMessages,
-                  message: e.target.value,
-                });
-              }}
-            />
-            <Input
-              as={"button"}
-              type="file"
-              onChange={handleFileChange}
-              width={"20rem"}
-            />
-            <Button onClick={handleSendMessages}> Send </Button>
-          </HStack>
-        </Container>
+      <Box height={"calc(100vh - 80px)"}>
+        <ChatSection messages={messages} sender={currentUser} receiver={receiver} />
+      </Box>
+      <Container
+        padding="2vh"
+        position="fixed"
+        bottom={0}
+        left={0}
+        right={0}
+        zIndex={1000}
+        bg="white"
+        boxShadow="md"
+        maxWidth={"100%"}
+      >
+        <HStack>
+          <Input
+            placeholder="send message"
+            value={outgoingMessages.message}
+            onChange={(e) => {
+              setOutgoingMessages({
+                ...outgoingMessages,
+                message: e.target.value,
+              });
+            }}
+          />
+          <Input
+            as={"button"}
+            type="file"
+            onChange={handleFileChange}
+            width={"20rem"}
+          />
+          <Button onClick={handleSendMessages}> Send </Button>
+        </HStack>
+      </Container>
     </>
   );
 }

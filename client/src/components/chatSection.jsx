@@ -1,11 +1,12 @@
-import { Box, Text, VStack, Image } from "@chakra-ui/react";
+import { Box, Text, Image, Flex } from "@chakra-ui/react";
 import { useEffect, useRef } from "react";
 
-function ChatSection({ messages, currentUser }) {
+function ChatSection({ messages, sender, receiver}) {
   const messagesEndRef = useRef(null);
-
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
   };
 
   useEffect(() => {
@@ -13,36 +14,34 @@ function ChatSection({ messages, currentUser }) {
   }, [messages]);
 
   return (
-    <Box
-      display="flex"
-      flexDirection="column"
-      height="calc(100vh - 60px)"
-      bg="gray.100"
-    >
-      <VStack
-        spacing={4}
+    <Box height="100%" bg="gray.100" overflow="hidden">
+      <Flex
+        direction="column"
+        justify="flex-end"
         p={4}
+        pb={10}
+        height="100%"
         overflowY="auto"
-        flex={1}
-        alignItems="stretch"
       >
         {messages.map((msg, index) => (
           <Box
             key={index}
             maxW="80%"
-            alignSelf={msg.sender === currentUser ? "flex-end" : "flex-start"}
-            bg={msg.sender === currentUser ? "gray.400" : "gray.300"}
+            alignSelf={msg.sender === sender ? "flex-end" : "flex-start"}
+            bg={msg.sender === sender ? "gray.400" : "gray.300"}
             color="black"
             p={3}
+            mb={2}
             borderRadius="lg"
+            wordBreak="break-word"
           >
             <Text fontSize="sm" fontWeight="bold">
-              {msg.sender === currentUser ? "You" : msg.sender}
+              {msg.sender === sender ? sender : receiver}
             </Text>
             {msg.image_data && (
               <Image
                 src={msg.image_data}
-                alt="Attached image"
+                alt="Attached"
                 borderRadius="md"
                 maxW="100%"
                 my={2}
@@ -54,8 +53,8 @@ function ChatSection({ messages, currentUser }) {
             </Text>
           </Box>
         ))}
-        <div ref={messagesEndRef} style={{ paddingBottom: "20px" }} />
-      </VStack>
+        <div ref={messagesEndRef} />
+      </Flex>
     </Box>
   );
 }

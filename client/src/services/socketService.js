@@ -52,7 +52,7 @@ export const socketService = create((set, get) => ({
       formData.append("receiver", messageData.receiver);
       formData.append("created_at", messageData.created_at);
 
-      const { messages } = get();
+
       const token = localStorage.getItem("token");
       const query = await fetch(`${baseURL}/api/messages/send-message/${receiver}`, {
         method: "POST",
@@ -62,13 +62,12 @@ export const socketService = create((set, get) => ({
         body: formData
       });
       const response = await query.json();
-      set({ messages: [...messages, response]});
+      set({ messages: [ ...get().messages, response]});
     } catch (error) {
       console.error(error);
     }
   },
 
-  // The socket is null here, hence not message getting transfered through the socket event, need to debug this
   subscribeToMessages: async (receiver) => {
     if (!receiver) return;
 
@@ -83,7 +82,8 @@ export const socketService = create((set, get) => ({
 
     socket.on("newMessage", (msg) => {
       console.log("message", msg);
-      get().getmessages(receiver);
+      get().getmessages(receiver); 
+      set({ messages: [ ...get().messages, msg]});
     });
   },
 
