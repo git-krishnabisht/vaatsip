@@ -1,19 +1,19 @@
-import { Routes, Route } from "react-router-dom";
-import HomePage from "./pages/HomePage";
-import NavBar from "./pages/NavBar";
-import AboutUsPage from "./pages/AboutUsPage";
-import { Container } from "@chakra-ui/react";
-import SignInPage from "./pages/SignInPage";
-import UsersPage from "./pages/UsersPage";
-import { Toaster } from "react-hot-toast";
-import ChatPage from "./pages/ChatPage";
-import ProfileDetailsPage from "./pages/ProfileDetailsPage";
+// import { Routes, Route } from "react-router-dom";
+// import HomePage from "./pages/HomePage";
+// import NavBar from "./pages/NavBar";
+// import AboutUsPage from "./pages/AboutUsPage";
+// import { Container } from "@chakra-ui/react";
+// import SignInPage from "./pages/SignInPage";
+// import UsersPage from "./pages/UsersPage";
+// import { Toaster } from "react-hot-toast";
+// import ChatPage from "./pages/ChatPage";
+// import ProfileDetailsPage from "./pages/ProfileDetailsPage";
 
 function App() {
-
   return (
     <>
-      <Container 
+     <h1 class="text-3xl font-bold underline">Hello world!</h1>
+      {/* <Container 
         maxW={{ base: "full", md: "95%", lg: "container.xl" }} 
         px={{ base: 2, md: 4 }} 
         minH="100vh" u
@@ -30,7 +30,7 @@ function App() {
         <Toaster 
           position="bottom-center" 
         />
-      </Container>
+      </Container> */}
     </>
   );
 }

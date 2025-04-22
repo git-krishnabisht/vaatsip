@@ -1,6 +1,7 @@
 import { create } from "zustand";
-import { authService } from "../services/authService";
-const baseURL = import.meta.env.MODE === "development" ? "http://localhost:50136" : "";
+import { authService } from "./authService";
+const baseURL =
+  import.meta.env.MODE === "development" ? "http://localhost:50136" : "";
 
 export const socketService = create((set, get) => ({
   messages: [],
@@ -13,16 +14,19 @@ export const socketService = create((set, get) => ({
         method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,
-        }
+        },
       });
       const data = await query.json();
       const users = data.map((user) => ({
         username: user.username,
-        image: user.image
+        image: user.image,
       }));
       set({ users: users });
     } catch (err) {
-      console.error("Error:", err || err.messgae || err.stack || "Unexpected error.");
+      console.error(
+        "Error:",
+        err || err.messgae || err.stack || "Unexpected error."
+      );
     }
   },
 
@@ -30,12 +34,15 @@ export const socketService = create((set, get) => ({
     try {
       const token = localStorage.getItem("token");
       if (!token) console.error("Token is missing");
-      const query = await fetch(`${baseURL}/api/messages/get-messages/${receiver}`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`
+      const query = await fetch(
+        `${baseURL}/api/messages/get-messages/${receiver}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         }
-      });
+      );
       const messages = await query.json();
       set({ messages: messages });
     } catch (error) {
@@ -52,17 +59,19 @@ export const socketService = create((set, get) => ({
       formData.append("receiver", messageData.receiver);
       formData.append("created_at", messageData.created_at);
 
-
       const token = localStorage.getItem("token");
-      const query = await fetch(`${baseURL}/api/messages/send-message/${receiver}`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData
-      });
+      const query = await fetch(
+        `${baseURL}/api/messages/send-message/${receiver}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
+        }
+      );
       const response = await query.json();
-      set({ messages: [ ...get().messages, response]});
+      set({ messages: [...get().messages, response] });
     } catch (error) {
       console.error(error);
     }
@@ -72,18 +81,23 @@ export const socketService = create((set, get) => ({
     if (!receiver) return;
 
     const socket = authService.getState().socket;
-    
+
     console.log("Socket in subscribeToMessages:", socket);
 
     if (!socket) {
-      console.error("Socket is not connected");
-      return;
-    }
+      console.info("Socket is not connected, re-initializing the socket.");
+      const _re_socket = authService.getState().connectSocket;
+      _re_socket();
+      if(!socket) {
+        console.error("Cannot initiate new intance for the socket, something is wrong with the session");
+        return;
+      }
+    } 
 
     socket.on("newMessage", (msg) => {
       console.log("message", msg);
-      get().getmessages(receiver); 
-      set({ messages: [ ...get().messages, msg]});
+      get().getmessages(receiver);
+      set({ messages: [...get().messages, msg] });
     });
   },
 
