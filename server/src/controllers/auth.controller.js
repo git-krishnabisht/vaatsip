@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken";
-import db from "../libs/db.js";
+import db from "../config/db.config.js";
 import { userService } from "../services/user.service.js";
-import { userValidate } from "../validation-patterns/user.validation.js";
+import { userValidation } from "../validators/user.validation.js";
 
 export const signIn = async (req, res) => {
   const signOptions = {
@@ -36,7 +36,7 @@ export const signUp = async (req, res) => {
   try {
     const input = req.body;
 
-    const validation = await userValidate(input);
+    const validation = await userValidation(input);
     if (!validation.isValid) {
       return res.status(400).send(validation.errors);
     }

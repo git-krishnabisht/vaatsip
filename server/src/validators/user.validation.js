@@ -1,4 +1,4 @@
-export async function userValidate(input) {
+export async function userValidation(input) {
   const errors = [];
   if (!input.username) errors.push("Username is required");
   if (!input.name) errors.push("Name is required");

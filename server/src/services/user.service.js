@@ -1,6 +1,5 @@
-import { userRepository } from "../repositories/user.repo.js";
-import { signUpCommand } from "../cmd-patterns/signup.cmd.js";
-import db from "../libs/db.js";
+import { userRepository } from "../repositories/user.repository.js";
+import db from "../config/db.config.js";
 
 export class userService {
   static async signUp(input) {
@@ -11,18 +10,16 @@ export class userService {
         body: { message: "User already exists" },
       };
     } else {
-      const cmd = new signUpCommand(
-        input.username,
-        input.name,
-        input.email,
-        input.gender,
-        input.dob,
-        input.password
-      );
-
       const query = {
         text: "insert into users (username, name, email, gender, dob, password) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
-        values: cmd.toArray(),
+        values: [
+          input.username,
+          input.name,
+          input.email,
+          input.gender,
+          input.dob,
+          input.password,
+        ],
       };
 
       const result = await db.query(query);

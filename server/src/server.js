@@ -5,7 +5,7 @@ import userRoutes from "./routes/user.route.js";
 import dotenv from "dotenv";
 import { app, server } from "./socket/socket.js";
 import path from "path";
-import { fileURLToPath } from 'url';
+import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -16,12 +16,12 @@ app.use(express.json());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
-app.use("/api/users",  userRoutes);
+app.use("/api/users", userRoutes);
 
-app.use(express.static(path.join(__dirname, '../../client/public')));
+app.use(express.static(path.join(__dirname, "../../client/public")));
 
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../../client/public/index.html'));
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "../../client/public/index.html"));
 });
 
 const PORT = process.env.PORT;

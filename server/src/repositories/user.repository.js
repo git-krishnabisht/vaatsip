@@ -1,4 +1,4 @@
-import db from "../libs/db.js";
+import db from "../config/db.config.js";
 
 export class userRepository {
   static async userExists(cmd) {

@@ -1,6 +1,6 @@
 import { fileTypeFromBuffer } from "file-type";
 import imageType from "image-type";
-import db from "../libs/db.js";
+import db from "../config/db.config.js";
 
 export const getPictures = async (req, res) => {
   const { username } = req.params;
@@ -41,15 +41,24 @@ export const userDetails = async (req, res) => {
     if (!username) {
       return res.status(400).json({ message: "User not found" });
     }
-    const details = await db.query("select * from users where username = $1;", [username]);
+    const details = await db.query("select * from users where username = $1;", [
+      username,
+    ]);
     const _details = details.rows[0];
     if (!_details.image) return res.status(200).json({ details: _details });
     const type = imageType(_details.image)?.mime || "image/jpeg";
-    const base64Image = `data:${type};base64,${_details.image.toString("base64")}`;
+    const base64Image = `data:${type};base64,${_details.image.toString(
+      "base64"
+    )}`;
     const userdetails = { ..._details, image: base64Image };
     return res.status(200).json({ details: userdetails });
   } catch (err) {
-    return res.status(500).json({ error: "Something is wrong with the /user-details : " + err.stack || err });
+    return res
+      .status(500)
+      .json({
+        error:
+          "Something is wrong with the /user-details : " + err.stack || err,
+      });
   }
 };
 
@@ -59,7 +68,9 @@ export const getUsers = async (_, res) => {
     const usersWithBase64 = rows.map((user) => {
       if (!user.image) return { username: user.username, image: null };
       const type = imageType(user.image)?.mime || "image/jpeg";
-      const base64Image = `data:${type};base64,${user.image.toString("base64")}`;
+      const base64Image = `data:${type};base64,${user.image.toString(
+        "base64"
+      )}`;
       return { username: user.username, image: base64Image };
     });
     res.json(usersWithBase64);
@@ -83,7 +94,9 @@ export const uploadProfile = async (req, res) => {
     }
 
     if (!req.file?.buffer) {
-      return res.status(400).json({ error: "No image file found in the request" });
+      return res
+        .status(400)
+        .json({ error: "No image file found in the request" });
     }
 
     const image = req.file.buffer;
@@ -107,8 +120,6 @@ export const uploadProfile = async (req, res) => {
   }
 };
 
-
-
 export const getUser = async (req, res) => {
   try {
     const username = req.username;
@@ -124,7 +135,9 @@ export const userDelete = async (req, res) => {
     return res.status(400).json({ message: "Username not found" });
   }
   try {
-    const result = await db.query(`delete from users where username=$1;`, [username]);
+    const result = await db.query(`delete from users where username=$1;`, [
+      username,
+    ]);
     if (result.rowCount > 0) {
       return res.status(200).send({ message: "User deleted sucessfully" });
     } else {

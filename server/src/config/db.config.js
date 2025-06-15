@@ -3,11 +3,11 @@ import dotenv from "dotenv";
 dotenv.config();
 const { Pool } = pg;
 
-const db = new Pool({ 
+const db = new Pool({
   connectionString: process.env.DB_URI,
   ssl: {
     rejectUnauthorized: false,
-  }
+  },
 });
 
 (async () => {
