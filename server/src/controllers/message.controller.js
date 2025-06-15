@@ -1,4 +1,4 @@
-import db from "../lib/db.js";
+import db from "../libs/db.js";
 import imageType from "image-type";
 import { getReceiverSocketId, io } from "../socket/socket.js";
 

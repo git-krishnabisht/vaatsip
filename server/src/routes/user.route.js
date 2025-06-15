@@ -1,7 +1,7 @@
 import express from "express";
 import multer from "multer";
-import { protectedRoute } from "../middleware/auth.middleware.js";
-import { uploadProfile, getPictures, getUsers, getUser, userDelete, userUpdate, userDetails } from "../controller/user.controller.js";
+import { protectedRoute } from "../middlewares/auth.middleware.js";
+import { uploadProfile, getPictures, getUsers, getUser, userDelete, userUpdate, userDetails } from "../controllers/user.controller.js";
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage });

@@ -1,5 +1,4 @@
 import express from "express";
-import cors from "cors";
 import authRoutes from "./routes/auth.route.js";
 import messageRoutes from "./routes/message.route.js";
 import userRoutes from "./routes/user.route.js";
@@ -14,14 +13,6 @@ const __dirname = path.dirname(__filename);
 dotenv.config();
 
 app.use(express.json());
-
-app.use(
-  cors({
-    origin: "http://localhost:5000",
-    credentials: true,
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
 
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);

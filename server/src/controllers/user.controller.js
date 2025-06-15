@@ -1,6 +1,6 @@
 import { fileTypeFromBuffer } from "file-type";
 import imageType from "image-type";
-import db from "../lib/db.js";
+import db from "../libs/db.js";
 
 export const getPictures = async (req, res) => {
   const { username } = req.params;

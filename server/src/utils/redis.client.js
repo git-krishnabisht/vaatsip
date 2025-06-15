@@ -4,7 +4,8 @@ const redis_client = redis.createClient({
   socket: {
     port: 6379,
     host: '127.0.0.1'
-  }
+  },
+  database: 0
 });
 
 redis_client.on('error', (err) => console.error('Redis Error:', err));
