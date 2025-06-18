@@ -11,11 +11,9 @@ export const protectedRoute = async (req, res, next) => {
     }
     const token = authHeader.split(" ")[1];
     if (!token) {
-      return res
-        .status(400)
-        .json({
-          message: "Token is not available in the authorization header",
-        });
+      return res.status(400).json({
+        message: "Token is not available in the authorization header",
+      });
     }
 
     const me = jwt.verify(token, process.env.PUBLIC_KEY, {
@@ -33,12 +31,10 @@ export const protectedRoute = async (req, res, next) => {
     req.username = me;
     next();
   } catch (err) {
-    return res
-      .status(500)
-      .json({
-        error:
-          "Something is wrong with the is-valid middleware \n " + err.stack ||
-          err,
-      });
+    return res.status(500).json({
+      error:
+        "Something is wrong with the is-valid middleware \n " + err.stack ||
+        err,
+    });
   }
 };
