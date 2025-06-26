@@ -1,7 +1,6 @@
 import { authRepository } from "../repositories/auth.repository.js";
-import db from "../config/db.config.js";
-import jwt from "jsonwebtoken";
 import { serviceResponse } from "../utils/service-response.util.js";
+import { jwtService } from "./jwt.service.js";
 
 export class authService {
   static async signUp(input) {
@@ -24,16 +23,11 @@ export class authService {
     if (userExists === false) {
       return serviceResponse(400, { message: "User does not exists" });
     } else {
-
-      const result = await authRepository.checkCredentials(input);
+      const result = await authRepository.verifyCredentials(input);
 
       if (result.success) {
-        var token = jwt.sign(
-          { username: input.username },
-          process.env.PRIVATE_KEY,
-          { expiresIn: "7d", algorithm: "RS256" }
-        );
 
+        var token = await jwtService.generateJWT(input.username);
         return serviceResponse(200, {
           token: token,
           message: "Sign in successfull",

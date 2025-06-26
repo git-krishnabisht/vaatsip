@@ -53,12 +53,9 @@ export const userDetails = async (req, res) => {
     const userdetails = { ..._details, image: base64Image };
     return res.status(200).json({ details: userdetails });
   } catch (err) {
-    return res
-      .status(500)
-      .json({
-        error:
-          "Something is wrong with the /user-details : " + err.stack || err,
-      });
+    return res.status(500).json({
+      error: "Something is wrong with the /user-details : " + err.stack || err,
+    });
   }
 };
 

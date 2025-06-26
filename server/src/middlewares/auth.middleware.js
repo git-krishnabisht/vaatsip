@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import db from "../config/db.config.js";
+import { jwtService } from "../services/jwt.service.js";
 
 export const protectedRoute = async (req, res, next) => {
   try {
@@ -16,12 +17,10 @@ export const protectedRoute = async (req, res, next) => {
       });
     }
 
-    const me = jwt.verify(token, process.env.PUBLIC_KEY, {
-      algorithm: "RS256",
-    }).username;
+    const username = jwtService.verifyJWT(token);
     const query = await db.query(
       "SELECT CASE WHEN EXISTS (SELECT 1 FROM users WHERE username = $1) THEN true ELSE false END AS is_valid",
-      [me]
+      [username]
     );
 
     if (!query.rows[0].is_valid) {

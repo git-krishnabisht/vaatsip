@@ -31,15 +31,15 @@ export class authRepository {
     }
   }
 
-  static async checkCredentials(input) {
+  static async verifyCredentials(input) {
     const query = {
       text: "select 1 from users where username = $1 and password = $2 limit 1",
       values: [input.username, input.password],
     };
 
     const result = await db.query(query);
-    
-    if(result.rowCount > 0) {
+
+    if (result.rowCount > 0) {
       return { success: true };
     } else {
       return { success: false };
