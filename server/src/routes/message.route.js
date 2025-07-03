@@ -11,6 +11,7 @@ const upload = multer({ storage });
 const router = express.Router();
 
 router.get("/get-messages/:user", protectedRoute, getMessages);
+
 router.post(
   "/send-message/:receiver",
   upload.single("image_data"),
