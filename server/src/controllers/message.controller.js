@@ -5,8 +5,8 @@ import { encode64 } from "../utils/encode-base64.util.js";
 
 export const sendMessages = async (req, res) => {
   try {
+    const sender = req.user.googleId;
     const {
-      username: sender,
       params: { receiver },
       body: { message },
       file,

@@ -47,7 +47,7 @@ export const oauthCallback = async (req, res) => {
     }
 
     const user = { googleId, email, name };
-    const token = jwt.sign(user, process.env.JWT_SECRET, { expiresIn: "20s" });
+    const token = jwt.sign(user, process.env.JWT_SECRET, { expiresIn: "2d" });
 
     res.cookie("jwt", token, {
       httpOnly: true,
