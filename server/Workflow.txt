@@ -1,4 +1,0 @@
-Workflow :->
-
-client signs up -> signs in
-clients can talk with each other via websocket(socket.io)

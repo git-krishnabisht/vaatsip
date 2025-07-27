@@ -26,7 +26,6 @@ export class authService {
       const result = await authRepository.verifyCredentials(input);
 
       if (result.success) {
-
         var token = await jwtService.generateJWT(input.username);
         return serviceResponse(200, {
           token: token,

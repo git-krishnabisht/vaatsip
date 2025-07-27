@@ -1,14 +1,7 @@
 import db from "../config/db.config.js";
 import imageType from "image-type";
 import { getReceiverSocketId, io } from "../socket/socket.js";
-
-function encode64(image, type) {
-  if (!image || !type) return { success: false, data: undefined };
-  return {
-    success: true,
-    data: `data:${type};base64,${image.toString("base64")}`,
-  };
-}
+import { encode64 } from "../utils/encode-base64.util.js";
 
 export const sendMessages = async (req, res) => {
   try {

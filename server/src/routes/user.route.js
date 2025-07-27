@@ -1,6 +1,7 @@
 import express from "express";
 import multer from "multer";
 import { protectedRoute } from "../middlewares/auth.middleware.js";
+
 import {
   uploadProfile,
   getPictures,

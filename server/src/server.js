@@ -4,27 +4,50 @@ import messageRoutes from "./routes/message.route.js";
 import userRoutes from "./routes/user.route.js";
 import dotenv from "dotenv";
 import { app, server } from "./socket/socket.js";
-import path from "path";
-import { fileURLToPath } from "url";
+import cookieParser from "cookie-parser";
+import { protectedRoute } from "./middlewares/auth.middleware.js";
+import { oauthEntry } from "./oauth/oauth-entry.js";
+import { oauthCallback } from "./oauth/oauth-callback.js";
+import { testProfile } from "./test/oauth.test-profile.js";
+import { testLogout } from "./test/oauth.test-logout.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// import path from "path";
+// import { fileURLToPath } from "url";
 
 dotenv.config();
 
+const PORT = process.env.PORT;
+export const REDIRECT_URI = `http://localhost:${PORT}/auth/google/callback`;
+
+// const __filename = fileURLToPath(import.meta.url);
+// const __dirname = path.dirname(__filename);
+
 app.use(express.json());
+app.use(cookieParser());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/users", userRoutes);
 
-app.use(express.static(path.join(__dirname, "../../client/public")));
+app.get("/auth/google", oauthEntry);
+app.get("/auth/google/callback", oauthCallback);
+app.get("/profile", protectedRoute, testProfile);
+app.post("/logout", testLogout);
 
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "../../client/public/index.html"));
+app.get("/", (_, res) => {
+  res.send(
+    `<form action="/api/auth/sign-in">
+      <button>sign-in</button>
+    </form>`
+  );
 });
 
-const PORT = process.env.PORT;
+// app.use(express.static(path.join(__dirname, "../../client/public")));
+
+// app.get("*", (req, res) => {
+//   res.sendFile(path.join(__dirname, "../../client/public/index.html"));
+// });
+
 server.listen(PORT, () => {
   console.log(`Server is Listening to port ${PORT}...`);
 });
