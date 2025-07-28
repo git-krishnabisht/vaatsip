@@ -1,9 +1,9 @@
 import express from "express";
 import authRoutes from "./routes/auth.route.js";
-import messageRoutes from "./routes/message.route.js";
+import messageRoutes from "./routes/comm.route.js";
 import userRoutes from "./routes/user.route.js";
 import dotenv from "dotenv";
-import { app, server } from "./socket/socket.js";
+import { app, server } from "./config/socket.config.js";
 import cookieParser from "cookie-parser";
 import { protectedRoute } from "./middlewares/auth.middleware.js";
 import { oauthEntry } from "./oauth/oauth-entry.js";

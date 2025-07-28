@@ -3,8 +3,8 @@ import multer from "multer";
 import { protectedRoute } from "../middlewares/auth.middleware.js";
 import {
   getMessages,
-  sendMessages,
-} from "../controllers/message.controller.js";
+  sendMessages
+} from "../controllers/comm.controller.js";
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage });

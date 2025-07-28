@@ -1,7 +1,8 @@
 import db from "../config/db.config.js";
 import imageType from "image-type";
-import { getReceiverSocketId, io } from "../socket/socket.js";
 import { encode64 } from "../utils/encode-base64.util.js";
+import { commRepository } from "../repositories/comm.repository.js";
+import { notifyUserMessage } from "../utils/socket.notify-user.util.js";
 
 export const sendMessages = async (req, res) => {
   try {
@@ -17,6 +18,9 @@ export const sendMessages = async (req, res) => {
         error: "You much provide both sender username and receiver username",
       });
     }
+
+    // check sender and reciever existense in DB
+
     if (!message && !file) {
       return res
         .status(400)
@@ -24,12 +28,15 @@ export const sendMessages = async (req, res) => {
     }
 
     await db.query("BEGIN");
-    const messageQuery = await db.query(
-      "INSERT INTO messages(sender, receiver, message) VALUES ($1, $2, $3) RETURNING *",
-      [sender, receiver, message || null]
+
+    const messageQuery = await commRepository.insertMessage(
+      sender,
+      receiver,
+      message
     );
 
     const { created_at, message_id: messageId } = messageQuery.rows[0];
+
     let image = null;
     let type = null;
     let base64Image = null;
@@ -37,9 +44,10 @@ export const sendMessages = async (req, res) => {
     if (file) {
       image = file.buffer;
       type = file.mimetype;
-      const attachmentQuery = await db.query(
-        "INSERT INTO attachments(message_id, image_data, image_type) VALUES ($1, $2, $3) RETURNING *",
-        [messageId, image, type]
+      const attachmentQuery = await commRepository.insertAttachments(
+        messageId,
+        image,
+        type
       );
 
       image = attachmentQuery.rows[0].image_data;
@@ -54,29 +62,27 @@ export const sendMessages = async (req, res) => {
     }
 
     await db.query("COMMIT");
-    const socketId = getReceiverSocketId(receiver);
-    if (socketId) {
-      const msg = messageQuery.rows[0].message;
-      io.to(socketId).emit("newMessage", {
-        msg,
-        base64Image,
-        sender,
-        receiver,
-        created_at,
-      });
-      console.log(
-        "Message sent successfully from the socket's server to :",
-        receiver
-      );
-    }
 
-    return res.status(200).json({
+    notifyUserMessage({
       sender,
       receiver,
       message,
-      image_data: base64Image,
+      image: base64Image,
       created_at,
     });
+
+    const responsePayload = {
+      sender,
+      receiver,
+      message,
+      created_at,
+    };
+
+    if (base64Image) {
+      responsePayload.image_data = base64Image;
+    }
+
+    return res.status(200).json(responsePayload);
   } catch (err) {
     await db.query("ROLLBACK");
     console.error("Send message error:", err);
@@ -89,51 +95,15 @@ export const sendMessages = async (req, res) => {
 
 export const getMessages = async (req, res) => {
   try {
-    const sender = req.username;
+    const sender = req.user?.googleId;
     const receiver = req.params.user;
 
-    const query = await db.query(
-      `
-      SELECT 
-        m.message, 
-        a.image_data, 
-        m.sender, 
-        m.receiver, 
-        m.created_at 
-      FROM messages m
-      LEFT JOIN attachments a ON m.message_id = a.message_id 
-      WHERE (m.sender = $1 AND m.receiver = $2) 
-         OR (m.sender = $2 AND m.receiver = $1) 
-      ORDER BY m.created_at
-    `,
-      [sender, receiver]
-    );
+    // check sender and receiver existence in DB
 
+    const query = await commRepository.getMessages(sender, receiver);
     const rows = query.rows;
 
-    const messagesWithBase64 = rows.map((row) => {
-      if (!row.image_data) {
-        return {
-          message: row.message,
-          image_data: null,
-          sender: row.sender,
-          receiver: row.receiver,
-          created_at: row.created_at,
-        };
-      }
-
-      const type = imageType(row.image_data)?.mime || "image/jpeg";
-      const base64Image = encode64(row.image_data, type);
-
-      return {
-        message: row.message,
-        image_data: base64Image,
-        sender: row.sender,
-        receiver: row.receiver,
-        created_at: row.created_at,
-      };
-    });
-
+    const messagesWithBase64 = parseMessageList(rows);
     return res.status(200).json(messagesWithBase64);
   } catch (err) {
     console.error("Get messages error:", err);
@@ -144,3 +114,30 @@ export const getMessages = async (req, res) => {
     });
   }
 };
+
+function parseMessageList(rows) {
+  const list = rows.map((row) => {
+    if (!row.image_data) {
+      return {
+        message: row.message,
+        image_data: null,
+        sender: row.sender,
+        receiver: row.receiver,
+        created_at: row.created_at,
+      };
+    }
+
+    const type = imageType(row.image_data)?.mime || "image/jpeg";
+    const base64Image = encode64(row.image_data, type);
+
+    return {
+      message: row.message,
+      image_data: base64Image,
+      sender: row.sender,
+      receiver: row.receiver,
+      created_at: row.created_at,
+    };
+  });
+
+  return list;
+}

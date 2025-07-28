@@ -1,12 +1,12 @@
 import db from "../config/db.config.js";
 
 export class authRepository {
-  static async userExists(input) {
+
+  static async userExists(googleId) {
     const result = await db.query(
       "select exists (select 1 from users where username = $1)",
-      [input.username]
+      [googleId]
     );
-
     return result.rows[0].exists;
   }
 
