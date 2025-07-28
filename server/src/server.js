@@ -18,6 +18,9 @@ dotenv.config();
 
 const PORT = process.env.PORT;
 export const REDIRECT_URI = `http://localhost:${PORT}/auth/google/callback`;
+export const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+export const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
+export const JWT_SECRET = process.env.JWT_SECRET;
 
 // const __filename = fileURLToPath(import.meta.url);
 // const __dirname = path.dirname(__filename);
