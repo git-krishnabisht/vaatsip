@@ -1,4 +1,4 @@
-import { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET } from "../server";
+import { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET } from "../server.js";
 
 export async function refreshGoogleToken(refreshToken) {
   if (!refreshToken) {
