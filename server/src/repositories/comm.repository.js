@@ -8,14 +8,15 @@ export class commRepository {
     );
   }
 
-  static async insertAttachments(messageId, image, type) {
+  static async insertAttachments(message_id, image, type) {
     return await db.query(
       "INSERT INTO attachments(message_id, image_data, image_type) VALUES ($1, $2, $3) RETURNING *",
-      [messageId, image, type]
+      [message_id, image, type]
     );
   }
 
   static async getMessages(sender, receiver) {
+    console.log("s : r : ", sender, receiver);
     return await db.query(
       `
       SELECT 

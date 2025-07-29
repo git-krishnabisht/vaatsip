@@ -4,7 +4,7 @@ export class authRepository {
 
   static async userExists(googleId) {
     const result = await db.query(
-      "select exists (select 1 from users where username = $1)",
+      "select exists (select 1 from users where google_id = $1)",
       [googleId]
     );
     return result.rows[0].exists;
@@ -33,7 +33,7 @@ export class authRepository {
 
   static async verifyCredentials(input) {
     const query = {
-      text: "select 1 from users where username = $1 and password = $2 limit 1",
+      text: "select 1 from users where googleId = $1 and password = $2 limit 1",
       values: [input.username, input.password],
     };
 

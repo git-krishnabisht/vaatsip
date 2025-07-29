@@ -1,10 +1,11 @@
 import { authService } from "../services/auth.service.js";
 import { userValidation } from "../validators/user.validation.js";
 import jwt from "jsonwebtoken";
+import { SignUpDTO } from "../dtos/user.dto.js";
 
 export const signUp = async (req, res) => {
   try {
-    const input = req.body;
+    const input = new SignUpDTO(req.body);
     const validation = await userValidation(input, "signup");
 
     if (!validation.isValid) {
@@ -22,7 +23,7 @@ export const signUp = async (req, res) => {
 
 /* export const signIn = async (req, res) => {
   try {
-    const input = req.body;
+    const input = new SignInDTO(req.body);
     const validation = await userValidation(input, "signin");
 
     if (!validation.isValid) {

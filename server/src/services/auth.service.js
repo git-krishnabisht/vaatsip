@@ -4,7 +4,7 @@ import { jwtService } from "./jwt.service.js";
 
 export class authService {
   static async signUp(input) {
-    const userExists = await authRepository.userExists(input);
+    const userExists = await authRepository.userExists(input.googleId);
     if (userExists) {
       return serviceResponse(400, { message: "User already exists" });
     } else {
