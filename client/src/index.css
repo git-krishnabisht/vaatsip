@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+[theme="dark"] {
+  background-color: black;
+  color: white;
+  font-family: "Underdog", system-ui;
+}
+
+[theme="light"] {
+  background-color: white;
+  color: black;
+  font-family: "Underdog", system-ui;
+}

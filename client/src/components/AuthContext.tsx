@@ -1,0 +1,99 @@
+import { createContext, useContext, useEffect, useState } from "react";
+
+interface User {
+  googleId: string;
+  email: string;
+  name: string;
+}
+
+interface AuthContextType {
+  isLoggedIn: boolean;
+  user: User | null;
+  setIsLoggedIn: (value: boolean) => void;
+  setUser: (user: User | null) => void;
+  logout: () => Promise<void>;
+  checkAuthStatus: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextType | null>(null);
+
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+
+  const checkAuthStatus = async () => {
+    try {
+      const res = await fetch("http://localhost:50136/api/auth/sign-in", {
+        method: "GET",
+        credentials: "include", // Include cookies
+      });
+
+      if (!res.ok) {
+        console.error("Network error");
+        setIsLoggedIn(false);
+        setUser(null);
+        return;
+      }
+
+      const data = await res.json();
+
+      if (data.body?.signed_in === true) {
+        setIsLoggedIn(true);
+        setUser(data.body.user);
+        console.log("Login successful");
+      } else {
+        setIsLoggedIn(false);
+        setUser(null);
+        console.log("Login failed");
+      }
+    } catch (error) {
+      console.error("Fetch error:", error);
+      setIsLoggedIn(false);
+      setUser(null);
+    }
+  };
+
+  const logout = async () => {
+    try {
+      const res = await fetch("http://localhost:50136/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+
+      if (res.ok) {
+        setIsLoggedIn(false);
+        setUser(null);
+        console.log("Logout successful");
+      }
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+  };
+
+  useEffect(() => {
+    checkAuthStatus();
+  }, []);
+
+  return (
+    <AuthContext.Provider
+      value={{
+        isLoggedIn,
+        user,
+        setIsLoggedIn,
+        setUser,
+        logout,
+        checkAuthStatus,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
+};

@@ -1,4 +1,3 @@
-// question 1 - why do we need seperate cors configuration for express and socket.io
 import http from "http";
 import express from "express";
 import cors from "cors";

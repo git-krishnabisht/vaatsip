@@ -96,9 +96,10 @@ export const oauthCallback = async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    return res.redirect("/profile");
+    return res.redirect("http://localhost:5000/dashboard");
   } catch (err) {
     console.error("OAuth Error:", err);
-    res.status(500).send("Authentication failed");
+    // Redirect to client with error
+    return res.redirect("http://localhost:5000/?error=auth_failed");
   }
 };

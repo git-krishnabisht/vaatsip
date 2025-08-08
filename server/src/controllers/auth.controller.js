@@ -21,32 +21,61 @@ export const signUp = async (req, res) => {
   }
 };
 
-/* export const signIn = async (req, res) => {
+export const signIn = async (req, res) => {
   try {
-    const input = new SignInDTO(req.body);
-    const validation = await userValidation(input, "signin");
+    const token = req.cookies.jwt;
 
-    if (!validation.isValid) {
-      return res.status(400).json(validation.errors);
+    if (!token) {
+      return res.status(200).json({
+        body: {
+          signed_in: false,
+          message: "No authentication token found"
+        }
+      });
     }
 
-    const output = await authService.signIn(input);
-    return res.status(output.status).json(output.body);
+    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+      if (err) {
+        return res.status(200).json({
+          body: {
+            signed_in: false,
+            message: "Invalid or expired token"
+          }
+        });
+      }
+
+      return res.status(200).json({
+        body: {
+          signed_in: true,
+          user: {
+            googleId: decoded.googleId,
+            email: decoded.email,
+            name: decoded.name
+          }
+        }
+      });
+    });
   } catch (err) {
     return res.status(500).json({
       error: "Something is wrong with the /sign-in :\n " + err.stack || err,
     });
   }
-}; */
+};
 
-export const signIn = async (req, res) => {
-  const token = req.cookies.jwt;
-  if (token) {
-    jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-      if (!err) return res.redirect("/profile");
-      res.send('<a href="/auth/google">Login with Google</a>');
+export const logout = async (req, res) => {
+  try {
+    res.clearCookie('jwt');
+    res.clearCookie('googleId');
+
+    return res.status(200).json({
+      body: {
+        signed_in: false,
+        message: "Logged out successfully"
+      }
     });
-  } else {
-    res.send('<a href="/auth/google">Login with Google</a>');
+  } catch (err) {
+    return res.status(500).json({
+      error: "Something is wrong with the /logout :\n " + err.stack || err,
+    });
   }
 };
