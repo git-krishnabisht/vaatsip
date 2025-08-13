@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken";
+
 import { REDIRECT_URI, GOOGLE_CLIENT_ID, JWT_SECRET } from "../server.js";
 
 export const oauthEntry = async (req, res) => {

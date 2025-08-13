@@ -1,13 +1,18 @@
 import { authRepository } from "../repositories/auth.repository.js";
 import { serviceResponse } from "../utils/service-response.util.js";
 import { jwtService } from "./jwt.service.js";
+import bcrypt from "bcrypt";
 
 export class authService {
-  static async signUp(input) {
-    const userExists = await authRepository.userExists(input.googleId);
+  static async sign_up_service(input) {
+    const userExists = await authRepository.userExists(input.email);
     if (userExists) {
       return serviceResponse(400, { message: "User already exists" });
     } else {
+      const salt_rounds = 10;
+      const salt = await bcrypt.genSalt(salt_rounds);
+      const hash = await bcrypt.hash(password, salt);
+
       const result = await authRepository.postCredentials(input);
 
       if (result.success) {

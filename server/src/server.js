@@ -35,7 +35,7 @@ app.use("/api/users", userRoutes);
 app.get("/auth/google", oauthEntry);
 app.get("/auth/google/callback", oauthCallback);
 app.get("/profile", protectedRoute, testProfile);
-app.post("/logout", testLogout);
+app.post("/sign-out", testLogout);
 
 app.get("/", (_, res) => {
   res.send(

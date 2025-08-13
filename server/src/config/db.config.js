@@ -4,7 +4,7 @@ dotenv.config();
 const { Pool } = pg;
 
 const db = new Pool({
-  connectionString: process.env.DB_URI,
+  connectionString: process.env.CLOUD_DB_URI,
   ssl: {
     rejectUnauthorized: false,
   },

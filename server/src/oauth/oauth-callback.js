@@ -82,6 +82,8 @@ export const oauthCallback = async (req, res) => {
     const user = { googleId, email, name };
     const token = jwt.sign(user, JWT_SECRET, { expiresIn: "2d" });
 
+    // question is: how does this server sends the jwt on cookie to the client and how tf the cookies stays at the client side and where tf does it even stays and how client sends the cookie with each http req in the header, how does this all process works?
+
     res.cookie("jwt", token, {
       httpOnly: true,
       secure: false,
@@ -96,7 +98,7 @@ export const oauthCallback = async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    return res.redirect("http://localhost:5000/dashboard");
+    return res.redirect("http://localhost:5000/");
   } catch (err) {
     console.error("OAuth Error:", err);
     // Redirect to client with error
