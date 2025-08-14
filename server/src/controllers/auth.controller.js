@@ -1,51 +1,65 @@
 import jwt from "jsonwebtoken";
-import { authDto } from "../dtos/user.dto.js";
+import { authDto, signUpDto } from "../dtos/user.dto.js";
 import bcrypt from "bcrypt";
 import prisma from "../utils/prisma.util.js";
+import { jwtService } from "../utils/jwt.util.js";
 
 export const sign_up = async (req, res) => {
   try {
-    const input = new authDto(req.body);
-    if (!input.email || !input.password) {
-      return res.status(400).json({ error: "Email and password are required" });
+    const input = new signUpDto(req.body);
+
+    if (!input.email || !input.password || !input.name) {
+      return res.status(400).json({ error: "All credentials are required" });
     }
 
-    const existingUser = await prisma.user.findUnique({
-      where: { email: input.email }
-    });
-    if (existingUser) {
-      return res.status(409).json({ error: "Email already in use" });
-    }
+    const email = input.email.toLowerCase();
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    let user;
 
     const salt_rounds = 10;
-    const hashed_password = await bcrypt.hash(input.password, salt_rounds);
+    let hashed_password;
 
-    const user = await prisma.user.create({
-      data: {
-        email: input.email,
-        passwordHash: hashed_password
-      },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        createdAt: true
-      }
+    if (existingUser && existingUser.passwordHash !== null) {
+      return res.status(409).json({
+        error: "User is already registered. Please sign in or reset your password."
+      });
+    }
+    else if (existingUser && existingUser.passwordHash === null) {
+      hashed_password = await bcrypt.hash(input.password, salt_rounds);
+
+      user = await prisma.user.update({
+        where: { email, name: input.name },
+        data: { passwordHash: hashed_password },
+        select: { id: true, email: true, name: true, createdAt: true }
+      });
+    }
+    else if (!existingUser) {
+      hashed_password = await bcrypt.hash(input.password, salt_rounds);
+
+
+      user = await prisma.user.create({
+        data: { name: input.name, email, passwordHash: hashed_password },
+        select: { id: true, email: true, name: true, createdAt: true }
+      });
+    }
+
+    const token = jwtService.generateJWT({ id: user.id, email: user.email, name: user.name });
+
+    res.cookie("jwt", token, {
+      httpOnly: true,
+      secure: false,
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    console.log("User signed up successfully.: ", user);
-
-    return res.status(201).json({
-      message: "User signed up successfully.",
-      data: user
-    });;
-
+    return res.status(201).json({ signed_up: true, message: "User signed up successfully" });
   } catch (err) {
     return res.status(500).json({
-      error: "Something is wrong with the /sign-up :\n " + err.stack || err,
+      error: "Something is wrong with the /sign_up:\n" + (err.stack || err),
     });
   }
 };
+
 
 export const sign_in = async (req, res) => {
   try {
@@ -71,10 +85,18 @@ export const sign_in = async (req, res) => {
       });
     }
 
+    const token = await jwtService.generateJWT({ id: user.id, email: user.email, name: user.name });
+
+    res.cookie("jwt", token, {
+      httpOnly: true,
+      secure: false,
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
     return res.status(200).json({
       signed_in: true,
       user: {
-        googleId: user.googleId ?? null,
         email: user.email,
         name: user.name ?? null
       }
@@ -82,17 +104,37 @@ export const sign_in = async (req, res) => {
 
   } catch (err) {
     return res.status(500).json({
-      error: "Something went wrong with /sign-in"
+      error: "Something went wrong with /sign_in"
     });
   }
 };
+
+
+export const sign_out = async (_req, res) => {
+  try {
+    res.clearCookie('jwt');
+
+    return res.status(200).json({
+      body: {
+        signed_in: false,
+        message: "Logged out successfully"
+      }
+    });
+
+  } catch (err) {
+    return res.status(500).json({
+      error: "Something is wrong with the /sign_out :\n " + err.stack || err,
+    });
+  }
+};
+
 
 export const oauth_signin = async (req, res) => {
   try {
     const token = req.cookies.jwt;
 
     if (!token) {
-      return res.status(200).json({
+      return res.status(404).json({
         body: {
           signed_in: false,
           message: "No authentication token found"
@@ -102,7 +144,7 @@ export const oauth_signin = async (req, res) => {
 
     jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
       if (err) {
-        return res.status(200).json({
+        return res.status(400).json({
           body: {
             signed_in: false,
             message: "Invalid or expired token"
@@ -114,7 +156,6 @@ export const oauth_signin = async (req, res) => {
         body: {
           signed_in: true,
           user: {
-            googleId: decoded.googleId,
             email: decoded.email,
             name: decoded.name
           }
@@ -123,25 +164,8 @@ export const oauth_signin = async (req, res) => {
     });
   } catch (err) {
     return res.status(500).json({
-      error: "Something is wrong with the /sign-in :\n " + err.stack || err,
+      error: "Something is wrong with the /oauth_signin :\n " + err.stack || err,
     });
   }
 };
 
-export const sign_out = async (_req, res) => {
-  try {
-    res.clearCookie('jwt');
-    res.clearCookie('googleId');
-
-    return res.status(200).json({
-      body: {
-        signed_in: false,
-        message: "Logged out successfully"
-      }
-    });
-  } catch (err) {
-    return res.status(500).json({
-      error: "Something is wrong with the /logout :\n " + err.stack || err,
-    });
-  }
-};

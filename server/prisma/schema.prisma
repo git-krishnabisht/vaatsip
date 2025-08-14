@@ -10,11 +10,9 @@ datasource db {
 
 model User {
   id            Int       @id @default(autoincrement())
-  googleId      String?   @unique @map("google_id")
   email         String    @unique
   name          String?
   avatar        String?
-  refreshToken  String?   @map("refresh_token")
   createdAt     DateTime  @default(now()) @map("created_at")
   passwordHash  String?   @map("password_hash")
 

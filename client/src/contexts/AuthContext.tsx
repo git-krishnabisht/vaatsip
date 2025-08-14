@@ -10,8 +10,9 @@ interface AuthContextType {
   isLoggedIn: boolean;
   user: User | null;
   setIsLoggedIn: (value: boolean) => void;
+  authLoading: boolean;
   setUser: (user: User | null) => void;
-  logout: () => Promise<void>;
+  signout: () => Promise<void>;
   checkAuthStatus: () => Promise<void>;
 }
 
@@ -20,12 +21,14 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState<boolean>(true);
 
   const checkAuthStatus = async () => {
     try {
-      const res = await fetch("http://localhost:50136/api/auth/sign-in", {
+      setAuthLoading(true);
+      const res = await fetch("http://localhost:50136/api/auth/oauth-signin", {
         method: "GET",
-        credentials: "include", // Include cookies
+        credentials: "include",
       });
 
       if (!res.ok) {
@@ -50,12 +53,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.error("Fetch error:", error);
       setIsLoggedIn(false);
       setUser(null);
+    } finally {
+      setAuthLoading(false);
     }
   };
 
-  const logout = async () => {
+  const signout = async () => {
     try {
-      const res = await fetch("http://localhost:50136/api/auth/logout", {
+      const res = await fetch("http://localhost:50136/api/auth/sign-out", {
         method: "POST",
         credentials: "include",
       });
@@ -63,10 +68,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (res.ok) {
         setIsLoggedIn(false);
         setUser(null);
-        console.log("Logout successful");
+        console.log("Sign out successful");
       }
     } catch (error) {
-      console.error("Logout error:", error);
+      console.error("Sign out error:", error);
     }
   };
 
@@ -80,8 +85,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         isLoggedIn,
         user,
         setIsLoggedIn,
+        authLoading,
         setUser,
-        logout,
+        signout,
         checkAuthStatus,
       }}
     >
@@ -91,9 +97,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 };
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
+  const ctx = useContext(AuthContext);
+  if (!ctx) {
     throw new Error("useAuth must be used within an AuthProvider");
   }
-  return context;
+  return ctx;
 };

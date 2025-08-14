@@ -1,5 +1,4 @@
 import jwt from "jsonwebtoken";
-import db from "../config/db.config.js";
 import { OAuth2Client } from "google-auth-library";
 const oauthClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 import {
@@ -8,6 +7,8 @@ import {
   GOOGLE_CLIENT_SECRET,
   JWT_SECRET,
 } from "../server.js";
+import prisma from "../utils/prisma.util.js";
+import { jwtService } from "../utils/jwt.util.js";
 
 export const oauthCallback = async (req, res) => {
   const code = req.query.code;
@@ -40,10 +41,10 @@ export const oauthCallback = async (req, res) => {
 
     const tokenData = await tokenRes.json();
 
-    const { id_token, refresh_token } = tokenData;
+    const { id_token } = tokenData;
 
-    if (!id_token || !refresh_token) {
-      throw new Error("Missing id_token or refresh_token");
+    if (!id_token) {
+      throw new Error("Missing id_token");
     }
 
     const ticket = await oauthClient.verifyIdToken({
@@ -57,41 +58,34 @@ export const oauthCallback = async (req, res) => {
 
     const payload = ticket.getPayload();
 
-    const { sub: googleId, email, name, picture } = payload;
 
-    if (!googleId || !email || !name || !picture) {
+    const { email, name, picture } = payload;
+
+    if (!email || !name || !picture) {
       throw new Error("Missing data in payload");
     }
 
-    const result = await db.query("select * from users where google_id = $1", [
-      googleId,
-    ]);
-
-    if (result.rows.length === 0) {
-      await db.query(
-        "insert into users (google_id, email, name, avatar, refresh_token) VALUES ($1, $2, $3, $4, $5)",
-        [googleId, email, name, picture, refresh_token || null]
-      );
-    } else if (refresh_token) {
-      await db.query(
-        "update users set refresh_token = $1 where google_id = $2",
-        [refresh_token, googleId]
-      );
-    }
-
-    const user = { googleId, email, name };
-    const token = jwt.sign(user, JWT_SECRET, { expiresIn: "2d" });
-
-    // question is: how does this server sends the jwt on cookie to the client and how tf the cookies stays at the client side and where tf does it even stays and how client sends the cookie with each http req in the header, how does this all process works?
-
-    res.cookie("jwt", token, {
-      httpOnly: true,
-      secure: false,
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+    const result = await prisma.user.findUnique({
+      where: {
+        email
+      },
     });
 
-    res.cookie("googleId", googleId, {
+    if (!result) {
+      await prisma.user.create({
+        data: {
+          email,
+          avatar: picture,
+          name,
+          passwordHash: null
+        },
+      });
+    }
+
+    const user = { email, name };
+    const token = await jwtService.generateJWT(user);
+
+    res.cookie("jwt", token, {
       httpOnly: true,
       secure: false,
       sameSite: "lax",
@@ -101,7 +95,6 @@ export const oauthCallback = async (req, res) => {
     return res.redirect("http://localhost:5000/");
   } catch (err) {
     console.error("OAuth Error:", err);
-    // Redirect to client with error
     return res.redirect("http://localhost:5000/?error=auth_failed");
   }
 };

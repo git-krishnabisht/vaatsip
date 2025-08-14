@@ -1,8 +1,8 @@
 import jwt from "jsonwebtoken";
 
 export class jwtService {
-  static async generateJWT(username) {
-    var token = jwt.sign({ username: username }, process.env.JWT_SECRET, {
+  static async generateJWT(user) {
+    var token = jwt.sign(user, process.env.JWT_SECRET, {
       expiresIn: "7d",
       algorithm: "HS256",
     });
@@ -16,3 +16,4 @@ export class jwtService {
     }).username;
   }
 }
+
