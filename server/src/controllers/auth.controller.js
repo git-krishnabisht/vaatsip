@@ -28,7 +28,7 @@ export const sign_up = async (req, res) => {
       hashed_password = await bcrypt.hash(input.password, salt_rounds);
 
       user = await prisma.user.update({
-        where: { email, name: input.name },
+        where: { email },
         data: { passwordHash: hashed_password },
         select: { id: true, email: true, name: true, createdAt: true }
       });
@@ -36,14 +36,13 @@ export const sign_up = async (req, res) => {
     else if (!existingUser) {
       hashed_password = await bcrypt.hash(input.password, salt_rounds);
 
-
       user = await prisma.user.create({
         data: { name: input.name, email, passwordHash: hashed_password },
         select: { id: true, email: true, name: true, createdAt: true }
       });
     }
 
-    const token = jwtService.generateJWT({ id: user.id, email: user.email, name: user.name });
+    const token = jwtService.generateJWT({ id: user.id, email: user.email });
 
     res.cookie("jwt", token, {
       httpOnly: true,
@@ -85,7 +84,7 @@ export const sign_in = async (req, res) => {
       });
     }
 
-    const token = await jwtService.generateJWT({ id: user.id, email: user.email, name: user.name });
+    const token = await jwtService.generateJWT({ id: user.id, email: user.email });
 
     res.cookie("jwt", token, {
       httpOnly: true,
