@@ -22,11 +22,11 @@ router.post(
   protectedRoute,
   uploadProfile
 );
-router.get("/get-pictures/:username", getPictures);
+router.get("/get-pictures/:id", getPictures);
 router.get("/get-users", protectedRoute, getUsers);
 router.get("/get-user", protectedRoute, getUser);
 router.delete("/user-delete", userDelete);
 router.put("/user-update", userUpdate);
-router.get("/user-details/:username", protectedRoute, userDetails);
+router.get("/user-details/:id", protectedRoute, userDetails);
 
 export default router;

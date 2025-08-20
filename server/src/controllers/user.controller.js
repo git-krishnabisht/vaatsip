@@ -1,32 +1,35 @@
 import { fileTypeFromBuffer } from "file-type";
 import imageType from "image-type";
-import db from "../config/db.config.js";
 import prisma from "../utils/prisma.util.js";
 
 export const getPictures = async (req, res) => {
-  const { username } = req.params;
+  const { id } = req.params;
   try {
-    if (!username) {
-      return res.status(400).json({ message: "Username not found" });
+    if (!id) {
+      return res.status(400).json({ message: "email not found" });
     }
-    const result = await db.query(
-      "SELECT image FROM users where username = $1;",
-      [username]
-    );
-    if (result.rows[0].image === null) {
-      return res.status(400);
+
+    const user = await prisma.user.findUnique({
+      where: { id: id },
+      select: { avatar: true }
+    });
+
+    if (!user || !user.avatar) {
+      return res.status(404).json({ message: "No image found for this user" });
     }
-    const img = result.rows[0].image;
+
+    const img = user.avatar;
     if (!img) {
       return res
         .status(404)
         .json({ message: "No image found from the result query" });
     }
+
     const fileType = await fileTypeFromBuffer(img);
     res.setHeader("Content-Type", fileType.mime);
     res.setHeader(
       "Content-Disposition",
-      `inline; filename="${username}-img.${fileType.ext}"`
+      `inline; filename="${user.name}-img.${fileType.ext}"`
     );
     res.send(img);
   } catch (err) {
@@ -38,20 +41,26 @@ export const getPictures = async (req, res) => {
 
 export const userDetails = async (req, res) => {
   try {
-    const { username } = req.params;
-    if (!username) {
+    const { id } = req.params;
+    if (!id) {
       return res.status(400).json({ message: "User not found" });
     }
-    const details = await db.query("select * from users where username = $1;", [
-      username,
-    ]);
-    const _details = details.rows[0];
-    if (!_details.image) return res.status(200).json({ details: _details });
-    const type = imageType(_details.image)?.mime || "image/jpeg";
-    const base64Image = `data:${type};base64,${_details.image.toString(
+
+    const user = await prisma.user.findUnique({
+      where: { id: id }
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (!user.avatar) return res.status(200).json({ details: user });
+
+    const type = imageType(user.avatar)?.mime || "image/jpeg";
+    const base64Image = `data:${type};base64,${user.avatar.toString(
       "base64"
     )}`;
-    const userdetails = { ..._details, image: base64Image };
+    const userdetails = { ...user, avatar: base64Image };
     return res.status(200).json({ details: userdetails });
   } catch (err) {
     return res.status(500).json({
@@ -80,13 +89,13 @@ export const getUsers = async (_, res) => {
 
 export const uploadProfile = async (req, res) => {
   try {
-    const username = req.username;
-    const checkUser = await db.query(
-      "SELECT EXISTS (SELECT 1 FROM users WHERE username = $1);",
-      [username]
-    );
+    const email = req.email;
+    const checkUser = await prisma.user.findUnique({
+      where: { email: email },
+      select: { id: true }
+    });
 
-    if (!checkUser.rows[0].exists) {
+    if (!checkUser) {
       return res.status(404).json({ error: "User does not exist" });
     }
 
@@ -97,15 +106,16 @@ export const uploadProfile = async (req, res) => {
     }
 
     const image = req.file.buffer;
-    const result = await db.query(
-      "UPDATE users SET image = $1 WHERE username = $2 RETURNING username;",
-      [image, username]
-    );
+    const result = await prisma.user.update({
+      where: { email: email },
+      data: { avatar: image },
+      select: { email: true }
+    });
 
-    if (result.rowCount > 0) {
+    if (result) {
       return res.status(200).json({
         message: "Image uploaded successfully",
-        username: result.rows[0].username,
+        email: result.email,
       });
     } else {
       return res.status(500).json({ error: "Failed to update user profile" });
@@ -119,24 +129,25 @@ export const uploadProfile = async (req, res) => {
 
 export const getUser = async (req, res) => {
   try {
-    const username = req.username;
-    return res.status(201).json(username);
+    const email = req.email;
+    return res.status(201).json(email);
   } catch (err) {
     return res.status(400).send({ error: "Failed to get the user" });
   }
 };
 
 export const userDelete = async (req, res) => {
-  const { username } = req.body;
-  if (!username) {
+  const { id } = req.body;
+  if (!id) {
     return res.status(400).json({ message: "Username not found" });
   }
   try {
-    const result = await db.query(`delete from users where username=$1;`, [
-      username,
-    ]);
-    if (result.rowCount > 0) {
-      return res.status(200).send({ message: "User deleted sucessfully" });
+    const result = await prisma.user.delete({
+      where: { id: id }
+    });
+
+    if (result) {
+      return res.status(200).send({ message: "User deleted successfully" });
     } else {
       return res.status(400).send({ message: "Deletion failed" });
     }
@@ -148,19 +159,22 @@ export const userDelete = async (req, res) => {
 };
 
 export const userUpdate = async (req, res) => {
-  console.log("req", req);
-  const { username, password } = req.body;
+  const { email, password } = req.body;
 
-  if (!username || !password) {
+  if (!email || !password) {
     return res.status(400).send({ message: "Provide correct information" });
   }
-  const updateQuery = `update users set password=$2 where username=$1 returning *;`;
+
   try {
-    const result = await db.query(updateQuery, [username, password]);
-    if (result.rowCount > 0) {
-      return res.status(200).send({ message: "Updation successfull" });
+    const result = await prisma.user.update({
+      where: { email: email },
+      data: { passwordHash: password }
+    });
+
+    if (result) {
+      return res.status(200).send({ message: "Update successful" });
     } else {
-      return res.status(400).send({ message: "Updation failed" });
+      return res.status(400).send({ message: "Update failed" });
     }
   } catch (err) {
     return res.status(500).json({
