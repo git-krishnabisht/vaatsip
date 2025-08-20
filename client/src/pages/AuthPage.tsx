@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 
 interface Cred {
   name?: string;
@@ -8,6 +9,9 @@ interface Cred {
 }
 
 function AuthPage() {
+  const { isLoggedIn, checkAuthStatus } = useAuth();
+  const navigate = useNavigate();
+
   const [searchParams] = useSearchParams();
   const error = searchParams.get("error");
 
@@ -16,6 +20,12 @@ function AuthPage() {
       alert("Authentication failed. Please try again.");
     }
   }, [error]);
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      navigate("/", { replace: true });
+    }
+  }, [isLoggedIn]);
 
   const [authTab, setAuthTab] = useState<"signin" | "signup">("signin");
   const [showPassword, setShowPassword] = useState(false);
@@ -28,6 +38,7 @@ function AuthPage() {
   });
 
 
+
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setCred({
       ...cred,
@@ -35,7 +46,6 @@ function AuthPage() {
     });
   };
 
-  const navigate = useNavigate();
 
   const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -65,9 +75,12 @@ function AuthPage() {
       const data = await res.json();
       console.log("Success:", data);
 
-      setCred({ name: "", email: "", password: "" });
-      navigate("/", { replace: true });
 
+      setCred({ name: "", email: "", password: "" });
+
+      await checkAuthStatus();
+
+      navigate("/", { replace: true });
     } catch (err) {
       console.error("Error:", err);
     }
@@ -141,7 +154,7 @@ function AuthPage() {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-2 top-8 text-sm cursor-pointer p-2"
                 >
-                  {showPassword ? "🙈" : "👁️"}
+                  {showPassword ? "hide" : "show"}
                 </button>
               </div>
             </div>

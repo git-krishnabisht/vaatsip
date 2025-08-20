@@ -18,7 +18,7 @@ function Sidebar({ onUserClick }: SidebarProps) {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="p-4">
+      <div className="p-5">
         <h1 className="text-xl font-medium">Chats</h1>
       </div>
 
