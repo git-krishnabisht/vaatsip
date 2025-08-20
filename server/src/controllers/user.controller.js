@@ -1,6 +1,7 @@
 import { fileTypeFromBuffer } from "file-type";
 import imageType from "image-type";
 import db from "../config/db.config.js";
+import prisma from "../utils/prisma.util.js";
 
 export const getPictures = async (req, res) => {
   const { username } = req.params;
@@ -61,16 +62,15 @@ export const userDetails = async (req, res) => {
 
 export const getUsers = async (_, res) => {
   try {
-    const { rows } = await db.query("SELECT username,image FROM users");
-    const usersWithBase64 = rows.map((user) => {
-      if (!user.image) return { username: user.username, image: null };
-      const type = imageType(user.image)?.mime || "image/jpeg";
-      const base64Image = `data:${type};base64,${user.image.toString(
-        "base64"
-      )}`;
-      return { username: user.username, image: base64Image };
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        name: true,
+        avatar: true,
+      },
     });
-    res.json(usersWithBase64);
+
+    return res.status(200).json({ data: users });
   } catch (err) {
     return res.status(500).json({
       error: "Something is wrong with the /get-users :\n " + err.stack,

@@ -5,6 +5,7 @@ import { app, server } from "./config/socket.config.js";
 import cookieParser from "cookie-parser";
 import { oauthEntry } from "./oauth/oauth-entry.js";
 import { oauthCallback } from "./oauth/oauth-callback.js";
+import userRoutes from "./routes/user.route.js";
 
 dotenv.config();
 
@@ -19,7 +20,7 @@ app.use(cookieParser());
 
 app.use("/api/auth", authRoutes);
 // app.use("/api/comm", messageRoutes);
-// app.use("/api/users", userRoutes);
+app.use("/api/users", userRoutes);
 
 app.get("/auth/google", oauthEntry);
 app.get("/auth/google/callback", oauthCallback);

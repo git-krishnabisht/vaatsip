@@ -6,7 +6,7 @@ import {
   Routes,
 } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
-import SignInPage from "./components/SignInPage";
+import AuthPage from "./pages/AuthPage";
 import Dashboard from "./pages/Dashboard";
 
 function App() {
@@ -14,7 +14,7 @@ function App() {
     <AuthProvider>
       <Router>
         <Routes>
-          <Route path="/auth-google" element={<SignInPage />} />
+          <Route path="/auth-google" element={<AuthPage />} />
           <Route element={<ProtectedLayout />}>
             <Route path="/" element={<Dashboard />} />
           </Route>

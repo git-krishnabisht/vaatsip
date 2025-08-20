@@ -7,7 +7,7 @@ interface Cred {
   password: string;
 }
 
-function SignInPage() {
+function AuthPage() {
   const [searchParams] = useSearchParams();
   const error = searchParams.get("error");
 
@@ -18,6 +18,8 @@ function SignInPage() {
   }, [error]);
 
   const [authTab, setAuthTab] = useState<"signin" | "signup">("signin");
+  const [showPassword, setShowPassword] = useState(false);
+
 
   const [cred, setCred] = useState<Cred>({
     name: "",
@@ -77,7 +79,7 @@ function SignInPage() {
       <div className="flex justify-center items-center h-screen">
 
         {/* container containing container 01 and 02 -> container 3*/}
-        <div className="border-2 border-black rounded-xl p-15">
+        <div className="border-2 border-black rounded-xl p-8 w-full max-w-md">
 
           {/* tabs */}
           <div className="flex justify-around mb-4">
@@ -92,13 +94,12 @@ function SignInPage() {
           <form onSubmit={handleFormSubmit} className="flex flex-col gap-5">
 
             {/* flex column container for labels and input -> container 01 */}
-            <div className="flex flex-col gap-5">
-
+            <div className="flex flex-col gap-5 w-full">
               {authTab === "signup" && (
-                <div>
-                  <label className="ml-6">Name:</label>
+                <div className="w-full">
+                  <label className="block mb-1">Name:</label>
                   <input
-                    className="ml-2 border-2 rounded-sm"
+                    className="w-full border-2 rounded-sm p-2"
                     type="text"
                     id="name"
                     name="name"
@@ -109,10 +110,10 @@ function SignInPage() {
                 </div>
               )}
 
-              <div>
-                <label className="ml-6">Email:</label>
+              <div className="w-full">
+                <label className="block mb-1">Email:</label>
                 <input
-                  className="ml-2 border-2 rounded-sm"
+                  className="w-full border-2 rounded-sm p-2"
                   type="email"
                   id="email"
                   name="email"
@@ -122,19 +123,29 @@ function SignInPage() {
                 />
               </div>
 
-              <div>
-                <label>Password:</label>
+
+              <div className="w-full relative">
+                <label className="block mb-1">Password:</label>
                 <input
-                  className="ml-2 border-2 rounded-sm"
-                  type="password"
+                  className="w-full border-2 rounded-sm p-2"
+                  type={showPassword ? "text" : "password"}
                   id="password"
                   name="password"
                   value={cred.password}
                   onChange={handleFormChange}
                   required
                 />
+
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-2 top-8 text-sm cursor-pointer p-2"
+                >
+                  {showPassword ? "🙈" : "👁️"}
+                </button>
               </div>
             </div>
+
 
             {/* flex column container for buttons -> container 02 */}
             <div className="flex justify-center items-center flex-col gap-3">
@@ -173,5 +184,5 @@ function SignInPage() {
   );
 }
 
-export default SignInPage;
+export default AuthPage;
 
