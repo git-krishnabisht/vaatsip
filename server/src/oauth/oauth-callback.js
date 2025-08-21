@@ -71,8 +71,9 @@ export const oauthCallback = async (req, res) => {
       },
     });
 
+    let userId;
     if (!result) {
-      await prisma.user.create({
+      const newUser = await prisma.user.create({
         data: {
           email,
           avatar: picture,
@@ -80,9 +81,12 @@ export const oauthCallback = async (req, res) => {
           passwordHash: null
         },
       });
+      userId = newUser.id;
+    } else {
+      userId = result.id;
     }
 
-    const user = { email, name };
+    const user = { id: userId, email, name };
     const token = await jwtService.generateJWT(user);
 
     res.cookie("jwt", token, {

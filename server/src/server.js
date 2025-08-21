@@ -6,6 +6,7 @@ import cookieParser from "cookie-parser";
 import { oauthEntry } from "./oauth/oauth-entry.js";
 import { oauthCallback } from "./oauth/oauth-callback.js";
 import userRoutes from "./routes/user.route.js";
+import commRoutes from "./routes/comm.route.js";
 
 dotenv.config();
 
@@ -18,8 +19,11 @@ export const JWT_SECRET = process.env.JWT_SECRET;
 app.use(express.json());
 app.use(cookieParser());
 
+
+app.use("/api/comm", commRoutes);
 app.use("/api/auth", authRoutes);
-// app.use("/api/comm", messageRoutes);
+
+
 app.use("/api/users", userRoutes);
 
 app.get("/auth/google", oauthEntry);

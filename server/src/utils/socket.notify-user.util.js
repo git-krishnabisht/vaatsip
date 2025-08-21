@@ -1,5 +1,4 @@
-import { getReceiverSocketId } from "../config/socket.config.js";
-import { io } from "../config/socket.config.js";
+import { io, getReceiverSocketId } from "../config/socket.config.js";
 
 export function notifyUserMessage({
   sender,

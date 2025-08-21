@@ -1,6 +1,7 @@
 import { fileTypeFromBuffer } from "file-type";
 import imageType from "image-type";
 import prisma from "../utils/prisma.util.js";
+import jwt from "jsonwebtoken";
 
 export const getPictures = async (req, res) => {
   const { id } = req.params;
@@ -69,7 +70,7 @@ export const userDetails = async (req, res) => {
   }
 };
 
-export const getUsers = async (_, res) => {
+export const getUsers = async (req, res) => {
   try {
     const users = await prisma.user.findMany({
       select: {
@@ -129,8 +130,12 @@ export const uploadProfile = async (req, res) => {
 
 export const getUser = async (req, res) => {
   try {
-    const email = req.email;
-    return res.status(201).json(email);
+    const token = req.cookies.jwt;
+    if (!token) {
+      return res.status(401).json({ error: "No token found" });
+    }
+    const decoded = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ["HS256"] });
+    return res.status(200).json({ user: decoded });
   } catch (err) {
     return res.status(400).send({ error: "Failed to get the user" });
   }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getUsers, type User } from "../utils/get-users.util";
+import { getUsers, type User } from "../utils/users.util";
 
 interface SidebarProps {
   onUserClick: (user: User) => void;
