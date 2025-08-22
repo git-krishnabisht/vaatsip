@@ -21,24 +21,23 @@ export const sign_up = async (req, res) => {
 
     if (existingUser && existingUser.passwordHash !== null) {
       return res.status(409).json({
-        error: "User is already registered. Please sign in or reset your password."
+        error:
+          "User is already registered. Please sign in or reset your password.",
       });
-    }
-    else if (existingUser && existingUser.passwordHash === null) {
+    } else if (existingUser && existingUser.passwordHash === null) {
       hashed_password = await bcrypt.hash(input.password, salt_rounds);
 
       user = await prisma.user.update({
         where: { email },
         data: { passwordHash: hashed_password },
-        select: { id: true, email: true, name: true, createdAt: true }
+        select: { id: true, email: true, name: true, createdAt: true },
       });
-    }
-    else if (!existingUser) {
+    } else if (!existingUser) {
       hashed_password = await bcrypt.hash(input.password, salt_rounds);
 
       user = await prisma.user.create({
         data: { name: input.name, email, passwordHash: hashed_password },
-        select: { id: true, email: true, name: true, createdAt: true }
+        select: { id: true, email: true, name: true, createdAt: true },
       });
     }
 
@@ -51,14 +50,15 @@ export const sign_up = async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    return res.status(201).json({ signed_up: true, message: "User signed up successfully" });
+    return res
+      .status(201)
+      .json({ signed_up: true, message: "User signed up successfully" });
   } catch (err) {
     return res.status(500).json({
       error: "Something is wrong with the /sign_up:\n" + (err.stack || err),
     });
   }
 };
-
 
 export const sign_in = async (req, res) => {
   try {
@@ -69,7 +69,7 @@ export const sign_in = async (req, res) => {
     }
 
     const user = await prisma.user.findUnique({
-      where: { email: input.email }
+      where: { email: input.email },
     });
 
     if (!user) {
@@ -80,11 +80,14 @@ export const sign_in = async (req, res) => {
     if (!isMatch) {
       return res.status(401).json({
         signed_in: false,
-        message: "Password didn't match"
+        message: "Password didn't match",
       });
     }
 
-    const token = await jwtService.generateJWT({ id: user.id, email: user.email });
+    const token = await jwtService.generateJWT({
+      id: user.id,
+      email: user.email,
+    });
 
     res.cookie("jwt", token, {
       httpOnly: true,
@@ -98,36 +101,32 @@ export const sign_in = async (req, res) => {
       user: {
         id: user.id,
         email: user.email,
-        name: user.name ?? null
-      }
+        name: user.name ?? null,
+      },
     });
-
   } catch (err) {
     return res.status(500).json({
-      error: "Something went wrong with /sign_in"
+      error: "Something went wrong with /sign_in",
     });
   }
 };
 
-
 export const sign_out = async (_req, res) => {
   try {
-    res.clearCookie('jwt');
+    res.clearCookie("jwt");
 
     return res.status(200).json({
       body: {
         signed_in: false,
-        message: "Logged out successfully"
-      }
+        message: "Logged out successfully",
+      },
     });
-
   } catch (err) {
     return res.status(500).json({
       error: "Something is wrong with the /sign_out :\n " + err.stack || err,
     });
   }
 };
-
 
 export const oauth_signin = async (req, res) => {
   try {
@@ -137,8 +136,8 @@ export const oauth_signin = async (req, res) => {
       return res.status(404).json({
         body: {
           signed_in: false,
-          message: "No authentication token found"
-        }
+          message: "No authentication token found",
+        },
       });
     }
 
@@ -147,8 +146,8 @@ export const oauth_signin = async (req, res) => {
         return res.status(400).json({
           body: {
             signed_in: false,
-            message: "Invalid or expired token"
-          }
+            message: "Invalid or expired token",
+          },
         });
       }
 
@@ -158,15 +157,14 @@ export const oauth_signin = async (req, res) => {
           user: {
             id: decoded.id,
             email: decoded.email,
-          }
-        }
+          },
+        },
       });
     });
   } catch (err) {
-    console.log("here");
     return res.status(500).json({
-      error: "Something is wrong with the /oauth_signin :\n " + err.stack || err,
+      error:
+        "Something is wrong with the /oauth_signin :\n " + err.stack || err,
     });
   }
 };
-

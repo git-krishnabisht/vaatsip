@@ -2,10 +2,7 @@ import prisma from "../utils/prisma.util.js";
 
 export const getMessages = async (req, res) => {
   try {
-    const user = req.user;
-
-    console.log("user: ", user);
-
+    const user = req.user; 
     if (!user) throw new Error("No user");
 
     const receiver = req.params.id;
@@ -16,26 +13,28 @@ export const getMessages = async (req, res) => {
       where: {
         OR: [
           { senderId: user.id, receiverId: parseInt(receiver) },
-          { senderId: parseInt(receiver), receiverId: user.id }
-        ]
+          { senderId: parseInt(receiver), receiverId: user.id },
+        ],
       },
       orderBy: {
-        createdAt: 'asc',
+        createdAt: "asc",
       },
       include: {
         sender: {
-          select: { id: true, name: true, avatar: true }
+          select: { id: true, name: true, avatar: true },
         },
         receiver: {
-          select: { id: true, name: true, avatar: true }
+          select: { id: true, name: true, avatar: true },
         },
-        attachments: true // optional if you want attachments
-      }
+        attachments: true,
+      },
     });
 
-    return res.status(200).json({ body: messages || [] });
+    return res.status(200).json({ body: messages });
   } catch (err) {
     console.error("Error in get_messages:", err);
-    return res.status(500).json({ error: err.message, message: "Error fetching messages" });
+    return res
+      .status(500)
+      .json({ error: err.message, message: "Error fetching messages" });
   }
 };

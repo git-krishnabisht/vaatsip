@@ -67,4 +67,3 @@ function Sidebar({ onUserClick }: SidebarProps) {
 }
 
 export default Sidebar;
-

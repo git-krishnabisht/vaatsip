@@ -12,4 +12,3 @@ export class signUpDto {
     this.password = password;
   }
 }
-

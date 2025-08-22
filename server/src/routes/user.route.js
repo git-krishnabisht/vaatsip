@@ -6,7 +6,6 @@ import {
   uploadProfile,
   getPictures,
   getUsers,
-  getUser,
   userDelete,
   userUpdate,
   userDetails,
@@ -16,6 +15,7 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage });
 const router = express.Router();
 
+//comment
 router.post(
   "/upload-profile",
   upload.single("image"),
@@ -24,7 +24,6 @@ router.post(
 );
 router.get("/get-pictures/:id", getPictures);
 router.get("/get-users", protectedRoute, getUsers);
-router.get("/get-user", protectedRoute, getUser);
 router.delete("/user-delete", userDelete);
 router.put("/user-update", userUpdate);
 router.get("/user-details/:id", protectedRoute, userDetails);

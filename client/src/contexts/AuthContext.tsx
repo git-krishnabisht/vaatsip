@@ -35,7 +35,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         let data = await res.json();
         setIsLoggedIn(false);
         setUser(null);
-        console.error("ERROR: ", data.body.message, "\nsign-in, or check your network connection");
+        console.error(
+          "ERROR: ",
+          data.body.message,
+          "\nsign-in, or check your network connection"
+        );
         return;
       }
 

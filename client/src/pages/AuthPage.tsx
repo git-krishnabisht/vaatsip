@@ -30,14 +30,11 @@ function AuthPage() {
   const [authTab, setAuthTab] = useState<"signin" | "signup">("signin");
   const [showPassword, setShowPassword] = useState(false);
 
-
   const [cred, setCred] = useState<Cred>({
     name: "",
     email: "",
     password: "",
   });
-
-
 
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setCred({
@@ -45,7 +42,6 @@ function AuthPage() {
       [e.target.name]: e.target.value,
     });
   };
-
 
   const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -75,7 +71,6 @@ function AuthPage() {
       const data = await res.json();
       console.log("Success:", data);
 
-
       setCred({ name: "", email: "", password: "" });
 
       await checkAuthStatus();
@@ -90,22 +85,27 @@ function AuthPage() {
     <>
       {/* contains the whole screen */}
       <div className="flex justify-center items-center h-screen">
-
         {/* container containing container 01 and 02 -> container 3*/}
         <div className="border-2 border-black rounded-xl p-8 w-full max-w-md">
-
           {/* tabs */}
           <div className="flex justify-around mb-4">
-            <button className="hover: cursor-pointer" type="button" onClick={() => setAuthTab("signin")}>
+            <button
+              className="hover: cursor-pointer"
+              type="button"
+              onClick={() => setAuthTab("signin")}
+            >
               Sign In
             </button>
-            <button className="hover: cursor-pointer" type="button" onClick={() => setAuthTab("signup")}>
+            <button
+              className="hover: cursor-pointer"
+              type="button"
+              onClick={() => setAuthTab("signup")}
+            >
               Sign Up
             </button>
           </div>
 
           <form onSubmit={handleFormSubmit} className="flex flex-col gap-5">
-
             {/* flex column container for labels and input -> container 01 */}
             <div className="flex flex-col gap-5 w-full">
               {authTab === "signup" && (
@@ -136,7 +136,6 @@ function AuthPage() {
                 />
               </div>
 
-
               <div className="w-full relative">
                 <label className="block mb-1">Password:</label>
                 <input
@@ -159,7 +158,6 @@ function AuthPage() {
               </div>
             </div>
 
-
             {/* flex column container for buttons -> container 02 */}
             <div className="flex justify-center items-center flex-col gap-3">
               <div>
@@ -168,10 +166,7 @@ function AuthPage() {
                 </button>
               </div>
               <div>
-                <a
-                  type="button"
-                  href="http://localhost:50136/auth/google"
-                >
+                <a type="button" href="http://localhost:50136/auth/google">
                   Continue with Google
                 </a>
               </div>
@@ -198,4 +193,3 @@ function AuthPage() {
 }
 
 export default AuthPage;
-

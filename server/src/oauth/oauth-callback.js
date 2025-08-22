@@ -58,7 +58,6 @@ export const oauthCallback = async (req, res) => {
 
     const payload = ticket.getPayload();
 
-
     const { email, name, picture } = payload;
 
     if (!email || !name || !picture) {
@@ -67,7 +66,7 @@ export const oauthCallback = async (req, res) => {
 
     const result = await prisma.user.findUnique({
       where: {
-        email
+        email,
       },
     });
 
@@ -78,7 +77,7 @@ export const oauthCallback = async (req, res) => {
           email,
           avatar: picture,
           name,
-          passwordHash: null
+          passwordHash: null,
         },
       });
       userId = newUser.id;

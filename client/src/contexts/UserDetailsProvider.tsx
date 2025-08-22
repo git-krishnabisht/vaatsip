@@ -6,7 +6,9 @@ interface UserDetailsContextType {
   setUserDetails: (user: User | null) => void;
 }
 
-const UserDetailsContext = createContext<UserDetailsContextType | undefined>(undefined);
+const UserDetailsContext = createContext<UserDetailsContextType | undefined>(
+  undefined
+);
 
 export function UserDetailsProvider({ children }: { children: ReactNode }) {
   const [userDetails, setUserDetails] = useState<User | null>(null);
@@ -20,7 +22,7 @@ export function UserDetailsProvider({ children }: { children: ReactNode }) {
 
 export function useUserDetails() {
   const context = useContext(UserDetailsContext);
-  if (!context) throw new Error("useUserDetails must be used within UserDetailsProvider");
+  if (!context)
+    throw new Error("useUserDetails must be used within UserDetailsProvider");
   return context;
 }
-

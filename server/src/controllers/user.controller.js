@@ -1,7 +1,6 @@
 import { fileTypeFromBuffer } from "file-type";
 import imageType from "image-type";
 import prisma from "../utils/prisma.util.js";
-import jwt from "jsonwebtoken";
 
 export const getPictures = async (req, res) => {
   const { id } = req.params;
@@ -12,7 +11,7 @@ export const getPictures = async (req, res) => {
 
     const user = await prisma.user.findUnique({
       where: { id: id },
-      select: { avatar: true }
+      select: { avatar: true },
     });
 
     if (!user || !user.avatar) {
@@ -48,7 +47,7 @@ export const userDetails = async (req, res) => {
     }
 
     const user = await prisma.user.findUnique({
-      where: { id: id }
+      where: { id: id },
     });
 
     if (!user) {
@@ -58,9 +57,7 @@ export const userDetails = async (req, res) => {
     if (!user.avatar) return res.status(200).json({ details: user });
 
     const type = imageType(user.avatar)?.mime || "image/jpeg";
-    const base64Image = `data:${type};base64,${user.avatar.toString(
-      "base64"
-    )}`;
+    const base64Image = `data:${type};base64,${user.avatar.toString("base64")}`;
     const userdetails = { ...user, avatar: base64Image };
     return res.status(200).json({ details: userdetails });
   } catch (err) {
@@ -93,7 +90,7 @@ export const uploadProfile = async (req, res) => {
     const email = req.email;
     const checkUser = await prisma.user.findUnique({
       where: { email: email },
-      select: { id: true }
+      select: { id: true },
     });
 
     if (!checkUser) {
@@ -110,7 +107,7 @@ export const uploadProfile = async (req, res) => {
     const result = await prisma.user.update({
       where: { email: email },
       data: { avatar: image },
-      select: { email: true }
+      select: { email: true },
     });
 
     if (result) {
@@ -128,19 +125,6 @@ export const uploadProfile = async (req, res) => {
   }
 };
 
-export const getUser = async (req, res) => {
-  try {
-    const token = req.cookies.jwt;
-    if (!token) {
-      return res.status(401).json({ error: "No token found" });
-    }
-    const decoded = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ["HS256"] });
-    return res.status(200).json({ user: decoded });
-  } catch (err) {
-    return res.status(400).send({ error: "Failed to get the user" });
-  }
-};
-
 export const userDelete = async (req, res) => {
   const { id } = req.body;
   if (!id) {
@@ -148,7 +132,7 @@ export const userDelete = async (req, res) => {
   }
   try {
     const result = await prisma.user.delete({
-      where: { id: id }
+      where: { id: id },
     });
 
     if (result) {
@@ -173,7 +157,7 @@ export const userUpdate = async (req, res) => {
   try {
     const result = await prisma.user.update({
       where: { email: email },
-      data: { passwordHash: password }
+      data: { passwordHash: password },
     });
 
     if (result) {
