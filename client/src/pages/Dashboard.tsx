@@ -1,10 +1,12 @@
+import { useEffect } from "react";
+import { useParams } from "react-router-dom";
 import Content from "../components/Content";
 import OptionBar from "../components/OptionBar";
 import Sidebar from "../components/Sidebar";
-import Navbar from "../components/Navbar";
 import { useUserDetails } from "../contexts/UserDetailsProvider";
 import { useMessages } from "../utils/useMessages";
 import { useAuth } from "../contexts/AuthContext";
+import { getUsers, type User } from "../utils/users.util";
 
 function EmptyState() {
   return (
@@ -77,9 +79,29 @@ function EmptyState() {
 }
 
 function Dashboard() {
+  const { receiver_id } = useParams<{ receiver_id: string }>();
   const { userDetails, setUserDetails } = useUserDetails();
   const { messages, loading, error } = useMessages();
   const { user: currentUser } = useAuth();
+
+  // Load user details from URL parameter on refresh
+  useEffect(() => {
+    const loadUserFromUrl = async () => {
+      if (receiver_id && (!userDetails || userDetails.id !== parseInt(receiver_id))) {
+        try {
+          const users = await getUsers();
+          const selectedUser = users.find(u => u.id === parseInt(receiver_id));
+          if (selectedUser) {
+            setUserDetails(selectedUser);
+          }
+        } catch (error) {
+          console.error("Failed to load user details:", error);
+        }
+      }
+    };
+
+    loadUserFromUrl();
+  }, [receiver_id, userDetails, setUserDetails]);
 
   return (
     <div className="flex flex-row h-screen">

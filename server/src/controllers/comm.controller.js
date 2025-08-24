@@ -16,6 +16,16 @@ export const get_messages = async (req, res) => {
         .json({ success: false, error: "Receiver ID must be a number" });
     }
 
+    // Check if the receiver exists
+    const receiverExists = await prisma.user.findUnique({
+      where: { id: receiverId },
+      select: { id: true },
+    });
+
+    if (!receiverExists) {
+      return res.status(404).json({ success: false, error: "User not found" });
+    }
+
     const messages = await prisma.message.findMany({
       where: {
         OR: [
@@ -37,13 +47,8 @@ export const get_messages = async (req, res) => {
       },
     });
 
-    if (!messages || messages.length === 0) {
-      return res
-        .status(404)
-        .json({ success: false, error: "No messages found" });
-    }
-
-    return res.status(200).json(messages);
+    // Return empty array if no messages found (this is normal)
+    return res.status(200).json(messages || []);
   } catch (err) {
     console.error("Error in get_messages:", err);
     return res.status(500).json({

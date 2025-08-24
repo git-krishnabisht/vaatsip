@@ -9,9 +9,18 @@ export function useMessages() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!receiver_id) return;
+    if (!receiver_id) {
+      setMessages([]);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
     const fetchMessages = async () => {
       try {
+        setLoading(true);
+        setError(null);
+        
         const res = await fetch(
           `http://localhost:50136/api/comm/get-messages/${receiver_id}`,
           {
@@ -21,13 +30,20 @@ export function useMessages() {
         );
 
         if (!res.ok) {
-          throw new Error("Failed to fetch messages");
+          if (res.status === 404) {
+            // No messages found is not an error, just empty state
+            setMessages([]);
+            return;
+          }
+          throw new Error(`Failed to fetch messages: ${res.status}`);
         }
 
         const data = (await res.json()) as Message[];
-        setMessages(data);
+        setMessages(Array.isArray(data) ? data : []);
       } catch (err: any) {
+        console.error("Error fetching messages:", err);
         setError(err.message || "Something went wrong");
+        setMessages([]);
       } finally {
         setLoading(false);
       }
