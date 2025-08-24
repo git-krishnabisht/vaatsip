@@ -3,7 +3,8 @@ import OptionBar from "../components/OptionBar";
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
 import { useUserDetails } from "../contexts/UserDetailsProvider";
-import { useState } from "react";
+import { useMessages } from "../utils/useMessages";
+import { useAuth } from "../contexts/AuthContext";
 
 function EmptyState() {
   return (
@@ -76,7 +77,9 @@ function EmptyState() {
 }
 
 function Dashboard() {
-  const { userDetails, setUserDetails } = useUserDetails(); 
+  const { userDetails, setUserDetails } = useUserDetails();
+  const { messages, loading, error } = useMessages();
+  const { user: currentUser } = useAuth();
 
   return (
     <div className="flex flex-row h-screen">
@@ -88,11 +91,14 @@ function Dashboard() {
       </div>
       {userDetails ? (
         <div className="flex-1 flex flex-col">
-          <div className="border-b border-black bg-gray-100">
-            <Navbar selectedUser={userDetails} />
-          </div>
           <div className="flex-1 overflow-auto">
-            <Content selectedUser={userDetails} />
+            <Content
+              selectedUser={userDetails}
+              messages={messages}
+              loading={loading}
+              error={error}
+              currentUser={currentUser?.id}
+            />
           </div>
         </div>
       ) : (

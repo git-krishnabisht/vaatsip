@@ -1,31 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import type { Message } from "../models/Messages";
 
-interface User {
-  id: number;
-  name: string;
-  avatar: string | null;
-}
-
-interface Attachment {
-  image_id: number;
-  message_id: number;
-  image_data: Uint8Array;
-  image_type: string;
-}
-
-interface Message {
-  messageId: number;
-  senderId: number;
-  receiverId: number;
-  message: string;
-  createdAt: string;
-  sender: User;
-  receiver: User;
-  attachments: Attachment[];
-}
-
-export const useMessages = async () => {
+export function useMessages() {
   const { receiver_id } = useParams<{ receiver_id: string }>();
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,4 +37,4 @@ export const useMessages = async () => {
   }, [receiver_id]);
 
   return { messages, loading, error };
-};
+}

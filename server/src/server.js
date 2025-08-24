@@ -28,5 +28,5 @@ app.get("/auth/google", oauthEntry);
 app.get("/auth/google/callback", oauthCallback);
 
 server.listen(PORT, () => {
-  console.log(`🚀 Server is running on port ${PORT}...`);
+  console.log(`Server is running on port ${PORT}...`);
 });

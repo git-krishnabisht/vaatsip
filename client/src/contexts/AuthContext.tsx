@@ -1,9 +1,9 @@
 import { createContext, useContext, useEffect, useState } from "react";
 
 interface User {
-  googleId: string;
-  email: string;
+  id: number,
   name: string;
+  email: string;
 }
 
 interface AuthContextType {

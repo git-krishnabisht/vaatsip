@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import { getUsers, type User } from "../utils/users.util";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
+// import { useMessages } from "../utils/useMessages";
 
 interface SidebarProps {
   onUserClick: (user: User) => void;
@@ -7,6 +10,14 @@ interface SidebarProps {
 
 function Sidebar({ onUserClick }: SidebarProps) {
   const [users, setUsers] = useState<User[]>([]);
+  const navigate = useNavigate();
+  // const { messages } = useMessages();
+  const { user } = useAuth();
+
+  // const [sidebarInfo, setSidebarInfo] = useState({
+  //   lastTime: "",
+  //   lastMessage: ""
+  // });
 
   useEffect(() => {
     async function fetchUsers() {
@@ -23,22 +34,25 @@ function Sidebar({ onUserClick }: SidebarProps) {
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {users.map((user) => (
+        {users.filter((u)=> u.id != user?.id).map((u) => (
           <div
-            key={user.id}
+            key={u.id}
             className="flex items-center px-4 py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100"
-            onClick={() => onUserClick(user)}
+            onClick={() => {
+              onUserClick(u);
+              navigate(`/u/${u.id}`);
+            }}
           >
             <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 mr-3">
-              {user.avatar ? (
+              {u.avatar ? (
                 <img
-                  src={user.avatar}
-                  alt={user.name}
+                  src={u.avatar}
+                  alt={u.name}
                   className="w-full h-full object-cover"
                 />
               ) : (
                 <div className="w-full h-full bg-gray-300 flex items-center justify-center text-white font-medium">
-                  {user.name.charAt(0).toUpperCase()}
+                  {u.name.charAt(0).toUpperCase()}
                 </div>
               )}
             </div>
@@ -46,7 +60,7 @@ function Sidebar({ onUserClick }: SidebarProps) {
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between mb-1">
                 <h3 className="text-sm font-medium text-gray-900 truncate">
-                  {user.name}
+                  {u.name}
                 </h3>
                 <span className="text-xs text-gray-500 flex-shrink-0">
                   12:34

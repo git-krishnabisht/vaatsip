@@ -38,7 +38,7 @@ function App() {
               }
             />
             <Route
-              path="user/:receiver_id"
+              path="u/:receiver_id"
               element={
                 <UserDetailsProvider>
                   <Dashboard />

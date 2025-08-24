@@ -7,8 +7,7 @@ export async function protectedRoute(req, res, next) {
       console.log("No token provided, returning 401");
       return res.status(401).json({ error: "No token provided" });
     }
-    
-    // Validate token format
+
     if (typeof token !== 'string' || token.length < 10) {
       return res.status(401).json({ error: "Invalid token format" });
     }
@@ -17,7 +16,6 @@ export async function protectedRoute(req, res, next) {
       algorithms: ["HS256"],
     });
     
-    // Validate decoded user data
     if (!decoded || !decoded.id || !decoded.email) {
       return res.status(401).json({ error: "Invalid token payload" });
     }
