@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import type { User } from "../utils/users.util";
 import type { Message } from "../models/Messages";
 import Navbar from "./Navbar";
+import { useWebSocket } from "../hooks/useWebSocket";
 
 interface ContentProps {
   selectedUser: User | null;
@@ -9,6 +10,7 @@ interface ContentProps {
   loading: boolean;
   error: string | null;
   currentUser?: number;
+  onMessagesUpdate: (messages: Message[]) => void;
 }
 
 function Content({
@@ -17,21 +19,207 @@ function Content({
   loading,
   error,
   currentUser,
+  onMessagesUpdate,
 }: ContentProps) {
   const [message, setMessage] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
+  const [localMessages, setLocalMessages] = useState<Message[]>([]);
+  const [pendingMessages, setPendingMessages] = useState<Map<string, Message>>(
+    new Map()
+  );
 
-  const handleSendMessage = () => {
-    if (message.trim()) {
-      console.log("Sending message:", message);
-      setMessage("");
-    }
-  };
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const typingTimeoutRef = useRef<number | null>(null);
+  const lastTypingRef = useRef<number>(0);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      handleSendMessage();
+  // WebSocket integration
+  const {
+    isConnected,
+    sendMessage: wsSendMessage,
+    sendTypingStart,
+    sendTypingStop,
+    onlineUsers,
+    typingUsers,
+    connectionStatus,
+  } = useWebSocket(
+    // onNewMessage
+    useCallback(
+      (newMessage: Message) => {
+        setLocalMessages((prev) => {
+          // Avoid duplicates
+          const exists = prev.some(
+            (msg) => msg.messageId === newMessage.messageId
+          );
+          if (exists) return prev;
+
+          const updated = [...prev, newMessage].sort(
+            (a, b) =>
+              new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+          );
+          onMessagesUpdate(updated);
+          return updated;
+        });
+
+        // Auto-scroll to bottom
+        setTimeout(
+          () => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }),
+          100
+        );
+      },
+      [onMessagesUpdate]
+    ),
+
+    // onMessageSent
+    useCallback(
+      (tempId: string, sentMessage: Message) => {
+        setPendingMessages((prev) => {
+          const updated = new Map(prev);
+          updated.delete(tempId);
+          return updated;
+        });
+
+        setLocalMessages((prev) => {
+          const filtered = prev.filter(
+            (msg) => String(msg.messageId) !== tempId
+          );
+          const updated = [...filtered, sentMessage].sort(
+            (a, b) =>
+              new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+          );
+          onMessagesUpdate(updated);
+          return updated;
+        });
+      },
+      [onMessagesUpdate]
+    ),
+
+    // onMessageDelivered
+    useCallback((messageId: number) => {
+      console.log(`Message ${messageId} delivered`);
+      // can update message status here
+    }, []),
+
+    // onMessageRead
+    useCallback((messageId: number) => {
+      console.log(`Message ${messageId} read`);
+      // can update message status here
+    }, [])
+  );
+
+  // Sync messages with props
+  useEffect(() => {
+    setLocalMessages(messages);
+  }, [messages]);
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [localMessages]);
+
+  const handleSendMessage = useCallback(() => {
+    if (!message.trim() || !selectedUser || !isConnected) {
+      return;
     }
-  };
+
+    const tempId = `temp_${Date.now()}_${Math.random()}`;
+    const tempMessage: Message = {
+      messageId: parseInt(tempId.replace(/[^0-9]/g, "").substring(0, 10)),
+      senderId: currentUser!,
+      receiverId: selectedUser.id,
+      message: message.trim(),
+      createdAt: new Date().toISOString(),
+      sender: {
+        id: currentUser!,
+        name: "You",
+        avatar: null,
+      },
+      receiver: {
+        id: selectedUser.id,
+        name: selectedUser.name,
+        avatar: selectedUser.avatar,
+      },
+      attachments: [],
+    };
+
+    // Add pending message to local state
+    setLocalMessages((prev) => [...prev, tempMessage]);
+    setPendingMessages((prev) => new Map(prev).set(tempId, tempMessage));
+
+    // Send via WebSocket
+    wsSendMessage(selectedUser.id, message.trim());
+    setMessage("");
+
+    // Stop typing indicator
+    if (isTyping) {
+      sendTypingStop(selectedUser.id);
+      setIsTyping(false);
+    }
+  }, [
+    message,
+    selectedUser,
+    isConnected,
+    currentUser,
+    wsSendMessage,
+    isTyping,
+    sendTypingStop,
+  ]);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        handleSendMessage();
+      }
+    },
+    [handleSendMessage]
+  );
+
+  const handleMessageChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value;
+      setMessage(value);
+
+      if (!selectedUser || !isConnected) return;
+
+      const now = Date.now();
+      lastTypingRef.current = now;
+
+      // Start typing indicator
+      if (!isTyping && value.trim()) {
+        setIsTyping(true);
+        sendTypingStart(selectedUser.id);
+      }
+
+      // Clear existing timeout
+      if (typingTimeoutRef.current) {
+        window.clearTimeout(typingTimeoutRef.current);
+      }
+
+      // Stop typing after 2 seconds of inactivity
+      typingTimeoutRef.current = window.setTimeout(() => {
+        if (now === lastTypingRef.current && isTyping) {
+          setIsTyping(false);
+          sendTypingStop(selectedUser.id);
+        }
+      }, 2000);
+
+      // Stop typing if message becomes empty
+      if (!value.trim() && isTyping) {
+        setIsTyping(false);
+        sendTypingStop(selectedUser.id);
+      }
+    },
+    [selectedUser, isConnected, isTyping, sendTypingStart, sendTypingStop]
+  );
+
+  // Cleanup typing timeout
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        window.clearTimeout(typingTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const formatTime = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -62,15 +250,19 @@ function Content({
     }
   };
 
-  const messageArray = Array.isArray(messages) ? messages : [];
+  const messageArray = Array.isArray(localMessages) ? localMessages : [];
+  const isUserOnline = selectedUser
+    ? onlineUsers.includes(selectedUser.id)
+    : false;
+  const isUserTyping = selectedUser ? typingUsers.get(selectedUser.id) : false;
 
   const groupedMessages = messageArray.reduce(
-    (groups: { [key: string]: Message[] }, message) => {
-      const date = new Date(message.createdAt).toDateString();
+    (groups: { [key: string]: Message[] }, msg) => {
+      const date = new Date(msg.createdAt).toDateString();
       if (!groups[date]) {
         groups[date] = [];
       }
-      groups[date].push(message);
+      groups[date].push(msg);
       return groups;
     },
     {}
@@ -78,9 +270,29 @@ function Content({
 
   return (
     <div className="flex flex-col h-full">
+      {/* Connection Status Bar */}
+      {connectionStatus !== "connected" && (
+        <div
+          className={`px-4 py-2 text-center text-sm ${
+            connectionStatus === "connecting"
+              ? "bg-yellow-100 text-yellow-800"
+              : connectionStatus === "error"
+              ? "bg-red-100 text-red-800"
+              : "bg-gray-100 text-gray-600"
+          }`}
+        >
+          {connectionStatus === "connecting" && "Connecting..."}
+          {connectionStatus === "error" && "Connection failed. Retrying..."}
+          {connectionStatus === "disconnected" && "Reconnecting..."}
+        </div>
+      )}
 
       <div className="sticky top-0 z-10 border-b border-black bg-gray-100">
-        <Navbar selectedUser={selectedUser} />
+        <Navbar
+          selectedUser={selectedUser}
+          isOnline={isUserOnline}
+          isTyping={isUserTyping}
+        />
       </div>
 
       <div className="flex-1 flex flex-col bg-gray-100 min-h-0">
@@ -140,6 +352,9 @@ function Content({
 
                   {dayMessages.map((msg, index) => {
                     const isOwnMessage = msg.senderId === currentUser;
+                    const isPending = pendingMessages.has(
+                      String(msg.messageId)
+                    );
                     const isConsecutive =
                       index > 0 &&
                       dayMessages[index - 1].senderId === msg.senderId &&
@@ -157,7 +372,9 @@ function Content({
                         <div
                           className={`max-w-md px-3 py-2 rounded-lg relative ${
                             isOwnMessage
-                              ? "bg-green-500 text-white rounded-br-none"
+                              ? `bg-green-500 text-white rounded-br-none ${
+                                  isPending ? "opacity-70" : ""
+                                }`
                               : "bg-white text-gray-900 rounded-bl-none shadow-sm"
                           }`}
                         >
@@ -169,17 +386,23 @@ function Content({
                           >
                             <span>{formatTime(msg.createdAt)}</span>
                             {isOwnMessage && (
-                              <svg
-                                className="w-4 h-4"
-                                fill="currentColor"
-                                viewBox="0 0 20 20"
-                              >
-                                <path
-                                  fillRule="evenodd"
-                                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                  clipRule="evenodd"
-                                />
-                              </svg>
+                              <>
+                                {isPending ? (
+                                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                                ) : (
+                                  <svg
+                                    className="w-4 h-4"
+                                    fill="currentColor"
+                                    viewBox="0 0 20 20"
+                                  >
+                                    <path
+                                      fillRule="evenodd"
+                                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                      clipRule="evenodd"
+                                    />
+                                  </svg>
+                                )}
+                              </>
                             )}
                           </div>
                         </div>
@@ -188,11 +411,36 @@ function Content({
                   })}
                 </div>
               ))}
+
+              {/* Typing indicator */}
+              {isUserTyping && (
+                <div className="flex justify-start mb-2">
+                  <div className="bg-white px-3 py-2 rounded-lg rounded-bl-none shadow-sm">
+                    <div className="flex items-center gap-1">
+                      <div className="flex gap-1">
+                        <div
+                          className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                          style={{ animationDelay: "0ms" }}
+                        ></div>
+                        <div
+                          className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                          style={{ animationDelay: "150ms" }}
+                        ></div>
+                        <div
+                          className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                          style={{ animationDelay: "300ms" }}
+                        ></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div ref={messagesEndRef} />
             </>
           )}
         </div>
 
-        {/* Input Area */}
         <div className="px-4 py-2 bg-gray-100">
           <div className="flex items-end gap-2">
             <button className="p-2 text-gray-500 hover:text-gray-700 mb-1">
@@ -213,18 +461,26 @@ function Content({
             <div className="flex-1">
               <input
                 type="text"
-                placeholder="Type a message"
+                placeholder={
+                  !isConnected
+                    ? "Connecting..."
+                    : !selectedUser
+                    ? "Select a chat"
+                    : "Type a message"
+                }
                 value={message}
-                onChange={(e) => setMessage(e.target.value)}
+                onChange={handleMessageChange}
                 onKeyDown={handleKeyDown}
-                className="w-full px-3 py-2 bg-white rounded-lg border-0 focus:outline-none text-sm"
+                disabled={!isConnected || !selectedUser}
+                className="w-full px-3 py-2 bg-white rounded-lg border-0 focus:outline-none text-sm disabled:bg-gray-200 disabled:text-gray-500"
                 style={{ minHeight: "40px" }}
               />
             </div>
             {message.trim() ? (
               <button
                 onClick={handleSendMessage}
-                className="p-2 bg-green-600 hover:bg-green-700 text-white rounded-full transition-colors ml-2"
+                disabled={!isConnected || !selectedUser}
+                className="p-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-full transition-colors ml-2"
               >
                 <svg
                   className="w-5 h-5"
@@ -235,7 +491,10 @@ function Content({
                 </svg>
               </button>
             ) : (
-              <button className="p-2 bg-green-600 hover:bg-green-700 text-white rounded-full transition-colors ml-2">
+              <button
+                disabled={!isConnected || !selectedUser}
+                className="p-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-full transition-colors ml-2"
+              >
                 <svg
                   className="w-5 h-5"
                   fill="currentColor"

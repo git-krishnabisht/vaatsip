@@ -1,12 +1,13 @@
-import { useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useEffect, useState } from "react";
 import Content from "../components/Content";
+import { useParams } from "react-router-dom";
 import OptionBar from "../components/OptionBar";
 import Sidebar from "../components/Sidebar";
 import { useUserDetails } from "../contexts/UserDetailsProvider";
 import { useMessages } from "../utils/useMessages";
 import { useAuth } from "../contexts/AuthContext";
-import { getUsers, type User } from "../utils/users.util";
+import { getUsers } from "../utils/users.util";
+import type { Message } from "../models/Messages";
 
 function EmptyState() {
   return (
@@ -83,6 +84,12 @@ function Dashboard() {
   const { userDetails, setUserDetails } = useUserDetails();
   const { messages, loading, error } = useMessages();
   const { user: currentUser } = useAuth();
+  const [allMessages, setAllMessages] = useState<Message[]>(messages);
+
+  // Update local messages when hook messages change
+  useEffect(() => {
+    setAllMessages(messages);
+  }, [messages]);
 
   // Load user details from URL parameter on refresh
   useEffect(() => {
@@ -103,6 +110,10 @@ function Dashboard() {
     loadUserFromUrl();
   }, [receiver_id, userDetails, setUserDetails]);
 
+  const handleMessagesUpdate = (updatedMessages: Message[]) => {
+    setAllMessages(updatedMessages);
+  };
+
   return (
     <div className="flex flex-row h-screen">
       <div className="basis-10 md:basis-14 lg:basis-16 border-r border-black shrink-0 bg-gray-100">
@@ -116,10 +127,11 @@ function Dashboard() {
           <div className="flex-1 overflow-auto">
             <Content
               selectedUser={userDetails}
-              messages={messages}
+              messages={allMessages}
               loading={loading}
               error={error}
               currentUser={currentUser?.id}
+              onMessagesUpdate={handleMessagesUpdate}
             />
           </div>
         </div>

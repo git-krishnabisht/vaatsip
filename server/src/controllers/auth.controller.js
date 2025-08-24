@@ -44,7 +44,7 @@ export const sign_up = async (req, res) => {
     const token = jwtService.generateJWT({ id: user.id, email: user.email });
 
     res.cookie("jwt", token, {
-      httpOnly: true,
+      httpOnly: false,
       secure: false,
       sameSite: "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
@@ -90,7 +90,7 @@ export const sign_in = async (req, res) => {
     });
 
     res.cookie("jwt", token, {
-      httpOnly: true,
+      httpOnly: false,
       secure: false,
       sameSite: "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
