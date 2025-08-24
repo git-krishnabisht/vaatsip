@@ -27,9 +27,18 @@ function App() {
       <Router>
         <Routes>
           <Route path="/auth-google" element={<AuthPage />} />
+
           <Route element={<ProtectedLayout />}>
             <Route
               path="/"
+              element={
+                <UserDetailsProvider>
+                  <Dashboard />
+                </UserDetailsProvider>
+              }
+            />
+            <Route
+              path="user/:receiver_id"
               element={
                 <UserDetailsProvider>
                   <Dashboard />

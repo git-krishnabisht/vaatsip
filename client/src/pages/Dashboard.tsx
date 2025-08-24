@@ -3,6 +3,7 @@ import OptionBar from "../components/OptionBar";
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
 import { useUserDetails } from "../contexts/UserDetailsProvider";
+import { useState } from "react";
 
 function EmptyState() {
   return (
@@ -75,7 +76,7 @@ function EmptyState() {
 }
 
 function Dashboard() {
-  const { userDetails, setUserDetails } = useUserDetails();
+  const { userDetails, setUserDetails } = useUserDetails(); 
 
   return (
     <div className="flex flex-row h-screen">

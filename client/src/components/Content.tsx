@@ -5,12 +5,8 @@ interface ContentProps {
   selectedUser: User | null;
 }
 
-function Content({ selectedUser }: ContentProps) {
+function Content({ selectedUser}: ContentProps) {
   const [message, setMessage] = useState("");
-
-  if (!selectedUser) {
-    return <div className="p-4">Select a user to start chatting</div>;
-  }
 
   const handleSendMessage = () => {
     if (message.trim()) {
@@ -46,7 +42,7 @@ function Content({ selectedUser }: ContentProps) {
         </div>
 
         <div className="text-center text-gray-500 text-sm">
-          No conversation yet. Start a new chat with {selectedUser.name}.
+          No conversation yet. Start a new chat with {selectedUser?.name}.
         </div>
       </div>
 
