@@ -32,7 +32,7 @@ function Content({
   const typingTimeoutRef = useRef<number | null>(null);
   const lastTypingRef = useRef<number>(0);
 
-  // WebSocket integration
+  // WebSocket integration with fixed duplicate handling
   const {
     isConnected,
     sendMessage: wsSendMessage,
@@ -42,21 +42,32 @@ function Content({
     typingUsers,
     connectionStatus,
   } = useWebSocket(
-    // onNewMessage
+    // onNewMessage - Fixed duplicate detection
     useCallback(
       (newMessage: Message) => {
         setLocalMessages((prev) => {
-          // Avoid duplicates
+          // Enhanced duplicate detection
           const exists = prev.some(
-            (msg) => msg.messageId === newMessage.messageId
+            (msg) =>
+              msg.messageId === newMessage.messageId ||
+              (msg.message === newMessage.message &&
+                msg.senderId === newMessage.senderId &&
+                msg.receiverId === newMessage.receiverId &&
+                Math.abs(
+                  new Date(msg.createdAt).getTime() -
+                    new Date(newMessage.createdAt).getTime()
+                ) < 5000)
           );
+
           if (exists) return prev;
 
           const updated = [...prev, newMessage].sort(
             (a, b) =>
               new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
           );
-          onMessagesUpdate(updated);
+
+          // Defer parent update to avoid render cycle issues
+          setTimeout(() => onMessagesUpdate(updated), 0);
           return updated;
         });
 
@@ -69,7 +80,7 @@ function Content({
       [onMessagesUpdate]
     ),
 
-    // onMessageSent
+    // onMessageSent - Fixed temp message removal
     useCallback(
       (tempId: string, sentMessage: Message) => {
         setPendingMessages((prev) => {
@@ -79,14 +90,31 @@ function Content({
         });
 
         setLocalMessages((prev) => {
-          const filtered = prev.filter(
-            (msg) => String(msg.messageId) !== tempId
+          // Remove the temporary message by matching the tempId pattern
+          const tempMessageId = parseInt(
+            tempId.replace(/[^0-9]/g, "").substring(0, 10)
           );
+          const filtered = prev.filter(
+            (msg) => msg.messageId !== tempMessageId
+          );
+
+          // Check if the sent message already exists to prevent duplicates
+          const exists = filtered.some(
+            (msg) => msg.messageId === sentMessage.messageId
+          );
+          if (exists) {
+            // Defer parent update to avoid render cycle issues
+            setTimeout(() => onMessagesUpdate(filtered), 0);
+            return filtered;
+          }
+
           const updated = [...filtered, sentMessage].sort(
             (a, b) =>
               new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
           );
-          onMessagesUpdate(updated);
+
+          // Defer parent update to avoid render cycle issues
+          setTimeout(() => onMessagesUpdate(updated), 0);
           return updated;
         });
       },
@@ -116,6 +144,7 @@ function Content({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [localMessages]);
 
+  // Fixed handleSendMessage to prevent duplicates
   const handleSendMessage = useCallback(() => {
     if (!message.trim() || !selectedUser || !isConnected) {
       return;
@@ -141,8 +170,15 @@ function Content({
       attachments: [],
     };
 
-    // Add pending message to local state
-    setLocalMessages((prev) => [...prev, tempMessage]);
+    // Add pending message to local state with duplicate check
+    setLocalMessages((prev) => {
+      const exists = prev.some(
+        (msg) => msg.messageId === tempMessage.messageId
+      );
+      if (exists) return prev;
+      return [...prev, tempMessage];
+    });
+
     setPendingMessages((prev) => new Map(prev).set(tempId, tempMessage));
 
     // Send via WebSocket

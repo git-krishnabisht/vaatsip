@@ -89,7 +89,7 @@ export const oauthCallback = async (req, res) => {
     const token = await jwtService.generateJWT(user);
 
     res.cookie("jwt", token, {
-      httpOnly: false,
+      httpOnly: true,
       secure: false,
       sameSite: "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
