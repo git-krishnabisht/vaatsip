@@ -31,7 +31,6 @@ export function useMessages() {
 
         if (!res.ok) {
           if (res.status === 404) {
-            // No messages found is not an error, just empty state
             setMessages([]);
             return;
           }

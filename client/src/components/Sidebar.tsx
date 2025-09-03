@@ -33,7 +33,7 @@ function Sidebar({ onUserClick }: SidebarProps) {
   return (
     <div className="flex flex-col h-full">
       <div className="p-5">
-        <h1 className="text-xl font-medium">Chats</h1>
+        <h1 className="text-xl font-medium hover: cursor-pointer">Chats</h1>
       </div>
 
       <div className="flex-1 overflow-y-auto">

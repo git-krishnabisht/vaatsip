@@ -2,11 +2,9 @@ import type { User } from "../utils/users.util";
 
 interface NavProps {
   selectedUser: User | null;
-  isOnline?: boolean;
-  isTyping?: boolean;
 }
 
-function Navbar({ selectedUser, isOnline, isTyping }: NavProps) {
+function Navbar({ selectedUser }: NavProps) {
   if (!selectedUser) {
     return (
       <div className="flex items-center justify-center h-16">
@@ -21,7 +19,7 @@ function Navbar({ selectedUser, isOnline, isTyping }: NavProps) {
     <>
       <div className="flex items-center justify-between px-4 py-3">
         <div className="flex items-center gap-3 hover: cursor-pointer">
-          <div className="relative w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
+          <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
             {selectedUser.avatar ? (
               <img
                 src={selectedUser.avatar}
@@ -33,30 +31,18 @@ function Navbar({ selectedUser, isOnline, isTyping }: NavProps) {
                 {selectedUser.name.charAt(0).toUpperCase()}
               </div>
             )}
-            
-            {isOnline && (
-              <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
-            )}
           </div>
 
           <div className="flex flex-col">
             <h2 className="text-base font-medium text-gray-900 truncate max-w-48">
               {selectedUser.name}
             </h2>
-            <p className="text-xs text-gray-500">
-              {isTyping ? (
-                <span className="text-green-600 font-medium">typing...</span>
-              ) : isOnline ? (
-                <span className="text-green-600">online</span>
-              ) : (
-                "last seen recently"
-              )}
-            </p>
+            <p className="text-xs text-gray-500">last seen today at 12:34 PM</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button className="p-2 hover:bg-gray-200 cursor-pointer rounded-full transition-colors">
+        <div>
+          <button className="p-2 hover:bg-gray-200 cursor-pointer rounded-full transition-colors ">
             <svg
               className="w-5 h-5 text-gray-600"
               fill="currentColor"
