@@ -1,7 +1,13 @@
+import { useEffect, useState } from "react";
 import Content from "../components/Content";
+import { useParams } from "react-router-dom";
 import OptionBar from "../components/OptionBar";
 import Sidebar from "../components/Sidebar";
 import { useUserDetails } from "../contexts/UserDetailsProvider";
+import { useMessages } from "../utils/useMessages";
+import { useAuth } from "../contexts/AuthContext";
+import { getUsers } from "../utils/users.util";
+import type { Message } from "../models/Messages";
 
 function EmptyState() {
   return (
@@ -74,7 +80,43 @@ function EmptyState() {
 }
 
 function Dashboard() {
+  const { receiver_id } = useParams<{ receiver_id: string }>();
   const { userDetails, setUserDetails } = useUserDetails();
+  const { messages, loading, error } = useMessages();
+  const { user: currentUser } = useAuth();
+  const [allMessages, setAllMessages] = useState<Message[]>(messages);
+
+  useEffect(() => {
+    setAllMessages(messages);
+  }, [messages]);
+
+  useEffect(() => {
+    const loadUserFromUrl = async () => {
+      if (
+        receiver_id &&
+        (!userDetails || userDetails.id !== parseInt(receiver_id))
+      ) {
+        // navbar glitchy behaviour: we can pass the loading state for content and navbar to slide into loading state while the getUser() is executing
+        try {
+          const users = await getUsers();
+          const selectedUser = users.find(
+            (u) => u.id === parseInt(receiver_id)
+          );
+          if (selectedUser) {
+            setUserDetails(selectedUser);
+          }
+        } catch (error) {
+          console.error("Failed to load user details:", error);
+        }
+      }
+    };
+
+    loadUserFromUrl();
+  }, [receiver_id, userDetails, setUserDetails]);
+
+  const handleMessagesUpdate = (updatedMessages: Message[]) => {
+    setAllMessages(updatedMessages);
+  };
 
   return (
     <div className="flex flex-row h-screen">
@@ -87,7 +129,14 @@ function Dashboard() {
       {userDetails ? (
         <div className="flex-1 flex flex-col">
           <div className="flex-1 overflow-auto">
-            <Content selectedUser={userDetails} />
+            <Content
+              selectedUser={userDetails}
+              messages={allMessages}
+              loading={loading}
+              error={error}
+              currentUser={currentUser?.id}
+              onMessagesUpdate={handleMessagesUpdate}
+            />
           </div>
         </div>
       ) : (

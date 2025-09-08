@@ -33,58 +33,62 @@ function Sidebar({ onUserClick }: SidebarProps) {
   return (
     <div className="flex flex-col h-full">
       <div className="p-5">
-        <h1 className="text-xl font-medium hover: cursor-pointer">Chats</h1>
+        <h1 className="text-xl font-medium">Chats</h1>
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {users.filter((u) => u.id !== user?.id).map((u) => {
-          const isSelected = receiver_id && parseInt(receiver_id) === u.id;
-          
-          return (
-            <div
-              key={u.id}
-              className={`flex items-center px-4 py-3 cursor-pointer border-b border-gray-100 transition-colors ${
-                isSelected 
-                  ? "bg-green-100 hover:bg-green-200" 
-                  : "hover:bg-gray-50"
-              }`}
-              onClick={() => handleUserClick(u)}
-            >
-              <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 mr-3">
-                {u.avatar ? (
-                  <img
-                    src={u.avatar}
-                    alt={u.name}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gray-300 flex items-center justify-center text-white font-medium">
-                    {u.name.charAt(0).toUpperCase()}
+        {users
+          .filter((u) => u.id !== user?.id)
+          .map((u) => {
+            const isSelected = receiver_id && parseInt(receiver_id) === u.id;
+
+            return (
+              <div
+                key={u.id}
+                className={`flex items-center px-4 py-3 cursor-pointer border-b border-gray-100 transition-colors ${
+                  isSelected
+                    ? "bg-green-100 hover:bg-green-200"
+                    : "hover:bg-gray-50"
+                }`}
+                onClick={() => handleUserClick(u)}
+              >
+                <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 mr-3">
+                  {u.avatar ? (
+                    <img
+                      src={u.avatar}
+                      alt={u.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gray-300 flex items-center justify-center text-white font-medium">
+                      {u.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-1">
+                    <h3
+                      className={`text-sm font-medium truncate ${
+                        isSelected ? "text-green-800" : "text-gray-900"
+                      }`}
+                    >
+                      {u.name}
+                    </h3>
+                    <span className="text-xs text-gray-500 flex-shrink-0">
+                      12:34
+                    </span>
                   </div>
-                )}
-              </div>
 
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-1">
-                  <h3 className={`text-sm font-medium truncate ${
-                    isSelected ? "text-green-800" : "text-gray-900"
-                  }`}>
-                    {u.name}
-                  </h3>
-                  <span className="text-xs text-gray-500 flex-shrink-0">
-                    12:34
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <p className="text-sm text-gray-600 truncate">
-                    Last message preview...
-                  </p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-gray-600 truncate">
+                      Last message preview...
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
       </div>
     </div>
   );

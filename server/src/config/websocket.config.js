@@ -281,11 +281,11 @@ class WebSocketManager {
     });
   }
 
-  sendToUser(userId, message) {
+  sendToUser(userId, obj) {
     const connection = this.connections.get(userId);
     if (connection && connection.readyState === 1) {
       // WebSocket.OPEN = 1
-      connection.send(JSON.stringify(message));
+      connection.send(JSON.stringify(obj));
       return true;
     }
     return false;

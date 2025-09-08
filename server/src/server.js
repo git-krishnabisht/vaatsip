@@ -43,7 +43,7 @@ app.use("/api/users", userRoutes);
 app.get("/auth/google", oauthEntry);
 app.get("/auth/google/callback", oauthCallback);
 
-app.get("/health", (req, res) => {
+app.get("/health", (_, res) => {
   res.json({ 
     status: "ok", 
     websocket: wsManager.wss ? "running" : "not running",
