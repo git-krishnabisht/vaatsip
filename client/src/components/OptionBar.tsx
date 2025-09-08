@@ -124,7 +124,7 @@ function OptionBar() {
                     target.nextElementSibling?.classList.remove("hidden");
                   }}
                 />
-                <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-xs">
+                <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-xs hidden">
                   {getUserInitials(user?.name || "")}
                 </div>
               </div>
@@ -164,7 +164,7 @@ function OptionBar() {
                         target.nextElementSibling?.classList.remove("hidden");
                       }}
                     />
-                    <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
+                    <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold hidden">
                       {getUserInitials(user?.name || "")}
                     </div>
                   </div>

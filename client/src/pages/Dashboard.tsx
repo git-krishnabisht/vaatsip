@@ -114,6 +114,19 @@ function EmptyState() {
           </div>
         </div>
       </div>
+
+      {/* Security notice */}
+      <div className="fixed bottom-4 sm:bottom-6 lg:bottom-8 left-1/2 transform -translate-x-1/2 px-4">
+        <div className="flex justify-center items-center gap-2 sm:gap-3 bg-white/90 backdrop-blur-sm px-4 sm:px-6 py-2.5 sm:py-3 rounded-full shadow-lg border border-gray-200 max-w-xs sm:max-w-none">
+          <Shield
+            className="w-4 h-4 sm:w-5 sm:h-5 text-green-600"
+            strokeWidth={2}
+          />
+          <span className="text-xs sm:text-sm font-medium text-gray-700 text-center">
+            Your privacy is protected with end-to-end encryption
+          </span>
+        </div>
+      </div>
     </div>
   );
 }
@@ -212,9 +225,9 @@ function Dashboard() {
   };
 
   return (
-    <div className="flex flex-row h-screen bg-gray-50 relative">
+    <div className="flex flex-row h-screen bg-gray-50 relative overflow-hidden">
       {/* Option Bar */}
-      <div className="hidden sm:block sm:basis-16 lg:basis-20 shrink-0 shadow-sm z-30">
+      <div className="hidden sm:block sm:basis-16 lg:basis-20 shrink-0 shadow-sm z-30 relative">
         <OptionBar />
       </div>
 
@@ -267,7 +280,7 @@ function Dashboard() {
           isMobile
             ? "fixed top-0 left-0 h-full w-80 z-50"
             : "hidden sm:block sm:basis-80 md:basis-96 lg:basis-[400px] shrink-0"
-        } shadow-sm
+        } shadow-sm relative
       `}
       >
         <Sidebar
@@ -279,7 +292,9 @@ function Dashboard() {
 
       {/* Main Content */}
       <div
-        className={`flex-1 flex flex-col shadow-sm ${isMobile ? "pt-14" : ""}`}
+        className={`flex-1 flex flex-col shadow-sm min-w-0 ${
+          isMobile ? "pt-14" : ""
+        }`}
       >
         {receiver_id ? (
           <div className="flex-1 overflow-hidden">
