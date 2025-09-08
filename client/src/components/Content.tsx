@@ -11,6 +11,7 @@ interface ContentProps {
   error: string | null;
   currentUser?: number;
   onMessagesUpdate: (messages: Message[]) => void;
+  isLoadingUser?: boolean; 
 }
 
 function Content({
@@ -20,6 +21,7 @@ function Content({
   error,
   currentUser,
   onMessagesUpdate,
+  isLoadingUser = false,
 }: ContentProps) {
   const [message, setMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -31,6 +33,7 @@ function Content({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<number | null>(null);
   const lastTypingRef = useRef<number>(0);
+  const previousSelectedUserId = useRef<number | null>(null);
 
   const {
     isConnected,
@@ -39,13 +42,21 @@ function Content({
     sendTypingStop,
     onlineUsers,
     typingUsers,
-    // connectionStatus,
   } = useWebSocket(
-
     useCallback(
       (newMessage: Message) => {
+        // Only process messages relevant to current conversation
+        if (!selectedUser) return;
+
+        const isRelevantMessage =
+          (newMessage.senderId === currentUser &&
+            newMessage.receiverId === selectedUser.id) ||
+          (newMessage.senderId === selectedUser.id &&
+            newMessage.receiverId === currentUser);
+
+        if (!isRelevantMessage) return;
+
         setLocalMessages((prev) => {
-          // duplicate detection
           const exists = prev.some(
             (msg) =>
               msg.messageId === newMessage.messageId ||
@@ -65,21 +76,18 @@ function Content({
               new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
           );
 
-          // Defer parent update to avoid render cycle issues
           setTimeout(() => onMessagesUpdate(updated), 0);
           return updated;
         });
 
-        // Auto-scroll to bottom
         setTimeout(
           () => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }),
           100
         );
       },
-      [onMessagesUpdate]
+      [onMessagesUpdate, selectedUser, currentUser]
     ),
 
-    // onMessageSent - temp message removal
     useCallback(
       (tempId: string, sentMessage: Message) => {
         setPendingMessages((prev) => {
@@ -89,8 +97,6 @@ function Content({
         });
 
         setLocalMessages((prev) => {
-
-          // Remove the temporary message by matching the tempId pattern
           const tempMessageId = parseInt(
             tempId.replace(/[^0-9]/g, "").substring(0, 10)
           );
@@ -98,12 +104,10 @@ function Content({
             (msg) => msg.messageId !== tempMessageId
           );
 
-          // Check if the sent message already exists to prevent duplicates
           const exists = filtered.some(
             (msg) => msg.messageId === sentMessage.messageId
           );
           if (exists) {
-            // Defer parent update to avoid render cycle issues
             setTimeout(() => onMessagesUpdate(filtered), 0);
             return filtered;
           }
@@ -113,7 +117,6 @@ function Content({
               new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
           );
 
-          // Defer parent update to avoid render cycle issues
           setTimeout(() => onMessagesUpdate(updated), 0);
           return updated;
         });
@@ -121,44 +124,69 @@ function Content({
       [onMessagesUpdate]
     ),
 
-    // onMessageDelivered
     useCallback((messageId: number) => {
       console.log(`Message ${messageId} delivered`);
-      // can update message status here
     }, []),
 
-    // onMessageRead
     useCallback((messageId: number) => {
       console.log(`Message ${messageId} read`);
-      // can update message status here
     }, [])
   );
 
+  // Clear local state when user changes
+  useEffect(() => {
+    if (selectedUser?.id !== previousSelectedUserId.current) {
+      setLocalMessages([]);
+      setPendingMessages(new Map());
+      setMessage("");
+      setIsTyping(false);
+
+      // Clear typing timeout
+      if (typingTimeoutRef.current) {
+        window.clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
+      }
+
+      // Stop typing indicator for previous user
+      if (previousSelectedUserId.current && isTyping) {
+        sendTypingStop(previousSelectedUserId.current);
+      }
+
+      previousSelectedUserId.current = selectedUser?.id || null;
+    }
+  }, [selectedUser?.id, isTyping, sendTypingStop]);
+
   // Sync messages with props
   useEffect(() => {
-    setLocalMessages(messages);
+    if (Array.isArray(messages)) {
+      setLocalMessages(messages);
+    }
   }, [messages]);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [localMessages]);
+    const timer = setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
 
-  // handleSendMessage to prevent duplicates
+    return () => clearTimeout(timer);
+  }, [localMessages.length, selectedUser?.id]);
+
   const handleSendMessage = useCallback(() => {
-    if (!message.trim() || !selectedUser || !isConnected) {
+    const trimmedMessage = message.trim();
+    if (!trimmedMessage || !selectedUser || !isConnected || !currentUser) {
       return;
     }
 
     const tempId = `temp_${Date.now()}_${Math.random()}`;
     const tempMessage: Message = {
       messageId: parseInt(tempId.replace(/[^0-9]/g, "").substring(0, 10)),
-      senderId: currentUser!,
+      senderId: currentUser,
       receiverId: selectedUser.id,
-      message: message.trim(),
+      message: trimmedMessage,
       createdAt: new Date().toISOString(),
       sender: {
-        id: currentUser!,
+        id: currentUser,
         name: "You",
         avatar: null,
       },
@@ -170,7 +198,6 @@ function Content({
       attachments: [],
     };
 
-    // Add pending message to local state with duplicate check
     setLocalMessages((prev) => {
       const exists = prev.some(
         (msg) => msg.messageId === tempMessage.messageId
@@ -181,11 +208,9 @@ function Content({
 
     setPendingMessages((prev) => new Map(prev).set(tempId, tempMessage));
 
-    // Send via WebSocket
-    wsSendMessage(selectedUser.id, message.trim());
+    wsSendMessage(selectedUser.id, trimmedMessage);
     setMessage("");
 
-    // Stop typing indicator
     if (isTyping) {
       sendTypingStop(selectedUser.id);
       setIsTyping(false);
@@ -213,6 +238,10 @@ function Content({
   const handleMessageChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const value = e.target.value;
+
+      // Prevent XSS by limiting input length and sanitizing
+      if (value.length > 1000) return;
+
       setMessage(value);
 
       if (!selectedUser || !isConnected) return;
@@ -220,18 +249,15 @@ function Content({
       const now = Date.now();
       lastTypingRef.current = now;
 
-      // Start typing indicator
       if (!isTyping && value.trim()) {
         setIsTyping(true);
         sendTypingStart(selectedUser.id);
       }
 
-      // Clear existing timeout
       if (typingTimeoutRef.current) {
         window.clearTimeout(typingTimeoutRef.current);
       }
 
-      // Stop typing after 2 seconds of inactivity
       typingTimeoutRef.current = window.setTimeout(() => {
         if (now === lastTypingRef.current && isTyping) {
           setIsTyping(false);
@@ -239,7 +265,6 @@ function Content({
         }
       }, 2000);
 
-      // Stop typing if message becomes empty
       if (!value.trim() && isTyping) {
         setIsTyping(false);
         sendTypingStop(selectedUser.id);
@@ -258,32 +283,54 @@ function Content({
   }, []);
 
   const formatTime = (timestamp: string) => {
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    });
+    try {
+      const date = new Date(timestamp);
+      if (isNaN(date.getTime())) return "Invalid time";
+
+      return date.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      });
+    } catch {
+      return "Invalid time";
+    }
   };
 
   const formatDate = (timestamp: string) => {
-    const date = new Date(timestamp);
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
+    try {
+      const date = new Date(timestamp);
+      if (isNaN(date.getTime())) return "Invalid date";
 
-    if (date.toDateString() === today.toDateString()) {
-      return "Today";
-    } else if (date.toDateString() === yesterday.toDateString()) {
-      return "Yesterday";
-    } else {
-      return date.toLocaleDateString("en-US", {
-        weekday: "long",
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      });
+      const today = new Date();
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+
+      if (date.toDateString() === today.toDateString()) {
+        return "Today";
+      } else if (date.toDateString() === yesterday.toDateString()) {
+        return "Yesterday";
+      } else {
+        return date.toLocaleDateString("en-US", {
+          weekday: "long",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        });
+      }
+    } catch {
+      return "Invalid date";
     }
+  };
+
+  // Sanitize message content to prevent XSS
+  const sanitizeMessage = (content: string) => {
+    return content
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#x27;");
   };
 
   const messageArray = Array.isArray(localMessages) ? localMessages : [];
@@ -294,40 +341,28 @@ function Content({
 
   const groupedMessages = messageArray.reduce(
     (groups: { [key: string]: Message[] }, msg) => {
-      const date = new Date(msg.createdAt).toDateString();
-      if (!groups[date]) {
-        groups[date] = [];
+      try {
+        const date = new Date(msg.createdAt).toDateString();
+        if (!groups[date]) {
+          groups[date] = [];
+        }
+        groups[date].push(msg);
+        return groups;
+      } catch {
+        return groups;
       }
-      groups[date].push(msg);
-      return groups;
     },
     {}
   );
 
   return (
     <div className="flex flex-col h-full">
-      {/* Connection Status Bar */}
-      {/* {connectionStatus !== "connected" && (
-        <div
-          className={`px-4 py-2 text-center text-sm ${
-            connectionStatus === "connecting"
-              ? "bg-yellow-100 text-yellow-800"
-              : connectionStatus === "error"
-              ? "bg-red-100 text-red-800"
-              : "bg-gray-100 text-gray-600"
-          }`}
-        >
-          {connectionStatus === "connecting" && "Connecting..."}
-          {connectionStatus === "error" && "Connection failed. Retrying..."}
-          {connectionStatus === "disconnected" && "Reconnecting..."}
-        </div>
-      )} */}
-
       <div className="sticky top-0 z-10 border-b border-black bg-gray-100">
         <Navbar
           selectedUser={selectedUser}
           isOnline={isUserOnline}
           isTyping={isUserTyping}
+          isLoading={isLoadingUser}
         />
       </div>
 
@@ -339,13 +374,19 @@ function Content({
               'url("data:image/svg+xml,%3Csvg width="260" height="260" viewBox="0 0 260 260" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23f0f0f0" fill-opacity="0.1"%3E%3Ccircle cx="3" cy="3" r="3"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
           }}
         >
-          {loading ? (
+          {loading || isLoadingUser ? (
             <div className="flex justify-center items-center h-full">
-              <div className="text-gray-500">Loading messages...</div>
+              <div className="flex flex-col items-center space-y-4">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <div className="text-gray-500 text-sm">Loading...</div>
+              </div>
             </div>
           ) : error ? (
             <div className="flex justify-center items-center h-full">
-              <div className="text-red-500">Error: {error}</div>
+              <div className="text-red-500 text-center">
+                <div className="text-lg font-medium mb-2">Error</div>
+                <div className="text-sm">{error}</div>
+              </div>
             </div>
           ) : messageArray.length === 0 ? (
             <>
@@ -354,8 +395,7 @@ function Content({
                   <div className="flex items-start gap-2 text-amber-800 text-xs">
                     <span>
                       Messages and calls are end-to-end encrypted. Only people
-                      in this chat can read, listen to, or share them. Click to
-                      learn more
+                      in this chat can read, listen to, or share them.
                     </span>
                   </div>
                 </div>
@@ -371,8 +411,7 @@ function Content({
                   <div className="flex items-start gap-2 text-amber-800 text-xs">
                     <span>
                       Messages and calls are end-to-end encrypted. Only people
-                      in this chat can read, listen to, or share them. Click to
-                      learn more
+                      in this chat can read, listen to, or share them.
                     </span>
                   </div>
                 </div>
@@ -388,8 +427,8 @@ function Content({
 
                   {dayMessages.map((msg, index) => {
                     const isOwnMessage = msg.senderId === currentUser;
-                    const isPending = pendingMessages.has(
-                      String(msg.messageId)
+                    const isPending = Array.from(pendingMessages.values()).some(
+                      (pendingMsg) => pendingMsg.messageId === msg.messageId
                     );
                     const isConsecutive =
                       index > 0 &&
@@ -400,7 +439,7 @@ function Content({
 
                     return (
                       <div
-                        key={msg.messageId}
+                        key={`${msg.messageId}-${msg.createdAt}`}
                         className={`flex mb-2 ${
                           isOwnMessage ? "justify-end" : "justify-start"
                         } ${isConsecutive ? "mt-1" : "mt-3"}`}
@@ -414,7 +453,12 @@ function Content({
                               : "bg-white text-gray-900 rounded-bl-none shadow-sm"
                           }`}
                         >
-                          <div className="break-words">{msg.message}</div>
+                          <div
+                            className="break-words"
+                            dangerouslySetInnerHTML={{
+                              __html: sanitizeMessage(msg.message || ""),
+                            }}
+                          />
                           <div
                             className={`text-xs mt-1 ${
                               isOwnMessage ? "text-green-100" : "text-gray-500"
@@ -448,7 +492,6 @@ function Content({
                 </div>
               ))}
 
-              {/* Typing indicator */}
               {isUserTyping && (
                 <div className="flex justify-start mb-2">
                   <div className="bg-white px-3 py-2 rounded-lg rounded-bl-none shadow-sm">
@@ -479,7 +522,11 @@ function Content({
 
         <div className="px-4 py-2 bg-gray-100">
           <div className="flex items-end gap-2">
-            <button className="p-2 text-gray-500 hover:text-gray-700 mb-1">
+            <button
+              className="p-2 text-gray-500 hover:text-gray-700 mb-1 disabled:opacity-50"
+              disabled={!isConnected || !selectedUser || isLoadingUser}
+              aria-label="Attach file"
+            >
               <svg
                 className="w-6 h-6"
                 fill="none"
@@ -500,6 +547,8 @@ function Content({
                 placeholder={
                   !isConnected
                     ? "Connecting..."
+                    : isLoadingUser
+                    ? "Loading..."
                     : !selectedUser
                     ? "Select a chat"
                     : "Type a message"
@@ -507,7 +556,8 @@ function Content({
                 value={message}
                 onChange={handleMessageChange}
                 onKeyDown={handleKeyDown}
-                disabled={!isConnected || !selectedUser}
+                disabled={!isConnected || !selectedUser || isLoadingUser}
+                maxLength={1000}
                 className="w-full px-3 py-2 bg-white rounded-lg border-0 focus:outline-none text-sm disabled:bg-gray-200 disabled:text-gray-500"
                 style={{ minHeight: "40px" }}
               />
@@ -515,8 +565,9 @@ function Content({
             {message.trim() ? (
               <button
                 onClick={handleSendMessage}
-                disabled={!isConnected || !selectedUser}
+                disabled={!isConnected || !selectedUser || isLoadingUser}
                 className="p-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-full transition-colors ml-2"
+                aria-label="Send message"
               >
                 <svg
                   className="w-5 h-5"
@@ -528,8 +579,9 @@ function Content({
               </button>
             ) : (
               <button
-                disabled={!isConnected || !selectedUser}
+                disabled={!isConnected || !selectedUser || isLoadingUser}
                 className="p-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-full transition-colors ml-2"
+                aria-label="Voice message"
               >
                 <svg
                   className="w-5 h-5"

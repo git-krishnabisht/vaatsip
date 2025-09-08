@@ -1,13 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Content from "../components/Content";
 import { useParams } from "react-router-dom";
 import OptionBar from "../components/OptionBar";
 import Sidebar from "../components/Sidebar";
 import { useUserDetails } from "../contexts/UserDetailsProvider";
-import { useMessages } from "../utils/useMessages";
+import { useMessages } from "../hooks/useMessages";
 import { useAuth } from "../contexts/AuthContext";
 import { getUsers } from "../utils/users.util";
 import type { Message } from "../models/Messages";
+import type { User } from "../utils/users.util";
 
 function EmptyState() {
   return (
@@ -82,60 +83,92 @@ function EmptyState() {
 function Dashboard() {
   const { receiver_id } = useParams<{ receiver_id: string }>();
   const { userDetails, setUserDetails } = useUserDetails();
-  const { messages, loading, error } = useMessages();
+  const { messages, loading: messagesLoading, error } = useMessages();
   const { user: currentUser } = useAuth();
   const [allMessages, setAllMessages] = useState<Message[]>(messages);
+  const [isLoadingUser, setIsLoadingUser] = useState(false);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+
+  // Pre-load all users to avoid async loading when switching
+  useEffect(() => {
+    const loadAllUsers = async () => {
+      try {
+        const users = await getUsers();
+        setAllUsers(users);
+      } catch (error) {
+        console.error("Failed to load users:", error);
+      }
+    };
+
+    loadAllUsers();
+  }, []);
 
   useEffect(() => {
     setAllMessages(messages);
   }, [messages]);
 
+  // Handle user selection from URL parameter
   useEffect(() => {
-    const loadUserFromUrl = async () => {
-      if (
-        receiver_id &&
-        (!userDetails || userDetails.id !== parseInt(receiver_id))
-      ) {
-        // navbar glitchy behaviour: we can pass the loading state for content and navbar to slide into loading state while the getUser() is executing
-        try {
-          const users = await getUsers();
-          const selectedUser = users.find(
-            (u) => u.id === parseInt(receiver_id)
-          );
-          if (selectedUser) {
-            setUserDetails(selectedUser);
-          }
-        } catch (error) {
-          console.error("Failed to load user details:", error);
+    if (receiver_id && allUsers.length > 0) {
+      const userId = parseInt(receiver_id);
+      const selectedUser = allUsers.find((u) => u.id === userId);
+
+      if (selectedUser) {
+        // Only update if it's a different user to prevent unnecessary re-renders
+        if (!userDetails || userDetails.id !== selectedUser.id) {
+          setUserDetails(selectedUser);
         }
+      } else {
+        console.warn(`User with ID ${userId} not found`);
+        setUserDetails(null);
       }
-    };
 
-    loadUserFromUrl();
-  }, [receiver_id, userDetails, setUserDetails]);
+      setIsLoadingUser(false);
+    } else if (!receiver_id) {
+      // Clear user details when no receiver_id
+      setUserDetails(null);
+      setIsLoadingUser(false);
+    } else if (receiver_id && allUsers.length === 0) {
+      // Still loading users
+      setIsLoadingUser(true);
+    }
+  }, [receiver_id, allUsers, userDetails, setUserDetails]);
 
-  const handleMessagesUpdate = (updatedMessages: Message[]) => {
+  const handleMessagesUpdate = useCallback((updatedMessages: Message[]) => {
     setAllMessages(updatedMessages);
-  };
+  }, []);
+
+  const handleUserClick = useCallback(
+    (user: User) => {
+      // Immediately set the user details to prevent navbar flashing
+      // This happens before navigation, so navbar shows correct user immediately
+      setUserDetails(user);
+      setIsLoadingUser(false);
+    },
+    [setUserDetails]
+  );
 
   return (
     <div className="flex flex-row h-screen">
       <div className="basis-10 md:basis-14 lg:basis-16 border-r border-black shrink-0 bg-gray-100">
         <OptionBar />
       </div>
+
       <div className="hidden sm:block sm:basis-60 md:basis-80 lg:basis-100 border-r border-black shrink-0">
-        <Sidebar onUserClick={setUserDetails} />
+        <Sidebar onUserClick={handleUserClick} />
       </div>
-      {userDetails ? (
+
+      {receiver_id ? (
         <div className="flex-1 flex flex-col">
           <div className="flex-1 overflow-auto">
             <Content
               selectedUser={userDetails}
               messages={allMessages}
-              loading={loading}
+              loading={messagesLoading}
               error={error}
               currentUser={currentUser?.id}
               onMessagesUpdate={handleMessagesUpdate}
+              isLoadingUser={isLoadingUser}
             />
           </div>
         </div>
