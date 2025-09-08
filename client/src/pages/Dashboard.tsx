@@ -1,131 +1,79 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import Content from "../components/Content";
 import { useParams } from "react-router-dom";
 import OptionBar from "../components/OptionBar";
 import Sidebar from "../components/Sidebar";
 import { useUserDetails } from "../contexts/UserDetailsProvider";
-import { useMessages } from "../hooks/useMessages";
+import { useMessages } from "../utils/useMessages";
 import { useAuth } from "../contexts/AuthContext";
 import { getUsers } from "../utils/users.util";
 import type { Message } from "../models/Messages";
-import type { User } from "../utils/users.util";
-import {
-  MessageSquare,
-  Shield,
-  Smartphone,
-  Globe,
-  Menu,
-  ArrowLeft,
-} from "lucide-react";
 
 function EmptyState() {
   return (
-    <div className="flex-1 flex flex-col items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-4 sm:p-6 lg:p-8">
-      {/* Main illustration */}
-      <div className="relative mb-8 sm:mb-10 lg:mb-12">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-purple-600 rounded-full blur-3xl opacity-20 animate-pulse"></div>
-
-        <div className="relative bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 lg:p-12 shadow-xl sm:shadow-2xl border border-gray-200">
-          <div className="w-20 h-20 sm:w-28 sm:h-28 lg:w-32 lg:h-32 mx-auto mb-6 sm:mb-8 relative">
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full animate-pulse opacity-20"></div>
-            <div className="relative w-full h-full bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-              <MessageSquare
-                className="w-10 h-10 sm:w-14 sm:h-14 lg:w-16 lg:h-16 text-white"
-                strokeWidth={1.5}
-              />
-            </div>
-          </div>
-
-          <div className="text-center">
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-3 sm:mb-4">
-              Vaatsip Web
-            </h1>
-            <p className="text-gray-600 text-base sm:text-lg max-w-xs sm:max-w-md leading-relaxed font-medium">
-              Connect with friends and family instantly. Send messages, share
-              moments, and stay close.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Feature cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-8 sm:mb-10 lg:mb-12 max-w-4xl w-full">
-        <div className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-lg border border-gray-200 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg sm:rounded-xl flex items-center justify-center mb-3 sm:mb-4">
-            <Shield
-              className="w-5 h-5 sm:w-6 sm:h-6 text-white"
-              strokeWidth={2}
-            />
-          </div>
-          <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-2">
-            End-to-End Encrypted
-          </h3>
-          <p className="text-gray-600 text-sm font-medium">
-            Your messages are secured with industry-leading encryption.
-          </p>
-        </div>
-
-        <div className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-lg border border-gray-200 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-blue-500 to-cyan-600 rounded-lg sm:rounded-xl flex items-center justify-center mb-3 sm:mb-4">
-            <Smartphone
-              className="w-5 h-5 sm:w-6 sm:h-6 text-white"
-              strokeWidth={2}
-            />
-          </div>
-          <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-2">
-            Cross-Platform
-          </h3>
-          <p className="text-gray-600 text-sm font-medium">
-            Access your conversations from any device, anywhere.
-          </p>
-        </div>
-
-        <div className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-lg border border-gray-200 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 sm:col-span-2 lg:col-span-1">
-          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-purple-500 to-pink-600 rounded-lg sm:rounded-xl flex items-center justify-center mb-3 sm:mb-4">
-            <Globe
-              className="w-5 h-5 sm:w-6 sm:h-6 text-white"
-              strokeWidth={2}
-            />
-          </div>
-          <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-2">
-            Always Connected
-          </h3>
-          <p className="text-gray-600 text-sm font-medium">
-            Real-time messaging that keeps you in touch instantly.
-          </p>
-        </div>
-      </div>
-
-      {/* Call to action */}
-      <div className="text-center">
-        <div className="bg-white rounded-xl sm:rounded-2xl px-6 sm:px-8 py-5 sm:py-6 shadow-lg border border-gray-200 inline-block">
-          <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-2 sm:mb-3">
-            Ready to start chatting?
-          </h2>
-          <p className="text-gray-600 font-medium mb-3 sm:mb-4 text-sm sm:text-base">
-            Select a conversation from the sidebar to begin messaging.
-          </p>
-          <div className="flex items-center justify-center gap-2 text-blue-600">
-            <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
-            <span className="text-sm font-bold">
-              Choose a chat to get started
-            </span>
-            <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
-          </div>
-        </div>
-      </div>
-
-      {/* Security notice */}
-      <div className="fixed bottom-4 sm:bottom-6 lg:bottom-8 left-1/2 transform -translate-x-1/2 px-4">
-        <div className="flex justify-center items-center gap-2 sm:gap-3 bg-white/90 backdrop-blur-sm px-4 sm:px-6 py-2.5 sm:py-3 rounded-full shadow-lg border border-gray-200 max-w-xs sm:max-w-none">
-          <Shield
-            className="w-4 h-4 sm:w-5 sm:h-5 text-green-600"
-            strokeWidth={2}
+    <div className="flex-1 flex flex-col items-center justify-center bg-gray-50 p-8">
+      <div className="mb-8">
+        <svg
+          className="w-80 h-80 text-gray-300"
+          viewBox="0 0 320 320"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <circle cx="160" cy="160" r="120" fill="currentColor" opacity="0.1" />
+          <path
+            d="M80 120h160c11 0 20 9 20 20v80c0 11-9 20-20 20H120l-20 20v-20H80c-11 0-20-9-20-20v-80c0-11 9-20 20-20z"
+            fill="currentColor"
+            opacity="0.2"
           />
-          <span className="text-xs sm:text-sm font-medium text-gray-700 text-center">
-            Your privacy is protected with end-to-end encryption
-          </span>
-        </div>
+          <circle cx="120" cy="180" r="8" fill="currentColor" opacity="0.3" />
+          <circle cx="160" cy="180" r="8" fill="currentColor" opacity="0.3" />
+          <circle cx="200" cy="180" r="8" fill="currentColor" opacity="0.3" />
+
+          <rect
+            x="200"
+            y="80"
+            width="60"
+            height="40"
+            rx="8"
+            fill="currentColor"
+            opacity="0.15"
+          />
+          <rect
+            x="210"
+            y="90"
+            width="40"
+            height="20"
+            rx="2"
+            fill="currentColor"
+            opacity="0.2"
+          />
+
+          <path
+            d="M180 160 L200 120"
+            stroke="currentColor"
+            strokeWidth="2"
+            opacity="0.2"
+            strokeDasharray="5,5"
+          />
+        </svg>
+      </div>
+
+      <div className="text-center mb-6">
+        <h1 className="text-3xl font-light text-gray-700 mb-4">Vaatsip Web</h1>
+        <p className="text-gray-500 text-lg max-w-md leading-relaxed">
+          Send and receive messages without keeping your phone online.
+        </p>
+      </div>
+
+      <div className="flex items-center gap-2 text-gray-400 text-sm mt-12">
+        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+          <path
+            fillRule="evenodd"
+            d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+            clipRule="evenodd"
+          />
+        </svg>
+        <span>Your personal messages are end-to-end encrypted</span>
       </div>
     </div>
   );
@@ -134,196 +82,65 @@ function EmptyState() {
 function Dashboard() {
   const { receiver_id } = useParams<{ receiver_id: string }>();
   const { userDetails, setUserDetails } = useUserDetails();
-  const { messages, loading: messagesLoading, error } = useMessages();
+  const { messages, loading, error } = useMessages();
   const { user: currentUser } = useAuth();
   const [allMessages, setAllMessages] = useState<Message[]>(messages);
-  const [isLoadingUser, setIsLoadingUser] = useState(false);
-  const [allUsers, setAllUsers] = useState<User[]>([]);
-  const [isSidebarVisible, setIsSidebarVisible] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-
-  // Check if mobile
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 640); // sm breakpoint
-    };
-
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
-  }, []);
-
-  // Pre-load all users to avoid async loading when switching
-  useEffect(() => {
-    const loadAllUsers = async () => {
-      try {
-        const users = await getUsers();
-        setAllUsers(users);
-      } catch (error) {
-        console.error("Failed to load users:", error);
-      }
-    };
-
-    loadAllUsers();
-  }, []);
 
   useEffect(() => {
     setAllMessages(messages);
   }, [messages]);
 
-  // Handle user selection from URL parameter
   useEffect(() => {
-    if (receiver_id && allUsers.length > 0) {
-      const userId = parseInt(receiver_id);
-      const selectedUser = allUsers.find((u) => u.id === userId);
-
-      if (selectedUser) {
-        // Only update if it's a different user to prevent unnecessary re-renders
-        if (!userDetails || userDetails.id !== selectedUser.id) {
-          setUserDetails(selectedUser);
+    const loadUserFromUrl = async () => {
+      if (
+        receiver_id &&
+        (!userDetails || userDetails.id !== parseInt(receiver_id))
+      ) {
+        // navbar glitchy behaviour: we can pass the loading state for content and navbar to slide into loading state while the getUser() is executing
+        try {
+          const users = await getUsers();
+          const selectedUser = users.find(
+            (u) => u.id === parseInt(receiver_id)
+          );
+          if (selectedUser) {
+            setUserDetails(selectedUser);
+          }
+        } catch (error) {
+          console.error("Failed to load user details:", error);
         }
-      } else {
-        console.warn(`User with ID ${userId} not found`);
-        setUserDetails(null);
       }
+    };
 
-      setIsLoadingUser(false);
-      // Hide sidebar on mobile when user is selected
-      if (isMobile) {
-        setIsSidebarVisible(false);
-      }
-    } else if (!receiver_id) {
-      // Clear user details when no receiver_id
-      setUserDetails(null);
-      setIsLoadingUser(false);
-    } else if (receiver_id && allUsers.length === 0) {
-      // Still loading users
-      setIsLoadingUser(true);
-    }
-  }, [receiver_id, allUsers, userDetails, setUserDetails, isMobile]);
+    loadUserFromUrl();
+  }, [receiver_id, userDetails, setUserDetails]);
 
-  const handleMessagesUpdate = useCallback((updatedMessages: Message[]) => {
+  const handleMessagesUpdate = (updatedMessages: Message[]) => {
     setAllMessages(updatedMessages);
-  }, []);
-
-  const handleUserClick = useCallback(
-    (user: User) => {
-      // Immediately set the user details to prevent navbar flashing
-      // This happens before navigation, so navbar shows correct user immediately
-      setUserDetails(user);
-      setIsLoadingUser(false);
-    },
-    [setUserDetails]
-  );
-
-  const toggleSidebar = () => {
-    setIsSidebarVisible(!isSidebarVisible);
-  };
-
-  const closeSidebar = () => {
-    setIsSidebarVisible(false);
   };
 
   return (
-    <div className="flex flex-row h-screen bg-gray-50 relative overflow-hidden">
-      {/* Option Bar */}
-      <div className="hidden sm:block sm:basis-16 lg:basis-20 shrink-0 shadow-sm z-30 relative">
+    <div className="flex flex-row h-screen">
+      <div className="basis-10 md:basis-14 lg:basis-16 border-r border-black shrink-0 bg-gray-100">
         <OptionBar />
       </div>
-
-      {/* Mobile Header */}
-      {isMobile && (
-        <div className="fixed top-0 left-0 right-0 h-14 bg-white border-b border-gray-200 flex items-center justify-between px-4 z-50 shadow-sm">
-          <div className="flex items-center gap-3">
-            {receiver_id ? (
-              <button
-                onClick={() => window.history.back()}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-            ) : (
-              <button
-                onClick={toggleSidebar}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <Menu className="w-5 h-5" />
-              </button>
-            )}
-            <h1 className="text-lg font-bold text-gray-900">
-              {receiver_id && userDetails ? userDetails.name : "Vaatsip"}
-            </h1>
-          </div>
-
-          {!receiver_id && (
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                <MessageSquare className="w-4 h-4 text-white" strokeWidth={2} />
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Mobile Sidebar Overlay */}
-      {isMobile && isSidebarVisible && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40"
-          onClick={closeSidebar}
-        />
-      )}
-
-      {/* Sidebar */}
-      <div
-        className={`
-        ${
-          isMobile
-            ? "fixed top-0 left-0 h-full w-80 z-50"
-            : "hidden sm:block sm:basis-80 md:basis-96 lg:basis-[400px] shrink-0"
-        } shadow-sm relative
-      `}
-      >
-        <Sidebar
-          onUserClick={handleUserClick}
-          isVisible={isMobile ? isSidebarVisible : true}
-          onClose={closeSidebar}
-        />
+      <div className="hidden sm:block sm:basis-60 md:basis-80 lg:basis-100 border-r border-black shrink-0">
+        <Sidebar onUserClick={setUserDetails} />
       </div>
-
-      {/* Main Content */}
-      <div
-        className={`flex-1 flex flex-col shadow-sm min-w-0 ${
-          isMobile ? "pt-14" : ""
-        }`}
-      >
-        {receiver_id ? (
-          <div className="flex-1 overflow-hidden">
+      {userDetails ? (
+        <div className="flex-1 flex flex-col">
+          <div className="flex-1 overflow-auto">
             <Content
               selectedUser={userDetails}
               messages={allMessages}
-              loading={messagesLoading}
+              loading={loading}
               error={error}
               currentUser={currentUser?.id}
               onMessagesUpdate={handleMessagesUpdate}
-              isLoadingUser={isLoadingUser}
             />
           </div>
-        ) : (
-          <EmptyState />
-        )}
-      </div>
-
-      {/* Mobile Bottom Navigation - Optional */}
-      {isMobile && receiver_id && (
-        <div className="fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-gray-200 flex items-center justify-center z-30 shadow-lg">
-          <button
-            onClick={toggleSidebar}
-            className="flex flex-col items-center gap-1 px-4 py-2 hover:bg-gray-50 rounded-lg transition-colors"
-          >
-            <MessageSquare className="w-5 h-5 text-gray-600" />
-            <span className="text-xs text-gray-600 font-medium">Chats</span>
-          </button>
         </div>
+      ) : (
+        <EmptyState />
       )}
     </div>
   );
