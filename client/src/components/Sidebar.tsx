@@ -193,7 +193,7 @@ function Sidebar({ onUserClick }: SidebarProps) {
     }
   };
 
-  const truncateMessage = (message: string, maxLength: number = 35) => {
+  const truncateMessage = (message: string, maxLength: number = 30) => {
     if (message.length <= maxLength) return message;
     return message.substring(0, maxLength) + "...";
   };
@@ -247,18 +247,17 @@ function Sidebar({ onUserClick }: SidebarProps) {
 
   if (loading) {
     return (
-      <div className="flex flex-col h-full bg-white">
-        <div className="px-6 py-5 border-b-2 border-gray-100">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-20 h-7 bg-gray-200 rounded animate-pulse"></div>
-            <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse"></div>
+      <div className="flex flex-col h-full bg-white w-full">
+        <div className="px-4 lg:px-6 py-4 lg:py-5 border-b-2 border-gray-100">
+          <div className="flex items-center justify-between mb-3 lg:mb-4">
+            <div className="w-16 lg:w-20 h-6 lg:h-7 bg-gray-200 rounded animate-pulse"></div>
           </div>
-          <div className="w-full h-10 bg-gray-200 rounded-lg animate-pulse"></div>
+          <div className="w-full h-9 lg:h-10 bg-gray-200 rounded-lg animate-pulse"></div>
         </div>
         <div className="flex-1 flex items-center justify-center">
           <div className="flex flex-col items-center space-y-4">
-            <div className="animate-spin rounded-full h-10 w-10 border-3 border-blue-600 border-t-transparent"></div>
-            <div className="text-gray-500 text-sm font-medium">
+            <div className="animate-spin rounded-full h-8 w-8 lg:h-10 lg:w-10 border-3 border-blue-600 border-t-transparent"></div>
+            <div className="text-gray-500 text-xs lg:text-sm font-medium">
               Loading chats...
             </div>
           </div>
@@ -269,15 +268,17 @@ function Sidebar({ onUserClick }: SidebarProps) {
 
   if (error) {
     return (
-      <div className="flex flex-col h-full bg-white">
-        <div className="px-6 py-5 border-b-2 border-gray-100">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Chats</h1>
+      <div className="flex flex-col h-full bg-white w-full">
+        <div className="px-4 lg:px-6 py-4 lg:py-5 border-b-2 border-gray-100">
+          <h1 className="text-xl lg:text-2xl font-bold text-gray-900 mb-4">
+            Chats
+          </h1>
         </div>
         <div className="flex-1 flex items-center justify-center">
-          <div className="text-center p-6">
-            <div className="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
+          <div className="text-center p-4 lg:p-6">
+            <div className="w-12 h-12 lg:w-16 lg:h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
               <svg
-                className="w-8 h-8 text-red-600"
+                className="w-6 h-6 lg:w-8 lg:h-8 text-red-600"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -290,10 +291,12 @@ function Sidebar({ onUserClick }: SidebarProps) {
                 />
               </svg>
             </div>
-            <div className="text-red-600 text-sm font-medium mb-3">{error}</div>
+            <div className="text-red-600 text-xs lg:text-sm font-medium mb-3">
+              {error}
+            </div>
             <button
               onClick={handleRetry}
-              className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 active:bg-blue-800 transition-all duration-150"
+              className="px-3 py-2 lg:px-4 lg:py-2 bg-blue-600 text-white text-xs lg:text-sm font-medium rounded-lg hover:bg-blue-700 active:bg-blue-800 transition-all duration-150"
             >
               Try again
             </button>
@@ -304,49 +307,51 @@ function Sidebar({ onUserClick }: SidebarProps) {
   }
 
   return (
-    <div className="flex flex-col h-full bg-white">
+    <div className="flex flex-col h-full bg-white w-full min-w-0">
       {/* Header Section */}
-      <div className="px-6 py-5 border-b-2 border-gray-100">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-bold text-gray-900">Chats</h1>
+      <div className="px-4 lg:px-6 py-4 lg:py-5 border-b-2 border-gray-100 flex-shrink-0">
+        <div className="flex items-center justify-between mb-3 lg:mb-4">
+          <h1 className="text-xl lg:text-2xl font-bold text-gray-900 truncate">
+            Chats
+          </h1>
         </div>
 
         {/* Search Bar */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 lg:w-5 lg:h-5 text-gray-400" />
           <input
             type="text"
             placeholder="Search conversations"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 border-transparent rounded-xl focus:outline-none focus:bg-white focus:border-blue-200 transition-all duration-200 text-sm font-medium"
+            className="w-full pl-9 lg:pl-10 pr-4 py-2 lg:py-2.5 bg-gray-50 border-2 border-transparent rounded-xl focus:outline-none focus:bg-white focus:border-blue-200 transition-all duration-200 text-sm font-medium"
           />
         </div>
 
         {/* Quick Actions */}
-        <div className="flex items-center gap-2 mt-4">
+        <div className="flex items-center gap-2 mt-3 lg:mt-4">
           <button className="flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-all duration-150 text-xs font-bold">
-            <MessageCircle className="w-4 h-4" />
-            All
+            <MessageCircle className="w-3 h-3 lg:w-4 lg:h-4" />
+            <span className="hidden sm:inline">All</span>
           </button>
         </div>
       </div>
 
       {/* Chat List */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto min-h-0">
         {filteredUsers.length === 0 ? (
-          <div className="flex items-center justify-center p-8">
+          <div className="flex items-center justify-center p-6 lg:p-8">
             <div className="text-center">
-              <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-                <MessageCircle className="w-8 h-8 text-gray-400" />
+              <div className="w-12 h-12 lg:w-16 lg:h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                <MessageCircle className="w-6 h-6 lg:w-8 lg:h-8 text-gray-400" />
               </div>
-              <div className="text-gray-500 text-sm font-medium">
+              <div className="text-gray-500 text-xs lg:text-sm font-medium">
                 {searchQuery ? "No chats found" : "No conversations yet"}
               </div>
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery("")}
-                  className="text-blue-600 text-sm font-medium hover:underline mt-2"
+                  className="text-blue-600 text-xs lg:text-sm font-medium hover:underline mt-2"
                 >
                   Clear search
                 </button>
@@ -369,7 +374,7 @@ function Sidebar({ onUserClick }: SidebarProps) {
               return (
                 <div
                   key={u.id}
-                  className={`relative mx-2 mb-1 px-4 py-4 cursor-pointer rounded-xl transition-all duration-150 group hover:bg-gray-50 active:bg-gray-100 ${
+                  className={`relative mx-2 mb-1 px-3 lg:px-4 py-3 lg:py-4 cursor-pointer rounded-xl transition-all duration-150 group hover:bg-gray-50 active:bg-gray-100 ${
                     isSelected
                       ? "bg-blue-50 hover:bg-blue-100 shadow-sm ring-1 ring-blue-200"
                       : ""
@@ -387,11 +392,11 @@ function Sidebar({ onUserClick }: SidebarProps) {
                 >
                   {/* Selection indicator */}
                   {isSelected && (
-                    <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-1 h-12 bg-blue-600 rounded-r-full"></div>
+                    <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-1 h-8 lg:h-12 bg-blue-600 rounded-r-full"></div>
                   )}
 
                   <div className="flex items-center">
-                    <div className="relative w-14 h-14 rounded-full overflow-hidden flex-shrink-0 mr-4 ring-2 ring-gray-100 group-hover:ring-blue-200 transition-all duration-200">
+                    <div className="relative w-10 h-10 lg:w-14 lg:h-14 rounded-full overflow-hidden flex-shrink-0 mr-3 lg:mr-4 ring-2 ring-gray-100 group-hover:ring-blue-200 transition-all duration-200">
                       {u.avatar ? (
                         <img
                           src={u.avatar}
@@ -408,21 +413,18 @@ function Sidebar({ onUserClick }: SidebarProps) {
                       ) : null}
 
                       <div
-                        className={`w-full h-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-white font-bold text-lg ${
+                        className={`w-full h-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-white font-bold text-sm lg:text-lg ${
                           u.avatar ? "hidden" : ""
                         }`}
                       >
                         {u.name.charAt(0).toUpperCase()}
                       </div>
-
-                      {/* Online indicator - you can integrate with your online users system */}
-                      <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-500 border-3 border-white rounded-full shadow-sm"></div>
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center justify-between mb-1 lg:mb-2">
                         <h3
-                          className={`text-base font-bold truncate ${
+                          className={`text-sm lg:text-base font-bold truncate ${
                             isSelected ? "text-blue-900" : "text-gray-900"
                           } group-hover:text-blue-700 transition-colors`}
                         >
@@ -430,7 +432,7 @@ function Sidebar({ onUserClick }: SidebarProps) {
                         </h3>
                         <div className="flex items-center gap-2">
                           {lastMessageTime && (
-                            <span className="text-xs text-gray-500 font-medium">
+                            <span className="text-xs text-gray-500 font-medium flex-shrink-0">
                               {lastMessageTime}
                             </span>
                           )}
@@ -438,7 +440,7 @@ function Sidebar({ onUserClick }: SidebarProps) {
                       </div>
 
                       <div className="flex items-center justify-between">
-                        <p className="text-sm text-gray-600 truncate font-medium flex-1">
+                        <p className="text-xs lg:text-sm text-gray-600 truncate font-medium flex-1">
                           {messagePreview}
                         </p>
                       </div>

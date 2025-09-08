@@ -1,58 +1,159 @@
-import {
-  MessageSquare,
-  Settings,
-  User,
-} from "lucide-react";
+import { MessageSquare, Settings, User } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
+import { useState, useEffect } from "react";
 
 function OptionBar() {
   const { user, signout } = useAuth();
+  const [userAvatar, setUserAvatar] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+
+  // Fetch user details with avatar
+  useEffect(() => {
+    const fetchUserDetails = async () => {
+      if (!user?.id) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const response = await fetch(
+          `http://localhost:50136/api/users/user-details/${user.id}`,
+          {
+            method: "GET",
+            credentials: "include",
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.details?.avatar) {
+            setUserAvatar(data.details.avatar);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch user details:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserDetails();
+  }, [user?.id]);
+
+  const getUserInitials = (name: string) => {
+    if (!name) return "U";
+    return name
+      .split(" ")
+      .map((word) => word.charAt(0).toUpperCase())
+      .join("")
+      .substring(0, 2);
+  };
 
   return (
-    <div className="h-full flex flex-col justify-between items-center p-3 bg-white border-r-2 border-gray-100">
+    <div className="h-full w-16 xl:w-20 flex flex-col justify-between items-center p-3 bg-white border-r-2 border-gray-100 flex-shrink-0">
       {/* Top Section */}
-      <div className="flex flex-col items-center space-y-2">
+      <div className="flex flex-col items-center space-y-3">
         {/* Navigation Items */}
-        <button className="relative flex items-center justify-center p-3 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all duration-200 group w-full">
-          <MessageSquare size={22} strokeWidth={2.5} />
-          <span className="absolute left-full ml-3 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200 whitespace-nowrap shadow-xl z-50 font-medium">
-            Chats
-          </span>
-          {/* Active indicator */}
-          <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-1 h-8 bg-blue-600 rounded-r-full"></div>
-        </button>
+        <div className="relative group">
+          <button className="flex items-center justify-center p-3 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all duration-200 w-12 h-12 xl:w-14 xl:h-14">
+            <MessageSquare
+              size={20}
+              strokeWidth={2.5}
+              className="xl:w-6 xl:h-6"
+            />
+            <span className="absolute left-full ml-4 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200 whitespace-nowrap shadow-xl z-50 font-medium pointer-events-none">
+              Chats
+            </span>
+            {/* Active indicator */}
+            <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-1 h-8 bg-blue-600 rounded-r-full"></div>
+          </button>
+        </div>
       </div>
 
       {/* Bottom Section */}
-      <div className="flex flex-col items-center space-y-2">
-        <button className="relative flex items-center justify-center p-3 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-xl transition-all duration-200 group w-full">
-          <Settings size={22} strokeWidth={2} />
-          <span className="absolute left-full ml-3 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200 whitespace-nowrap shadow-xl z-50 font-medium">
-            Settings
-          </span>
-        </button>
-
-        {/* User Profile */}
+      <div className="flex flex-col items-center space-y-3">
         <div className="relative group">
-          <button className="flex items-center justify-center p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all duration-200 w-full">
-            {user?.name ? (
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm ring-2 ring-blue-100">
-                {user.name.charAt(0).toUpperCase()}
+          <button className="flex items-center justify-center p-3 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-xl transition-all duration-200 w-12 h-12 xl:w-14 xl:h-14">
+            <Settings size={20} strokeWidth={2} className="xl:w-6 xl:h-6" />
+            <span className="absolute left-full ml-4 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200 whitespace-nowrap shadow-xl z-50 font-medium pointer-events-none">
+              Settings
+            </span>
+          </button>
+        </div>
+
+        {/* User Profile - Fixed hover area */}
+        <div className="relative">
+          <button
+            className="flex items-center justify-center p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all duration-200 w-12 h-12 xl:w-14 xl:h-14"
+            onMouseEnter={() => setShowProfileDropdown(true)}
+            onMouseLeave={() => setShowProfileDropdown(false)}
+          >
+            {loading ? (
+              <div className="w-8 h-8 xl:w-10 xl:h-10 bg-gray-200 rounded-full animate-pulse"></div>
+            ) : userAvatar ? (
+              <div className="w-8 h-8 xl:w-10 xl:h-10 rounded-full overflow-hidden ring-2 ring-blue-100 hover:ring-blue-200 transition-all duration-200">
+                <img
+                  src={userAvatar}
+                  alt={user?.name || "Profile"}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = "none";
+                    target.nextElementSibling?.classList.remove("hidden");
+                  }}
+                />
+                <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                  {getUserInitials(user?.name || "")}
+                </div>
               </div>
             ) : (
-              <User size={22} strokeWidth={2} />
+              <div className="w-8 h-8 xl:w-10 xl:h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-xs xl:text-sm ring-2 ring-blue-100 hover:ring-blue-200 transition-all duration-200">
+                {getUserInitials(user?.name || "")}
+              </div>
             )}
           </button>
 
-          {/* Profile dropdown */}
-          <div className="absolute left-full ml-3 bottom-0 min-w-48 bg-white rounded-xl shadow-2xl border-2 border-gray-100 opacity-0 group-hover:opacity-100 transition-all duration-200 z-50 overflow-hidden">
-            <div className="p-4 border-b border-gray-100">
+          {/* Profile dropdown - Controlled visibility */}
+          <div
+            className={`absolute left-full ml-4 bottom-0 min-w-64 bg-white rounded-xl shadow-2xl border-2 border-gray-100 transition-all duration-200 z-50 overflow-hidden ${
+              showProfileDropdown
+                ? "opacity-100 visible"
+                : "opacity-0 invisible"
+            }`}
+            onMouseEnter={() => setShowProfileDropdown(true)}
+            onMouseLeave={() => setShowProfileDropdown(false)}
+          >
+            <div className="p-4 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-purple-50">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
-                  {user?.name?.charAt(0).toUpperCase() || "U"}
-                </div>
+                {loading ? (
+                  <div className="w-12 h-12 bg-gray-200 rounded-full animate-pulse"></div>
+                ) : userAvatar ? (
+                  <div className="w-12 h-12 rounded-full overflow-hidden ring-2 ring-white shadow-md">
+                    <img
+                      src={userAvatar}
+                      alt={user?.name || "Profile"}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = "none";
+                        target.nextElementSibling?.classList.remove("hidden");
+                      }}
+                    />
+                    <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
+                      {getUserInitials(user?.name || "")}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold ring-2 ring-white shadow-md">
+                    {getUserInitials(user?.name || "")}
+                  </div>
+                )}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-gray-600 truncate">
+                  <p className="text-sm font-bold text-gray-900 truncate">
+                    {user?.name || "User"}
+                  </p>
+                  <p className="text-xs text-gray-600 truncate">
                     {user?.email || "user@example.com"}
                   </p>
                 </div>

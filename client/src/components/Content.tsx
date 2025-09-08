@@ -350,9 +350,9 @@ function Content({
   );
 
   return (
-    <div className="flex flex-col h-full bg-white">
+    <div className="flex flex-col h-full bg-white w-full min-w-0">
       {/* Navbar */}
-      <div className="sticky top-0 z-10 shadow-sm">
+      <div className="sticky top-0 z-10 shadow-sm flex-shrink-0">
         <Navbar
           selectedUser={selectedUser}
           isOnline={isUserOnline}
@@ -364,29 +364,29 @@ function Content({
       {/* Messages Area */}
       <div className="flex-1 flex flex-col min-h-0">
         <div
-          className="flex-1 overflow-y-auto px-6 py-4"
+          className="flex-1 overflow-y-auto px-3 sm:px-4 lg:px-6 py-3 lg:py-4"
           style={{
             background: "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)",
           }}
         >
           {loading || isLoadingUser ? (
             <div className="flex justify-center items-center h-full">
-              <div className="flex flex-col items-center space-y-6">
+              <div className="flex flex-col items-center space-y-4 lg:space-y-6">
                 <div className="relative">
-                  <div className="animate-spin rounded-full h-12 w-12 border-3 border-blue-600 border-t-transparent"></div>
+                  <div className="animate-spin rounded-full h-10 w-10 lg:h-12 lg:w-12 border-3 border-blue-600 border-t-transparent"></div>
                   <div className="absolute inset-0 rounded-full border-3 border-blue-200"></div>
                 </div>
-                <div className="text-gray-600 text-sm font-medium">
+                <div className="text-gray-600 text-xs lg:text-sm font-medium">
                   Loading messages...
                 </div>
               </div>
             </div>
           ) : error ? (
             <div className="flex justify-center items-center h-full">
-              <div className="text-center p-8 bg-white rounded-2xl shadow-sm border-2 border-red-100">
-                <div className="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
+              <div className="text-center p-6 lg:p-8 bg-white rounded-2xl shadow-sm border-2 border-red-100 max-w-md mx-auto">
+                <div className="w-12 h-12 lg:w-16 lg:h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
                   <svg
-                    className="w-8 h-8 text-red-600"
+                    className="w-6 h-6 lg:w-8 lg:h-8 text-red-600"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -399,19 +399,21 @@ function Content({
                     />
                   </svg>
                 </div>
-                <div className="text-lg font-bold text-gray-900 mb-2">
+                <div className="text-base lg:text-lg font-bold text-gray-900 mb-2">
                   Something went wrong
                 </div>
-                <div className="text-sm text-red-600 font-medium">{error}</div>
+                <div className="text-xs lg:text-sm text-red-600 font-medium">
+                  {error}
+                </div>
               </div>
             </div>
           ) : messageArray.length === 0 ? (
             <>
-              <div className="flex justify-center mb-8">
-                <div className="bg-yellow-50 border-2 border-yellow-200 px-4 py-3 rounded-2xl max-w-md text-center shadow-sm">
-                  <div className="flex items-start gap-3 text-yellow-800 text-sm">
+              <div className="flex justify-center mb-6 lg:mb-8">
+                <div className="bg-yellow-50 border-2 border-yellow-200 px-3 lg:px-4 py-2 lg:py-3 rounded-2xl max-w-md text-center shadow-sm">
+                  <div className="flex items-start gap-2 lg:gap-3 text-yellow-800 text-xs lg:text-sm">
                     <svg
-                      className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5"
+                      className="w-4 h-4 lg:w-5 lg:h-5 text-yellow-600 flex-shrink-0 mt-0.5"
                       fill="currentColor"
                       viewBox="0 0 20 20"
                     >
@@ -428,10 +430,10 @@ function Content({
                   </div>
                 </div>
               </div>
-              <div className="text-center py-12">
-                <div className="w-24 h-24 mx-auto mb-6 bg-blue-100 rounded-full flex items-center justify-center">
+              <div className="text-center py-8 lg:py-12">
+                <div className="w-16 h-16 lg:w-24 lg:h-24 mx-auto mb-4 lg:mb-6 bg-blue-100 rounded-full flex items-center justify-center">
                   <svg
-                    className="w-12 h-12 text-blue-600"
+                    className="w-8 h-8 lg:w-12 lg:h-12 text-blue-600"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -444,10 +446,10 @@ function Content({
                     />
                   </svg>
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">
+                <h3 className="text-lg lg:text-xl font-bold text-gray-900 mb-2">
                   Start a conversation
                 </h3>
-                <p className="text-gray-500 font-medium">
+                <p className="text-sm lg:text-base text-gray-500 font-medium">
                   Send a message to {selectedUser?.name} to get the conversation
                   started.
                 </p>
@@ -455,11 +457,11 @@ function Content({
             </>
           ) : (
             <>
-              <div className="flex justify-center mb-8">
-                <div className="bg-yellow-50 border-2 border-yellow-200 px-4 py-3 rounded-2xl max-w-md text-center shadow-sm">
-                  <div className="flex items-start gap-3 text-yellow-800 text-sm">
+              <div className="flex justify-center mb-6 lg:mb-8">
+                <div className="bg-yellow-50 border-2 border-yellow-200 px-3 lg:px-4 py-2 lg:py-3 rounded-2xl max-w-md text-center shadow-sm">
+                  <div className="flex items-start gap-2 lg:gap-3 text-yellow-800 text-xs lg:text-sm">
                     <svg
-                      className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5"
+                      className="w-4 h-4 lg:w-5 lg:h-5 text-yellow-600 flex-shrink-0 mt-0.5"
                       fill="currentColor"
                       viewBox="0 0 20 20"
                     >
@@ -479,8 +481,8 @@ function Content({
 
               {Object.entries(groupedMessages).map(([date, dayMessages]) => (
                 <div key={date}>
-                  <div className="flex justify-center mb-6">
-                    <span className="bg-white px-4 py-2 rounded-full text-sm font-bold text-gray-600 shadow-sm border-2 border-gray-100">
+                  <div className="flex justify-center mb-4 lg:mb-6">
+                    <span className="bg-white px-3 lg:px-4 py-1.5 lg:py-2 rounded-full text-xs lg:text-sm font-bold text-gray-600 shadow-sm border-2 border-gray-100">
                       {formatDate(dayMessages[0].createdAt)}
                     </span>
                   </div>
@@ -500,12 +502,12 @@ function Content({
                     return (
                       <div
                         key={`${msg.messageId}-${msg.createdAt}`}
-                        className={`flex mb-4 ${
+                        className={`flex mb-3 lg:mb-4 ${
                           isOwnMessage ? "justify-end" : "justify-start"
-                        } ${isConsecutive ? "mt-2" : "mt-4"}`}
+                        } ${isConsecutive ? "mt-1 lg:mt-2" : "mt-3 lg:mt-4"}`}
                       >
                         <div
-                          className={`max-w-lg px-4 py-3 rounded-2xl relative transition-all duration-200 ${
+                          className={`max-w-xs sm:max-w-sm lg:max-w-lg px-3 lg:px-4 py-2 lg:py-3 rounded-2xl relative transition-all duration-200 ${
                             isOwnMessage
                               ? `bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg hover:shadow-xl rounded-br-md ${
                                   isPending
@@ -516,13 +518,13 @@ function Content({
                           }`}
                         >
                           <div
-                            className="break-words font-medium"
+                            className="break-words font-medium text-sm lg:text-base"
                             dangerouslySetInnerHTML={{
                               __html: sanitizeMessage(msg.message || ""),
                             }}
                           />
                           <div
-                            className={`text-xs mt-2 flex items-center justify-end gap-2 ${
+                            className={`text-xs mt-1 lg:mt-2 flex items-center justify-end gap-1 lg:gap-2 ${
                               isOwnMessage ? "text-blue-100" : "text-gray-500"
                             }`}
                           >
@@ -532,10 +534,10 @@ function Content({
                             {isOwnMessage && (
                               <>
                                 {isPending ? (
-                                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                                  <div className="w-3 h-3 lg:w-4 lg:h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
                                 ) : (
                                   <svg
-                                    className="w-4 h-4"
+                                    className="w-3 h-3 lg:w-4 lg:h-4"
                                     fill="currentColor"
                                     viewBox="0 0 20 20"
                                   >
@@ -557,20 +559,20 @@ function Content({
               ))}
 
               {isUserTyping && (
-                <div className="flex justify-start mb-4">
-                  <div className="bg-white px-4 py-3 rounded-2xl rounded-bl-md shadow-md border-2 border-gray-100">
+                <div className="flex justify-start mb-3 lg:mb-4">
+                  <div className="bg-white px-3 lg:px-4 py-2 lg:py-3 rounded-2xl rounded-bl-md shadow-md border-2 border-gray-100">
                     <div className="flex items-center gap-2">
                       <div className="flex gap-1">
                         <div
-                          className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-bounce"
+                          className="w-2 h-2 lg:w-2.5 lg:h-2.5 bg-blue-500 rounded-full animate-bounce"
                           style={{ animationDelay: "0ms" }}
                         ></div>
                         <div
-                          className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-bounce"
+                          className="w-2 h-2 lg:w-2.5 lg:h-2.5 bg-blue-500 rounded-full animate-bounce"
                           style={{ animationDelay: "150ms" }}
                         ></div>
                         <div
-                          className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-bounce"
+                          className="w-2 h-2 lg:w-2.5 lg:h-2.5 bg-blue-500 rounded-full animate-bounce"
                           style={{ animationDelay: "300ms" }}
                         ></div>
                       </div>
@@ -585,17 +587,17 @@ function Content({
         </div>
 
         {/* Message Input Area */}
-        <div className="px-6 py-4 bg-white border-t-2 border-gray-100">
-          <div className="flex items-end gap-3">
+        <div className="px-3 sm:px-4 lg:px-6 py-3 lg:py-4 bg-white border-t-2 border-gray-100 flex-shrink-0">
+          <div className="flex items-end gap-2 lg:gap-3">
             <button
-              className="p-3 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-2.5 lg:p-3 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
               disabled={!isConnected || !selectedUser || isLoadingUser}
               aria-label="Add attachment"
             >
-              <Plus className="w-5 h-5" strokeWidth={2.5} />
+              <Plus className="w-4 h-4 lg:w-5 lg:h-5" strokeWidth={2.5} />
             </button>
 
-            <div className="flex-1 relative">
+            <div className="flex-1 relative min-w-0">
               <input
                 ref={inputRef}
                 type="text"
@@ -613,23 +615,23 @@ function Content({
                 onKeyDown={handleKeyDown}
                 disabled={!isConnected || !selectedUser || isLoadingUser}
                 maxLength={1000}
-                className="w-full pl-4 pr-12 py-3 bg-gray-50 border-2 border-transparent rounded-2xl focus:outline-none focus:bg-white focus:border-blue-200 text-sm font-medium disabled:bg-gray-200 disabled:text-gray-500 transition-all duration-200"
+                className="w-full pl-3 lg:pl-4 pr-20 lg:pr-24 py-2.5 lg:py-3 bg-gray-50 border-2 border-transparent rounded-2xl focus:outline-none focus:bg-white focus:border-blue-200 text-sm font-medium disabled:bg-gray-200 disabled:text-gray-500 transition-all duration-200"
               />
 
               <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
                 <button
-                  className="p-2 text-gray-400 hover:text-blue-600 rounded-full transition-colors"
+                  className="p-1.5 lg:p-2 text-gray-400 hover:text-blue-600 rounded-full transition-colors"
                   disabled={!isConnected || !selectedUser || isLoadingUser}
                   aria-label="Add emoji"
                 >
-                  <Smile className="w-4 h-4" />
+                  <Smile className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
                 </button>
                 <button
-                  className="p-2 text-gray-400 hover:text-blue-600 rounded-full transition-colors"
+                  className="p-1.5 lg:p-2 text-gray-400 hover:text-blue-600 rounded-full transition-colors"
                   disabled={!isConnected || !selectedUser || isLoadingUser}
                   aria-label="Attach file"
                 >
-                  <Paperclip className="w-4 h-4" />
+                  <Paperclip className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
                 </button>
               </div>
             </div>
@@ -638,18 +640,18 @@ function Content({
               <button
                 onClick={handleSendMessage}
                 disabled={!isConnected || !selectedUser || isLoadingUser}
-                className="p-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 disabled:from-gray-400 disabled:to-gray-500 text-white rounded-full transition-all duration-150 transform hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl"
+                className="p-2.5 lg:p-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 disabled:from-gray-400 disabled:to-gray-500 text-white rounded-full transition-all duration-150 transform hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl flex-shrink-0"
                 aria-label="Send message"
               >
-                <Send className="w-5 h-5" strokeWidth={2.5} />
+                <Send className="w-4 h-4 lg:w-5 lg:h-5" strokeWidth={2.5} />
               </button>
             ) : (
               <button
                 disabled={!isConnected || !selectedUser || isLoadingUser}
-                className="p-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 disabled:from-gray-400 disabled:to-gray-500 text-white rounded-full transition-all duration-150 transform hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl"
+                className="p-2.5 lg:p-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 disabled:from-gray-400 disabled:to-gray-500 text-white rounded-full transition-all duration-150 transform hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl flex-shrink-0"
                 aria-label="Voice message"
               >
-                <Mic className="w-5 h-5" strokeWidth={2.5} />
+                <Mic className="w-4 h-4 lg:w-5 lg:h-5" strokeWidth={2.5} />
               </button>
             )}
           </div>
