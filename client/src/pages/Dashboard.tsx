@@ -9,72 +9,104 @@ import { useAuth } from "../contexts/AuthContext";
 import { getUsers } from "../utils/users.util";
 import type { Message } from "../models/Messages";
 import type { User } from "../utils/users.util";
+import { MessageSquare, Shield, Smartphone, Globe } from "lucide-react";
 
 function EmptyState() {
   return (
-    <div className="flex-1 flex flex-col items-center justify-center bg-gray-50 p-8">
-      <div className="mb-8">
-        <svg
-          className="w-80 h-80 text-gray-300"
-          viewBox="0 0 320 320"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <circle cx="160" cy="160" r="120" fill="currentColor" opacity="0.1" />
-          <path
-            d="M80 120h160c11 0 20 9 20 20v80c0 11-9 20-20 20H120l-20 20v-20H80c-11 0-20-9-20-20v-80c0-11 9-20 20-20z"
-            fill="currentColor"
-            opacity="0.2"
-          />
-          <circle cx="120" cy="180" r="8" fill="currentColor" opacity="0.3" />
-          <circle cx="160" cy="180" r="8" fill="currentColor" opacity="0.3" />
-          <circle cx="200" cy="180" r="8" fill="currentColor" opacity="0.3" />
+    <div className="flex-1 flex flex-col items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-8">
+      {/* Main illustration */}
+      <div className="relative mb-12">
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-purple-600 rounded-full blur-3xl opacity-20 animate-pulse"></div>
 
-          <rect
-            x="200"
-            y="80"
-            width="60"
-            height="40"
-            rx="8"
-            fill="currentColor"
-            opacity="0.15"
-          />
-          <rect
-            x="210"
-            y="90"
-            width="40"
-            height="20"
-            rx="2"
-            fill="currentColor"
-            opacity="0.2"
-          />
+        <div className="relative bg-white rounded-3xl p-12 shadow-2xl border border-gray-200">
+          <div className="w-32 h-32 mx-auto mb-8 relative">
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full animate-pulse opacity-20"></div>
+            <div className="relative w-full h-full bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+              <MessageSquare
+                className="w-16 h-16 text-white"
+                strokeWidth={1.5}
+              />
+            </div>
+          </div>
 
-          <path
-            d="M180 160 L200 120"
-            stroke="currentColor"
-            strokeWidth="2"
-            opacity="0.2"
-            strokeDasharray="5,5"
-          />
-        </svg>
+          <div className="text-center">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
+              Vaatsip Web
+            </h1>
+            <p className="text-gray-600 text-lg max-w-md leading-relaxed font-medium">
+              Connect with friends and family instantly. Send messages, share
+              moments, and stay close.
+            </p>
+          </div>
+        </div>
       </div>
 
-      <div className="text-center mb-6">
-        <h1 className="text-3xl font-light text-gray-700 mb-4">Vaatsip Web</h1>
-        <p className="text-gray-500 text-lg max-w-md leading-relaxed">
-          Send and receive messages without keeping your phone online.
-        </p>
+      {/* Feature cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 max-w-4xl w-full">
+        <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+          <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl flex items-center justify-center mb-4">
+            <Shield className="w-6 h-6 text-white" strokeWidth={2} />
+          </div>
+          <h3 className="text-lg font-bold text-gray-900 mb-2">
+            End-to-End Encrypted
+          </h3>
+          <p className="text-gray-600 text-sm font-medium">
+            Your messages are secured with industry-leading encryption.
+          </p>
+        </div>
+
+        <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+          <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-cyan-600 rounded-xl flex items-center justify-center mb-4">
+            <Smartphone className="w-6 h-6 text-white" strokeWidth={2} />
+          </div>
+          <h3 className="text-lg font-bold text-gray-900 mb-2">
+            Cross-Platform
+          </h3>
+          <p className="text-gray-600 text-sm font-medium">
+            Access your conversations from any device, anywhere.
+          </p>
+        </div>
+
+        <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+          <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-600 rounded-xl flex items-center justify-center mb-4">
+            <Globe className="w-6 h-6 text-white" strokeWidth={2} />
+          </div>
+          <h3 className="text-lg font-bold text-gray-900 mb-2">
+            Always Connected
+          </h3>
+          <p className="text-gray-600 text-sm font-medium">
+            Real-time messaging that keeps you in touch instantly.
+          </p>
+        </div>
       </div>
 
-      <div className="flex items-center gap-2 text-gray-400 text-sm mt-12">
-        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-          <path
-            fillRule="evenodd"
-            d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
-            clipRule="evenodd"
-          />
-        </svg>
-        <span>Your personal messages are end-to-end encrypted</span>
+      {/* Call to action */}
+      <div className="text-center">
+        <div className="bg-white rounded-2xl px-8 py-6 shadow-lg border border-gray-200 inline-block">
+          <h2 className="text-xl font-bold text-gray-900 mb-3">
+            Ready to start chatting?
+          </h2>
+          <p className="text-gray-600 font-medium mb-4">
+            Select a conversation from the sidebar to begin messaging.
+          </p>
+          <div className="flex items-center justify-center gap-2 text-blue-600">
+            <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
+            <span className="text-sm font-bold">
+              Choose a chat to get started
+            </span>
+            <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
+          </div>
+        </div>
+      </div>
+
+      {/* Security notice */}
+      <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 ">
+        <div className="flex justify-center items-center gap-3 bg-white/90 backdrop-blur-sm px-6 py-3 rounded-full shadow-lg border border-gray-200">
+          <Shield className="w-5 h-5 text-green-600" strokeWidth={2} />
+          <span className="text-sm font-medium text-gray-700">
+            Your privacy is protected with end-to-end encryption
+          </span>
+        </div>
       </div>
     </div>
   );
@@ -149,17 +181,20 @@ function Dashboard() {
   );
 
   return (
-    <div className="flex flex-row h-screen">
-      <div className="basis-10 md:basis-14 lg:basis-16 border-r border-black shrink-0 bg-gray-100">
+    <div className="flex flex-row h-screen bg-gray-50">
+      {/* Option Bar */}
+      <div className="basis-16 lg:basis-20 shrink-0 shadow-sm">
         <OptionBar />
       </div>
 
-      <div className="hidden sm:block sm:basis-60 md:basis-80 lg:basis-100 border-r border-black shrink-0">
+      {/* Sidebar */}
+      <div className="hidden sm:block sm:basis-80 md:basis-96 lg:basis-[400px] shrink-0 shadow-sm">
         <Sidebar onUserClick={handleUserClick} />
       </div>
 
+      {/* Main Content */}
       {receiver_id ? (
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col shadow-sm">
           <div className="flex-1 overflow-auto">
             <Content
               selectedUser={userDetails}

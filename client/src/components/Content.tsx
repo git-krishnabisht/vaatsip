@@ -3,6 +3,7 @@ import type { User } from "../utils/users.util";
 import type { Message } from "../models/Messages";
 import Navbar from "./Navbar";
 import { useWebSocket } from "../hooks/useWebSocket";
+import { Paperclip, Send, Mic, Smile, Plus } from "lucide-react";
 
 interface ContentProps {
   selectedUser: User | null;
@@ -11,7 +12,7 @@ interface ContentProps {
   error: string | null;
   currentUser?: number;
   onMessagesUpdate: (messages: Message[]) => void;
-  isLoadingUser?: boolean; 
+  isLoadingUser?: boolean;
 }
 
 function Content({
@@ -34,6 +35,7 @@ function Content({
   const typingTimeoutRef = useRef<number | null>(null);
   const lastTypingRef = useRef<number>(0);
   const previousSelectedUserId = useRef<number | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const {
     isConnected,
@@ -45,7 +47,6 @@ function Content({
   } = useWebSocket(
     useCallback(
       (newMessage: Message) => {
-        // Only process messages relevant to current conversation
         if (!selectedUser) return;
 
         const isRelevantMessage =
@@ -141,13 +142,11 @@ function Content({
       setMessage("");
       setIsTyping(false);
 
-      // Clear typing timeout
       if (typingTimeoutRef.current) {
         window.clearTimeout(typingTimeoutRef.current);
         typingTimeoutRef.current = null;
       }
 
-      // Stop typing indicator for previous user
       if (previousSelectedUserId.current && isTyping) {
         sendTypingStop(previousSelectedUserId.current);
       }
@@ -168,7 +167,6 @@ function Content({
     const timer = setTimeout(() => {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, 100);
-
     return () => clearTimeout(timer);
   }, [localMessages.length, selectedUser?.id]);
 
@@ -207,7 +205,6 @@ function Content({
     });
 
     setPendingMessages((prev) => new Map(prev).set(tempId, tempMessage));
-
     wsSendMessage(selectedUser.id, trimmedMessage);
     setMessage("");
 
@@ -215,6 +212,8 @@ function Content({
       sendTypingStop(selectedUser.id);
       setIsTyping(false);
     }
+
+    inputRef.current?.focus();
   }, [
     message,
     selectedUser,
@@ -238,8 +237,6 @@ function Content({
   const handleMessageChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const value = e.target.value;
-
-      // Prevent XSS by limiting input length and sanitizing
       if (value.length > 1000) return;
 
       setMessage(value);
@@ -273,7 +270,6 @@ function Content({
     [selectedUser, isConnected, isTyping, sendTypingStart, sendTypingStop]
   );
 
-  // Cleanup typing timeout
   useEffect(() => {
     return () => {
       if (typingTimeoutRef.current) {
@@ -286,7 +282,6 @@ function Content({
     try {
       const date = new Date(timestamp);
       if (isNaN(date.getTime())) return "Invalid time";
-
       return date.toLocaleTimeString("en-US", {
         hour: "2-digit",
         minute: "2-digit",
@@ -323,7 +318,6 @@ function Content({
     }
   };
 
-  // Sanitize message content to prevent XSS
   const sanitizeMessage = (content: string) => {
     return content
       .replace(/&/g, "&amp;")
@@ -356,8 +350,9 @@ function Content({
   );
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="sticky top-0 z-10 border-b border-black bg-gray-100">
+    <div className="flex flex-col h-full bg-white">
+      {/* Navbar */}
+      <div className="sticky top-0 z-10 shadow-sm">
         <Navbar
           selectedUser={selectedUser}
           isOnline={isUserOnline}
@@ -366,61 +361,126 @@ function Content({
         />
       </div>
 
-      <div className="flex-1 flex flex-col bg-gray-100 min-h-0">
+      {/* Messages Area */}
+      <div className="flex-1 flex flex-col min-h-0">
         <div
-          className="flex-1 overflow-y-auto px-4 py-4"
+          className="flex-1 overflow-y-auto px-6 py-4"
           style={{
-            backgroundImage:
-              'url("data:image/svg+xml,%3Csvg width="260" height="260" viewBox="0 0 260 260" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23f0f0f0" fill-opacity="0.1"%3E%3Ccircle cx="3" cy="3" r="3"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
+            background: "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)",
           }}
         >
           {loading || isLoadingUser ? (
             <div className="flex justify-center items-center h-full">
-              <div className="flex flex-col items-center space-y-4">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                <div className="text-gray-500 text-sm">Loading...</div>
+              <div className="flex flex-col items-center space-y-6">
+                <div className="relative">
+                  <div className="animate-spin rounded-full h-12 w-12 border-3 border-blue-600 border-t-transparent"></div>
+                  <div className="absolute inset-0 rounded-full border-3 border-blue-200"></div>
+                </div>
+                <div className="text-gray-600 text-sm font-medium">
+                  Loading messages...
+                </div>
               </div>
             </div>
           ) : error ? (
             <div className="flex justify-center items-center h-full">
-              <div className="text-red-500 text-center">
-                <div className="text-lg font-medium mb-2">Error</div>
-                <div className="text-sm">{error}</div>
+              <div className="text-center p-8 bg-white rounded-2xl shadow-sm border-2 border-red-100">
+                <div className="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
+                  <svg
+                    className="w-8 h-8 text-red-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z"
+                    />
+                  </svg>
+                </div>
+                <div className="text-lg font-bold text-gray-900 mb-2">
+                  Something went wrong
+                </div>
+                <div className="text-sm text-red-600 font-medium">{error}</div>
               </div>
             </div>
           ) : messageArray.length === 0 ? (
             <>
-              <div className="flex justify-center mb-4">
-                <div className="bg-yellow-200 px-3 py-2 rounded-lg max-w-md text-center">
-                  <div className="flex items-start gap-2 text-amber-800 text-xs">
-                    <span>
-                      Messages and calls are end-to-end encrypted. Only people
-                      in this chat can read, listen to, or share them.
-                    </span>
+              <div className="flex justify-center mb-8">
+                <div className="bg-yellow-50 border-2 border-yellow-200 px-4 py-3 rounded-2xl max-w-md text-center shadow-sm">
+                  <div className="flex items-start gap-3 text-yellow-800 text-sm">
+                    <svg
+                      className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    <div className="font-medium">
+                      <strong>End-to-end encrypted.</strong> Only you and{" "}
+                      {selectedUser?.name} can read these messages.
+                    </div>
                   </div>
                 </div>
               </div>
-              <div className="text-center text-gray-500 text-sm">
-                No conversation yet. Start a new chat with {selectedUser?.name}.
+              <div className="text-center py-12">
+                <div className="w-24 h-24 mx-auto mb-6 bg-blue-100 rounded-full flex items-center justify-center">
+                  <svg
+                    className="w-12 h-12 text-blue-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                    />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">
+                  Start a conversation
+                </h3>
+                <p className="text-gray-500 font-medium">
+                  Send a message to {selectedUser?.name} to get the conversation
+                  started.
+                </p>
               </div>
             </>
           ) : (
             <>
-              <div className="flex justify-center mb-4">
-                <div className="bg-yellow-200 px-3 py-2 rounded-lg max-w-md text-center">
-                  <div className="flex items-start gap-2 text-amber-800 text-xs">
-                    <span>
-                      Messages and calls are end-to-end encrypted. Only people
-                      in this chat can read, listen to, or share them.
-                    </span>
+              <div className="flex justify-center mb-8">
+                <div className="bg-yellow-50 border-2 border-yellow-200 px-4 py-3 rounded-2xl max-w-md text-center shadow-sm">
+                  <div className="flex items-start gap-3 text-yellow-800 text-sm">
+                    <svg
+                      className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    <div className="font-medium">
+                      <strong>End-to-end encrypted.</strong> Only you and{" "}
+                      {selectedUser?.name} can read these messages.
+                    </div>
                   </div>
                 </div>
               </div>
 
               {Object.entries(groupedMessages).map(([date, dayMessages]) => (
                 <div key={date}>
-                  <div className="flex justify-center mb-4">
-                    <span className="bg-white px-3 py-1 rounded-full text-xs text-gray-600 shadow-sm border border-gray-200">
+                  <div className="flex justify-center mb-6">
+                    <span className="bg-white px-4 py-2 rounded-full text-sm font-bold text-gray-600 shadow-sm border-2 border-gray-100">
                       {formatDate(dayMessages[0].createdAt)}
                     </span>
                   </div>
@@ -440,31 +500,35 @@ function Content({
                     return (
                       <div
                         key={`${msg.messageId}-${msg.createdAt}`}
-                        className={`flex mb-2 ${
+                        className={`flex mb-4 ${
                           isOwnMessage ? "justify-end" : "justify-start"
-                        } ${isConsecutive ? "mt-1" : "mt-3"}`}
+                        } ${isConsecutive ? "mt-2" : "mt-4"}`}
                       >
                         <div
-                          className={`max-w-md px-3 py-2 rounded-lg relative ${
+                          className={`max-w-lg px-4 py-3 rounded-2xl relative transition-all duration-200 ${
                             isOwnMessage
-                              ? `bg-green-500 text-white rounded-br-none ${
-                                  isPending ? "opacity-70" : ""
+                              ? `bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg hover:shadow-xl rounded-br-md ${
+                                  isPending
+                                    ? "opacity-70 scale-95"
+                                    : "hover:scale-105"
                                 }`
-                              : "bg-white text-gray-900 rounded-bl-none shadow-sm"
+                              : "bg-white text-gray-900 shadow-md hover:shadow-lg rounded-bl-md border-2 border-gray-100"
                           }`}
                         >
                           <div
-                            className="break-words"
+                            className="break-words font-medium"
                             dangerouslySetInnerHTML={{
                               __html: sanitizeMessage(msg.message || ""),
                             }}
                           />
                           <div
-                            className={`text-xs mt-1 ${
-                              isOwnMessage ? "text-green-100" : "text-gray-500"
-                            } flex items-center justify-end gap-1`}
+                            className={`text-xs mt-2 flex items-center justify-end gap-2 ${
+                              isOwnMessage ? "text-blue-100" : "text-gray-500"
+                            }`}
                           >
-                            <span>{formatTime(msg.createdAt)}</span>
+                            <span className="font-medium">
+                              {formatTime(msg.createdAt)}
+                            </span>
                             {isOwnMessage && (
                               <>
                                 {isPending ? (
@@ -493,20 +557,20 @@ function Content({
               ))}
 
               {isUserTyping && (
-                <div className="flex justify-start mb-2">
-                  <div className="bg-white px-3 py-2 rounded-lg rounded-bl-none shadow-sm">
-                    <div className="flex items-center gap-1">
+                <div className="flex justify-start mb-4">
+                  <div className="bg-white px-4 py-3 rounded-2xl rounded-bl-md shadow-md border-2 border-gray-100">
+                    <div className="flex items-center gap-2">
                       <div className="flex gap-1">
                         <div
-                          className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                          className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-bounce"
                           style={{ animationDelay: "0ms" }}
                         ></div>
                         <div
-                          className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                          className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-bounce"
                           style={{ animationDelay: "150ms" }}
                         ></div>
                         <div
-                          className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                          className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-bounce"
                           style={{ animationDelay: "300ms" }}
                         ></div>
                       </div>
@@ -520,29 +584,20 @@ function Content({
           )}
         </div>
 
-        <div className="px-4 py-2 bg-gray-100">
-          <div className="flex items-end gap-2">
+        {/* Message Input Area */}
+        <div className="px-6 py-4 bg-white border-t-2 border-gray-100">
+          <div className="flex items-end gap-3">
             <button
-              className="p-2 text-gray-500 hover:text-gray-700 mb-1 disabled:opacity-50"
+              className="p-3 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={!isConnected || !selectedUser || isLoadingUser}
-              aria-label="Attach file"
+              aria-label="Add attachment"
             >
-              <svg
-                className="w-6 h-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
-                />
-              </svg>
+              <Plus className="w-5 h-5" strokeWidth={2.5} />
             </button>
-            <div className="flex-1">
+
+            <div className="flex-1 relative">
               <input
+                ref={inputRef}
                 type="text"
                 placeholder={
                   !isConnected
@@ -551,49 +606,50 @@ function Content({
                     ? "Loading..."
                     : !selectedUser
                     ? "Select a chat"
-                    : "Type a message"
+                    : `Message ${selectedUser.name}`
                 }
                 value={message}
                 onChange={handleMessageChange}
                 onKeyDown={handleKeyDown}
                 disabled={!isConnected || !selectedUser || isLoadingUser}
                 maxLength={1000}
-                className="w-full px-3 py-2 bg-white rounded-lg border-0 focus:outline-none text-sm disabled:bg-gray-200 disabled:text-gray-500"
-                style={{ minHeight: "40px" }}
+                className="w-full pl-4 pr-12 py-3 bg-gray-50 border-2 border-transparent rounded-2xl focus:outline-none focus:bg-white focus:border-blue-200 text-sm font-medium disabled:bg-gray-200 disabled:text-gray-500 transition-all duration-200"
               />
+
+              <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
+                <button
+                  className="p-2 text-gray-400 hover:text-blue-600 rounded-full transition-colors"
+                  disabled={!isConnected || !selectedUser || isLoadingUser}
+                  aria-label="Add emoji"
+                >
+                  <Smile className="w-4 h-4" />
+                </button>
+                <button
+                  className="p-2 text-gray-400 hover:text-blue-600 rounded-full transition-colors"
+                  disabled={!isConnected || !selectedUser || isLoadingUser}
+                  aria-label="Attach file"
+                >
+                  <Paperclip className="w-4 h-4" />
+                </button>
+              </div>
             </div>
+
             {message.trim() ? (
               <button
                 onClick={handleSendMessage}
                 disabled={!isConnected || !selectedUser || isLoadingUser}
-                className="p-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-full transition-colors ml-2"
+                className="p-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 disabled:from-gray-400 disabled:to-gray-500 text-white rounded-full transition-all duration-150 transform hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl"
                 aria-label="Send message"
               >
-                <svg
-                  className="w-5 h-5"
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
-                </svg>
+                <Send className="w-5 h-5" strokeWidth={2.5} />
               </button>
             ) : (
               <button
                 disabled={!isConnected || !selectedUser || isLoadingUser}
-                className="p-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-full transition-colors ml-2"
+                className="p-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 disabled:from-gray-400 disabled:to-gray-500 text-white rounded-full transition-all duration-150 transform hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl"
                 aria-label="Voice message"
               >
-                <svg
-                  className="w-5 h-5"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z"
-                    clipRule="evenodd"
-                  />
-                </svg>
+                <Mic className="w-5 h-5" strokeWidth={2.5} />
               </button>
             )}
           </div>
