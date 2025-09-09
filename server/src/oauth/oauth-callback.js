@@ -1,14 +1,25 @@
-import jwt from "jsonwebtoken";
 import { OAuth2Client } from "google-auth-library";
 const oauthClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 import {
   REDIRECT_URI,
   GOOGLE_CLIENT_ID,
   GOOGLE_CLIENT_SECRET,
-  JWT_SECRET,
 } from "../server.js";
 import prisma from "../utils/prisma.util.js";
 import { jwtService } from "../utils/jwt.util.js";
+
+const getCookieOptions = () => {
+  const isProduction = process.env.NODE_ENV === "production";
+
+  return {
+    httpOnly: false, // Allow client-side access for WebSocket
+    secure: isProduction, // Only use secure cookies in production
+    sameSite: isProduction ? "none" : "lax", // Cross-site cookies in production
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    domain: isProduction ? ".vercel.app" : undefined, // Set domain for Vercel in production
+    path: "/", // Available on all paths
+  };
+};
 
 export const oauthCallback = async (req, res) => {
   const code = req.query.code;
@@ -91,14 +102,7 @@ export const oauthCallback = async (req, res) => {
     const jwtPayload = { id: user.id, email: user.email };
     const token = await jwtService.generateJWT(jwtPayload);
 
-    res.cookie("jwt", token, {
-      httpOnly: false,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      domain: process.env.NODE_ENV === "production" ? undefined : undefined,
-      path: "/",
-    });
+    res.cookie("jwt", token, getCookieOptions());
 
     const redirectUrl =
       process.env.NODE_ENV === "production"

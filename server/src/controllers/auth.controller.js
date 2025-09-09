@@ -4,14 +4,18 @@ import bcrypt from "bcrypt";
 import prisma from "../utils/prisma.util.js";
 import { jwtService } from "../utils/jwt.util.js";
 
-const getCookieOptions = () => ({
-  httpOnly: false, 
-  secure: process.env.NODE_ENV === "production",
-  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", 
-  maxAge: 7 * 24 * 60 * 60 * 1000, 
-  domain: process.env.NODE_ENV === "production" ? undefined : undefined, 
-  path: "/", 
-});
+const getCookieOptions = () => {
+  const isProduction = process.env.NODE_ENV === "production";
+
+  return {
+    httpOnly: false, // Allow client-side access for WebSocket
+    secure: isProduction, // Only use secure cookies in production
+    sameSite: isProduction ? "none" : "lax", // Cross-site cookies in production
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    domain: isProduction ? ".vercel.app" : undefined, // Set domain for Vercel in production
+    path: "/", // Available on all paths
+  };
+};
 
 export const sign_up = async (req, res) => {
   try {
@@ -52,6 +56,7 @@ export const sign_up = async (req, res) => {
 
     const token = jwtService.generateJWT({ id: user.id, email: user.email });
 
+    // Set the JWT cookie
     res.cookie("jwt", token, getCookieOptions());
 
     return res
@@ -93,6 +98,7 @@ export const sign_in = async (req, res) => {
       email: user.email,
     });
 
+    // Set the JWT cookie
     res.cookie("jwt", token, getCookieOptions());
 
     return res.status(200).json({
@@ -112,13 +118,11 @@ export const sign_in = async (req, res) => {
 
 export const sign_out = async (_req, res) => {
   try {
-    res.clearCookie("jwt", {
-      httpOnly: false,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-      domain: process.env.NODE_ENV === "production" ? undefined : undefined,
-      path: "/",
-    });
+    // Clear the cookie with the same options used when setting it
+    const cookieOptions = getCookieOptions();
+    delete cookieOptions.maxAge; // Remove maxAge for clearing
+
+    res.clearCookie("jwt", cookieOptions);
 
     return res.status(200).json({
       body: {

@@ -55,6 +55,14 @@ export function useWebSocket(
     return null;
   };
 
+  // Debug function to log all cookies
+  const debugCookies = () => {
+    if (typeof document !== "undefined") {
+      console.log("All cookies:", document.cookie);
+      console.log("JWT cookie value:", getCookieValue("jwt"));
+    }
+  };
+
   const handleWebSocketMessage = useCallback(
     (data: WebSocketMessage) => {
       switch (data.type) {
@@ -163,9 +171,13 @@ export function useWebSocket(
 
     setConnectionStatus("connecting");
 
+    // Debug cookies before trying to connect
+    debugCookies();
+
     const token = getCookieValue("jwt");
     if (!token) {
       console.error("No JWT token found for WebSocket connection");
+      console.error("Available cookies:", document.cookie);
       setConnectionStatus("error");
       return;
     }
@@ -178,7 +190,7 @@ export function useWebSocket(
 
       wsRef.current.onopen = () => {
         if (import.meta.env.DEV) {
-          console.log("WebSocket connected");
+          console.log("WebSocket connected successfully");
         }
         setIsConnected(true);
         setConnectionStatus("connected");
@@ -232,6 +244,7 @@ export function useWebSocket(
         ) {
           attemptReconnect();
         } else if (reconnectAttempts.current >= maxReconnectAttempts) {
+          console.error("Max reconnection attempts reached");
           setConnectionStatus("error");
         }
       };
@@ -346,11 +359,16 @@ export function useWebSocket(
 
   useEffect(() => {
     if (user?.id) {
-      connect();
+      const timeoutId = setTimeout(() => {
+        connect();
+      }, 500);
+
+      return () => {
+        clearTimeout(timeoutId);
+      };
     }
 
     return () => {
-      // Cleanup on unmount
       if (reconnectTimeoutRef.current) {
         window.clearTimeout(reconnectTimeoutRef.current);
         reconnectTimeoutRef.current = null;
