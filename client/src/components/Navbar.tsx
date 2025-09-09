@@ -1,6 +1,5 @@
 import { useState } from "react";
 import type { User } from "../utils/users.util";
-import { ArrowLeft } from "lucide-react";
 
 interface NavProps {
   selectedUser: User | null;
@@ -25,11 +24,6 @@ function Navbar({ selectedUser, isOnline, isTyping }: NavProps) {
     <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200 relative">
       {/* Left Section - Back button (mobile) + User Info */}
       <div className="flex items-center space-x-3 flex-1 min-w-0">
-        {/* Back Button - visible on mobile */}
-        <button className="sm:hidden p-2 hover:bg-gray-100 rounded-full transition-colors">
-          <ArrowLeft className="w-5 h-5 text-gray-600" />
-        </button>
-
         {/* User Avatar */}
         <div className="relative flex-shrink-0">
           <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 border-2 border-white shadow-sm">

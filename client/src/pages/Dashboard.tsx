@@ -6,7 +6,7 @@ import Sidebar from "../components/Sidebar";
 import { useUserDetails } from "../contexts/UserDetailsProvider";
 import { useMessages } from "../utils/useMessages";
 import { useAuth } from "../contexts/AuthContext";
-import { getUsers } from "../utils/users.util";
+import { getUsers, type User } from "../utils/users.util";
 import type { Message } from "../models/Messages";
 
 function EmptyState() {
@@ -85,37 +85,64 @@ function Dashboard() {
   const { messages, loading, error } = useMessages();
   const { user: currentUser } = useAuth();
   const [allMessages, setAllMessages] = useState<Message[]>(messages);
+  const [recentMessage, setRecentMessage] = useState<Message | null>(null);
+  const [usersCache, setUsersCache] = useState<User[]>([]);
 
   useEffect(() => {
     setAllMessages(messages);
   }, [messages]);
 
   useEffect(() => {
-    const loadUserFromUrl = async () => {
-      if (
-        receiver_id &&
-        (!userDetails || userDetails.id !== parseInt(receiver_id))
-      ) {
-        // navbar glitchy behaviour: we can pass the loading state for content and navbar to slide into loading state while the getUser() is executing
+    const ensureUsersCache = async () => {
+      if (usersCache.length === 0) {
         try {
-          const users = await getUsers();
-          const selectedUser = users.find(
-            (u) => u.id === parseInt(receiver_id)
-          );
-          if (selectedUser) {
-            setUserDetails(selectedUser);
-          }
+          const fetched = await getUsers();
+          setUsersCache(fetched);
         } catch (error) {
-          console.error("Failed to load user details:", error);
+          console.error("Failed to load users cache:", error);
         }
       }
     };
+    ensureUsersCache();
+  }, [usersCache.length]);
 
-    loadUserFromUrl();
-  }, [receiver_id, userDetails, setUserDetails]);
+  useEffect(() => {
+    const setFromRoute = async () => {
+      if (!receiver_id) return;
+
+      const idNum = parseInt(receiver_id);
+      const cached = usersCache.find((u) => u.id === idNum);
+      if (cached) {
+        setUserDetails(cached);
+        return;
+      }
+
+      try {
+        const fetched = await getUsers();
+        setUsersCache(fetched);
+        const selected = fetched.find((u) => u.id === idNum);
+        if (selected) setUserDetails(selected);
+      } catch (error) {
+        console.error("Failed to load user details:", error);
+      }
+    };
+
+    setFromRoute();
+  }, [receiver_id, usersCache, setUserDetails]);
 
   const handleMessagesUpdate = (updatedMessages: Message[]) => {
     setAllMessages(updatedMessages);
+
+    // Update the recent message for sidebar
+    if (updatedMessages.length > 0) {
+      const latestMessage = updatedMessages[updatedMessages.length - 1];
+      setRecentMessage(latestMessage);
+    }
+  };
+
+  const handleConversationUpdate = (conversationId: number) => {
+    // This could be used for additional logic when conversations are updated
+    console.log(`Conversation with user ${conversationId} was updated`);
   };
 
   return (
@@ -124,7 +151,11 @@ function Dashboard() {
         <OptionBar />
       </div>
       <div className="hidden sm:block sm:basis-60 md:basis-80 lg:basis-100 border-r border-black shrink-0">
-        <Sidebar onUserClick={setUserDetails} />
+        <Sidebar
+          onUserClick={() => {}}
+          recentMessage={recentMessage}
+          onConversationUpdate={handleConversationUpdate}
+        />
       </div>
       {userDetails ? (
         <div className="flex-1 flex flex-col">

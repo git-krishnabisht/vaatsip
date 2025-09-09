@@ -3,7 +3,7 @@ import type { User } from "../utils/users.util";
 import type { Message } from "../models/Messages";
 import Navbar from "./Navbar";
 import { useWebSocket } from "../hooks/useWebSocket";
-import { Send, Paperclip, Mic, Smile } from "lucide-react";
+import { Send, Paperclip } from "lucide-react";
 
 interface ContentProps {
   selectedUser: User | null;
@@ -43,7 +43,6 @@ function Content({
     sendTypingStop,
     onlineUsers,
     typingUsers,
-    connectionStatus,
   } = useWebSocket(
     useCallback(
       (newMessage: Message) => {
@@ -337,31 +336,10 @@ function Content({
 
   return (
     <div className="flex flex-col h-full bg-gray-50">
-      {/* Connection Status */}
-      {connectionStatus !== "connected" && (
-        <div
-          className={`px-4 py-2 text-center text-sm font-medium transition-all ${
-            connectionStatus === "connecting"
-              ? "bg-yellow-50 text-yellow-700 border-b border-yellow-200"
-              : connectionStatus === "error"
-              ? "bg-red-50 text-red-700 border-b border-red-200"
-              : "bg-gray-50 text-gray-600 border-b border-gray-200"
-          }`}
-        >
-          {connectionStatus === "connecting" && (
-            <div className="flex items-center justify-center space-x-2">
-              <div className="w-4 h-4 border-2 border-yellow-600 border-t-transparent rounded-full animate-spin"></div>
-              <span>Connecting...</span>
-            </div>
-          )}
-          {connectionStatus === "error" && "Connection failed. Retrying..."}
-          {connectionStatus === "disconnected" && "Reconnecting..."}
-        </div>
-      )}
-
       {/* Header */}
       <div className="sticky top-0 z-10 bg-white border-b border-gray-200 shadow-sm">
         <Navbar
+          key={selectedUser.id}
           selectedUser={selectedUser}
           isOnline={isUserOnline}
           isTyping={isUserTyping}
@@ -529,25 +507,6 @@ function Content({
                                 <span className="font-medium">
                                   {formatTime(msg.createdAt)}
                                 </span>
-                                {isOwnMessage && (
-                                  <div className="flex items-center">
-                                    {isPending ? (
-                                      <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin ml-1"></div>
-                                    ) : (
-                                      <svg
-                                        className="w-4 h-4 ml-1"
-                                        fill="currentColor"
-                                        viewBox="0 0 20 20"
-                                      >
-                                        <path
-                                          fillRule="evenodd"
-                                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                          clipRule="evenodd"
-                                        />
-                                      </svg>
-                                    )}
-                                  </div>
-                                )}
                               </div>
                             </div>
                           </div>
@@ -650,33 +609,15 @@ function Content({
               disabled={!isConnected || !selectedUser}
               className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500 transition-all duration-200 text-sm"
             />
-
-            {/* Emoji Button */}
-            <button
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 transition-colors"
-              disabled={!isConnected || !selectedUser}
-            >
-              <Smile className="w-4 h-4" />
-            </button>
           </div>
 
-          {/* Send/Voice Button */}
-          {message.trim() ? (
-            <button
-              onClick={handleSendMessage}
-              disabled={!isConnected || !selectedUser}
-              className="p-2.5 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 text-white rounded-full transition-all duration-200 transform hover:scale-105 active:scale-95 flex-shrink-0 shadow-md hover:shadow-lg"
-            >
-              <Send className="w-5 h-5" />
-            </button>
-          ) : (
-            <button
-              disabled={!isConnected || !selectedUser}
-              className="p-2.5 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 text-white rounded-full transition-all duration-200 transform hover:scale-105 active:scale-95 flex-shrink-0 shadow-md hover:shadow-lg"
-            >
-              <Mic className="w-5 h-5" />
-            </button>
-          )}
+          <button
+            onClick={handleSendMessage}
+            disabled={!isConnected || !selectedUser}
+            className="p-2.5 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 text-white rounded-full transition-all duration-200 transform hover:scale-105 active:scale-95 flex-shrink-0 shadow-md hover:shadow-lg"
+          >
+            <Send className="w-5 h-5" />
+          </button>
         </div>
       </div>
     </div>

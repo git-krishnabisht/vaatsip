@@ -1,8 +1,9 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { getUsers, type User } from "../utils/users.util";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { Search, MessageCircle } from "lucide-react";
+import type { Message } from "../models/Messages";
 
 interface ConversationData {
   user: User;
@@ -11,14 +12,19 @@ interface ConversationData {
     timestamp: string;
     senderId: number;
   };
-  unreadCount: number;
 }
 
 interface SidebarProps {
   onUserClick: (user: User) => void;
+  recentMessage?: Message | null;
+  onConversationUpdate?: (conversationId: number) => void;
 }
 
-function Sidebar({ onUserClick }: SidebarProps) {
+function Sidebar({
+  onUserClick,
+  recentMessage,
+  onConversationUpdate,
+}: SidebarProps) {
   const [_users, setUsers] = useState<User[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
@@ -28,80 +34,102 @@ function Sidebar({ onUserClick }: SidebarProps) {
   const { user: currentUser } = useAuth();
 
   // Fetch users and conversation data
-  useEffect(() => {
-    async function fetchConversationData() {
-      try {
-        setLoading(true);
-        const _users = await getUsers();
-        const filteredUsers = _users.filter((u) => u.id !== currentUser?.id);
-        setUsers(filteredUsers);
+  const fetchConversationData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const allUsers = await getUsers();
+      const filteredUsers = allUsers.filter((u) => u.id !== currentUser?.id);
+      setUsers(filteredUsers);
 
-        // Fetch last messages for each user
-        const conversationPromises = filteredUsers.map(async (user) => {
-          try {
-            const response = await fetch(
-              `http://localhost:50136/api/comm/get-messages/${user.id}`,
-              {
-                method: "GET",
-                credentials: "include",
-              }
-            );
-
-            if (response.ok) {
-              const messages = await response.json();
-              const lastMessage =
-                messages.length > 0 ? messages[messages.length - 1] : null;
-
-              return {
-                user,
-                lastMessage: lastMessage
-                  ? {
-                      content: lastMessage.message || "",
-                      timestamp: lastMessage.createdAt,
-                      senderId: lastMessage.senderId,
-                    }
-                  : undefined,
-                unreadCount: 0, // You can implement unread count logic here
-              };
-            } else {
-              return {
-                user,
-                lastMessage: undefined,
-                unreadCount: 0,
-              };
+      const conversationPromises = filteredUsers.map(async (user) => {
+        try {
+          const response = await fetch(
+            `http://localhost:50136/api/comm/get-messages/${user.id}`,
+            {
+              method: "GET",
+              credentials: "include",
             }
-          } catch (error) {
-            console.error(
-              `Failed to fetch messages for user ${user.id}:`,
-              error
-            );
+          );
+
+          if (response.ok) {
+            const messages = await response.json();
+            const lastMessage =
+              messages.length > 0 ? messages[messages.length - 1] : null;
+
             return {
               user,
-              lastMessage: undefined,
-              unreadCount: 0,
+              lastMessage: lastMessage
+                ? {
+                    content: lastMessage.message || "",
+                    timestamp: lastMessage.createdAt,
+                    senderId: lastMessage.senderId,
+                  }
+                : undefined,
             };
+          } else {
+            return { user, lastMessage: undefined };
           }
-        });
+        } catch (error) {
+          console.error(`Failed to fetch messages for user ${user.id}:`, error);
+          return { user, lastMessage: undefined };
+        }
+      });
 
-        const conversationData = await Promise.all(conversationPromises);
-        setConversations(conversationData);
-      } catch (error) {
-        console.error("Failed to fetch conversation data:", error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    if (currentUser?.id) {
-      fetchConversationData();
+      const conversationData = await Promise.all(conversationPromises);
+      setConversations(conversationData);
+    } catch (error) {
+      console.error("Failed to fetch conversation data:", error);
+    } finally {
+      setLoading(false);
     }
   }, [currentUser?.id]);
 
-  // Filter conversations based on search query
-  const filteredConversations = useMemo(() => {
-    if (!searchQuery.trim()) {
-      return conversations;
+  useEffect(() => {
+    if (currentUser?.id) {
+      fetchConversationData();
     }
+  }, [currentUser?.id, fetchConversationData]);
+
+  // Handle real-time message updates
+  useEffect(() => {
+    if (!recentMessage || !currentUser?.id) return;
+
+    const { senderId, receiverId, message, createdAt } = recentMessage;
+    const otherUserId = senderId === currentUser.id ? receiverId : senderId;
+
+    setConversations((prevConversations) => {
+      const updatedConversations = prevConversations.map((conv) => {
+        if (conv.user.id === otherUserId) {
+          return {
+            ...conv,
+            lastMessage: {
+              content: message || "",
+              timestamp: createdAt,
+              senderId,
+            },
+          };
+        }
+        return conv;
+      });
+
+      return updatedConversations.sort((a, b) => {
+        const aTime = a.lastMessage?.timestamp
+          ? new Date(a.lastMessage.timestamp).getTime()
+          : 0;
+        const bTime = b.lastMessage?.timestamp
+          ? new Date(b.lastMessage.timestamp).getTime()
+          : 0;
+        return bTime - aTime;
+      });
+    });
+
+    if (onConversationUpdate) {
+      onConversationUpdate(otherUserId);
+    }
+  }, [recentMessage, currentUser?.id, receiver_id, onConversationUpdate]);
+
+  const filteredConversations = useMemo(() => {
+    if (!searchQuery.trim()) return conversations;
 
     return conversations.filter(
       (conversation) =>
@@ -114,7 +142,6 @@ function Sidebar({ onUserClick }: SidebarProps) {
     );
   }, [conversations, searchQuery]);
 
-  // Sort conversations by last message timestamp
   const sortedConversations = useMemo(() => {
     return filteredConversations.sort((a, b) => {
       const aTime = a.lastMessage?.timestamp
@@ -123,7 +150,7 @@ function Sidebar({ onUserClick }: SidebarProps) {
       const bTime = b.lastMessage?.timestamp
         ? new Date(b.lastMessage.timestamp).getTime()
         : 0;
-      return bTime - aTime; // Most recent first
+      return bTime - aTime;
     });
   }, [filteredConversations]);
 
@@ -133,9 +160,7 @@ function Sidebar({ onUserClick }: SidebarProps) {
   };
 
   const formatLastMessage = (conversation: ConversationData): string => {
-    if (!conversation.lastMessage) {
-      return "No messages yet";
-    }
+    if (!conversation.lastMessage) return "No messages yet";
 
     const { content, senderId } = conversation.lastMessage;
     const isOwnMessage = senderId === currentUser?.id;
@@ -162,53 +187,18 @@ function Sidebar({ onUserClick }: SidebarProps) {
     const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
     const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
 
-    if (diffInMinutes < 1) {
-      return "now";
-    } else if (diffInMinutes < 60) {
-      return `${diffInMinutes}m`;
-    } else if (diffInHours < 24) {
-      return `${diffInHours}h`;
-    } else if (diffInDays < 7) {
-      return `${diffInDays}d`;
-    } else {
-      return date.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-      });
-    }
-  };
-
-  const getMessageStatusIcon = (conversation: ConversationData) => {
-    if (
-      !conversation.lastMessage ||
-      conversation.lastMessage.senderId !== currentUser?.id
-    ) {
-      return null;
-    }
-
-    // For now, showing delivered status. You can enhance this with real delivery status
-    return (
-      <svg
-        className="w-3 h-3 text-blue-500 flex-shrink-0"
-        fill="currentColor"
-        viewBox="0 0 20 20"
-      >
-        <path
-          fillRule="evenodd"
-          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-          clipRule="evenodd"
-        />
-      </svg>
-    );
+    if (diffInMinutes < 1) return "now";
+    if (diffInMinutes < 60) return `${diffInMinutes}m`;
+    if (diffInHours < 24) return `${diffInHours}h`;
+    if (diffInDays < 7) return `${diffInDays}d`;
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   };
 
   return (
     <div className="flex flex-col h-full bg-white border-r border-gray-200">
       {/* Header */}
       <div className="p-4 border-b border-gray-200">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-xl font-semibold text-gray-800">Vaatsip</h1>
-        </div>
+        <h1 className="text-xl font-semibold text-gray-800 mb-4">Vaatsip</h1>
 
         {/* Search Bar */}
         <div className="relative">
@@ -262,10 +252,8 @@ function Sidebar({ onUserClick }: SidebarProps) {
               return (
                 <div
                   key={conversation.user.id}
-                  className={`flex items-center px-4 py-3 cursor-pointer transition-all duration-200 hover:bg-gray-50 ${
-                    isSelected
-                      ? "bg-blue-50 hover:bg-blue-100 border-r-2 border-blue-500"
-                      : ""
+                  className={`flex items-center px-4 py-3 cursor-pointer transition-all duration-200 hover:bg-gray-50 relative ${
+                    isSelected ? "bg-blue-50 hover:bg-blue-100" : ""
                   }`}
                   onClick={() => handleUserClick(conversation.user)}
                 >
@@ -296,37 +284,17 @@ function Sidebar({ onUserClick }: SidebarProps) {
                       >
                         {conversation.user.name}
                       </h3>
-                      <div className="flex items-center space-x-2">
-                        {lastMessageTime && (
-                          <span className="text-xs text-gray-500 flex-shrink-0">
-                            {formatTime(lastMessageTime)}
-                          </span>
-                        )}
-                        {conversation.unreadCount > 0 && (
-                          <div className="bg-blue-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
-                            {conversation.unreadCount > 9
-                              ? "9+"
-                              : conversation.unreadCount}
-                          </div>
-                        )}
-                      </div>
+                      {lastMessageTime && (
+                        <span className="text-xs flex-shrink-0 text-gray-500">
+                          {formatTime(lastMessageTime)}
+                        </span>
+                      )}
                     </div>
 
                     <div className="flex items-center justify-between">
-                      <p
-                        className={`text-sm truncate pr-2 ${
-                          conversation.unreadCount > 0
-                            ? "text-gray-900 font-medium"
-                            : "text-gray-500"
-                        }`}
-                      >
+                      <p className="text-sm truncate pr-2 text-gray-500">
                         {formatLastMessage(conversation)}
                       </p>
-
-                      {/* Message Status Icon */}
-                      <div className="flex items-center space-x-1 ml-2">
-                        {getMessageStatusIcon(conversation)}
-                      </div>
                     </div>
                   </div>
                 </div>

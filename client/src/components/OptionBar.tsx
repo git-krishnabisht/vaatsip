@@ -1,15 +1,8 @@
 import { useState } from "react";
-import {
-  MessageSquare,
-  Settings,
-  User,
-  LogOut,
-  Menu,
-} from "lucide-react";
+import { MessageSquare, Settings, User, LogOut } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 
 function OptionBar() {
-  const [activeTab, setActiveTab] = useState("chats");
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const { user, signout } = useAuth();
 
@@ -23,32 +16,13 @@ function OptionBar() {
 
   return (
     <div className="h-full flex flex-col justify-between items-center p-3 bg-white border-r border-gray-200 relative">
-      {/* Top Section */}
       <div className="flex flex-col space-y-2">
-        {/* Menu Button (Mobile) */}
-        <button className="md:hidden relative flex items-center justify-center p-3 text-gray-700 hover:bg-gray-100 rounded-lg transition-all duration-200 group">
-          <Menu size={20} />
-          <span className="absolute left-full ml-3 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
-            Menu
-          </span>
-        </button>
-
         {/* Chats Tab */}
-        <button
-          onClick={() => setActiveTab("chats")}
-          className={`relative flex items-center justify-center p-3 rounded-lg transition-all duration-200 group ${
-            activeTab === "chats"
-              ? "bg-blue-100 text-blue-600 shadow-sm"
-              : "text-gray-700 hover:bg-gray-100"
-          }`}
-        >
+        <button className="relative flex items-center justify-center p-3 rounded-lg transition-all duration-200 group">
           <MessageSquare size={20} />
           <span className="absolute left-full ml-3 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
             Chats
           </span>
-          {activeTab === "chats" && (
-            <div className="absolute -right-1 top-1/2 transform -translate-y-1/2 w-1 h-6 bg-blue-600 rounded-l"></div>
-          )}
         </button>
       </div>
 
