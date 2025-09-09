@@ -12,12 +12,11 @@ const getCookieOptions = () => {
   const isProduction = process.env.NODE_ENV === "production";
 
   return {
-    httpOnly: false, // Allow client-side access for WebSocket
-    secure: isProduction, // Only use secure cookies in production
-    sameSite: isProduction ? "none" : "lax", // Cross-site cookies in production
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    domain: isProduction ? ".vercel.app" : undefined, // Set domain for Vercel in production
-    path: "/", // Available on all paths
+    httpOnly: false,
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    path: "/",
   };
 };
 
@@ -102,16 +101,19 @@ export const oauthCallback = async (req, res) => {
     const jwtPayload = { id: user.id, email: user.email };
     const token = await jwtService.generateJWT(jwtPayload);
 
-    res.cookie("jwt", token, getCookieOptions());
+    const cookieOptions = getCookieOptions();
+    res.cookie("jwt", token, cookieOptions);
+
+    console.log(`OAuth successful for user ${user.email}`);
+    console.log("Cookie set with options:", cookieOptions);
+    console.log("Token preview:", token.substring(0, 20) + "...");
 
     const redirectUrl =
       process.env.NODE_ENV === "production"
         ? process.env.FRONTEND_URI
         : "http://localhost:4173";
 
-    console.log(
-      `OAuth successful for user ${user.email}, redirecting to ${redirectUrl}`
-    );
+    console.log(`Redirecting to ${redirectUrl}`);
 
     return res.redirect(redirectUrl);
   } catch (err) {

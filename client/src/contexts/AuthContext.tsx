@@ -68,6 +68,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           "Authentication successful for user:",
           data.body.user.email
         );
+
+        // Debug: Log cookies after successful auth
+        console.log("Cookies after successful auth:", document.cookie);
       } else {
         setIsLoggedIn(false);
         setUser(null);
@@ -99,10 +102,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.log("Sign out successful");
 
         // Clear any remaining cookies on client side
-        document.cookie =
-          "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.vercel.app;";
-        document.cookie =
-          "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+        const cookieNames = ["jwt", "token", "authToken", "access_token"];
+        cookieNames.forEach((name) => {
+          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.vercel.app;`;
+          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+        });
       } else {
         console.error("Sign out request failed:", res.status, res.statusText);
       }

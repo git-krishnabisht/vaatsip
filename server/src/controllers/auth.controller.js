@@ -11,11 +11,11 @@ const getCookieOptions = () => {
   console.log("Frontend URI:", process.env.FRONTEND_URI);
 
   const options = {
-    httpOnly: false, 
-    secure: isProduction, 
-    sameSite: isProduction ? "none" : "lax", 
-    maxAge: 7 * 24 * 60 * 60 * 1000, 
-    path: "/", 
+    httpOnly: false,
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    path: "/",
   };
 
   if (isProduction) {
@@ -64,7 +64,12 @@ export const sign_up = async (req, res) => {
 
     const token = jwtService.generateJWT({ id: user.id, email: user.email });
 
-    res.cookie("jwt", token, getCookieOptions());
+    const cookieOptions = getCookieOptions();
+    res.cookie("jwt", token, cookieOptions);
+
+    console.log(`User ${user.email} signed up successfully`);
+    console.log("Cookie set with options:", cookieOptions);
+    console.log("Token length:", token.length);
 
     return res
       .status(201)
@@ -110,6 +115,7 @@ export const sign_in = async (req, res) => {
 
     console.log(`User ${user.email} signed in successfully`);
     console.log("Cookie set with options:", cookieOptions);
+    console.log("Token preview:", token.substring(0, 20) + "...");
 
     return res.status(200).json({
       signed_in: true,
@@ -123,6 +129,7 @@ export const sign_in = async (req, res) => {
         debug: {
           cookieSet: true,
           tokenLength: token.length,
+          cookieOptions,
         },
       }),
     });
@@ -159,6 +166,13 @@ export const oauth_signin = async (req, res) => {
   try {
     const token = req.cookies.jwt;
 
+    console.log("=== OAuth Sign In Debug ===");
+    console.log("Cookies received:", req.cookies);
+    console.log(
+      "JWT token:",
+      token ? `${token.substring(0, 20)}...` : "NOT FOUND"
+    );
+
     if (!token) {
       return res.status(404).json({
         body: {
@@ -170,6 +184,7 @@ export const oauth_signin = async (req, res) => {
 
     jwt.verify(token, process.env.JWT_SECRET, async (err, decoded) => {
       if (err) {
+        console.error("JWT verification failed:", err.message);
         return res.status(400).json({
           body: {
             signed_in: false,
@@ -192,6 +207,8 @@ export const oauth_signin = async (req, res) => {
             },
           });
         }
+
+        console.log(`OAuth verification successful for user: ${user.email}`);
 
         return res.status(200).json({
           body: {

@@ -26,7 +26,7 @@ export function useWebSocket(
   onMessageDelivered?: (messageId: number) => void,
   onMessageRead?: (messageId: number) => void
 ): UseWebSocketReturn {
-  const { user } = useAuth();
+  const { user, isLoggedIn } = useAuth(); // Add isLoggedIn to ensure we're authenticated
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<number | null>(null);
   const heartbeatIntervalRef = useRef<number | null>(null);
@@ -44,12 +44,65 @@ export function useWebSocket(
   const maxReconnectAttempts = 5;
   const reconnectDelay = useRef(1000);
 
+  // Improved cookie parsing function
   const getCookieValue = (name: string): string | null => {
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) {
-      return parts.pop()?.split(";").shift() || null;
+    try {
+      const cookies = document.cookie.split(";");
+      for (let cookie of cookies) {
+        const [cookieName, cookieValue] = cookie.trim().split("=");
+        if (cookieName === name) {
+          return decodeURIComponent(cookieValue || "");
+        }
+      }
+      return null;
+    } catch (error) {
+      console.error("Error parsing cookies:", error);
+      return null;
     }
+  };
+
+  // Alternative method to get JWT token - try multiple possible cookie names
+  const getJWTToken = (): string | null => {
+    console.log("=== JWT Token Debug ===");
+    console.log("All cookies:", document.cookie);
+
+    if (!document.cookie) {
+      console.log("No cookies found at all");
+      return null;
+    }
+
+    // Split cookies and log each one
+    const cookies = document.cookie.split(";").map((c) => c.trim());
+    console.log("Parsed cookies:", cookies);
+
+    // Try different possible cookie names
+    const possibleNames = ["jwt", "token", "authToken", "access_token"];
+
+    for (const name of possibleNames) {
+      const token = getCookieValue(name);
+      if (token && token.length > 10) {
+        console.log(`Found JWT token with name: ${name}`);
+        console.log(`Token preview: ${token.substring(0, 20)}...`);
+        return token;
+      }
+    }
+
+    // Debug: Show all cookie names we found
+    const foundNames = cookies.map((c) => c.split("=")[0]).filter((n) => n);
+    console.log("Available cookie names:", foundNames);
+
+    // Try to find any cookie that looks like a JWT (contains dots)
+    for (const cookie of cookies) {
+      const [name, value] = cookie.split("=");
+      if (value && value.includes(".") && value.split(".").length === 3) {
+        console.log(
+          `Found JWT-like cookie: ${name} = ${value.substring(0, 20)}...`
+        );
+        return value;
+      }
+    }
+
+    console.log("No JWT token found in any format");
     return null;
   };
 
@@ -148,24 +201,42 @@ export function useWebSocket(
   );
 
   const connect = useCallback(() => {
-    if (!user?.id || wsRef.current?.readyState === WebSocket.CONNECTING) {
+    // Enhanced connection checks
+    if (!user?.id || !isLoggedIn) {
+      console.log("Cannot connect WebSocket: user not authenticated", {
+        userId: user?.id,
+        isLoggedIn,
+      });
+      return;
+    }
+
+    if (wsRef.current?.readyState === WebSocket.CONNECTING) {
+      console.log("WebSocket already connecting, skipping...");
       return;
     }
 
     setConnectionStatus("connecting");
 
-    const token = getCookieValue("jwt");
+    const token = getJWTToken();
     if (!token) {
       console.error("No JWT token found for WebSocket connection");
+      console.error("Available cookies:", document.cookie);
       setConnectionStatus("error");
       return;
     }
 
+    console.log(
+      "Attempting WebSocket connection with token:",
+      token.substring(0, 10) + "..."
+    );
+
     const wsUrl = `${ws_baseURL}?token=${encodeURIComponent(token)}`;
+    console.log("WebSocket URL:", wsUrl.replace(/token=[^&]*/, "token=***"));
+
     wsRef.current = new WebSocket(wsUrl);
 
     wsRef.current.onopen = () => {
-      console.log("WebSocket connected");
+      console.log("WebSocket connected successfully");
       setIsConnected(true);
       setConnectionStatus("connected");
       reconnectAttempts.current = 0;
@@ -219,7 +290,7 @@ export function useWebSocket(
       console.error("WebSocket error:", error);
       setConnectionStatus("error");
     };
-  }, [user?.id, handleWebSocketMessage]);
+  }, [user?.id, isLoggedIn, handleWebSocketMessage]);
 
   const attemptReconnect = useCallback(() => {
     if (reconnectAttempts.current >= maxReconnectAttempts) {
@@ -305,10 +376,18 @@ export function useWebSocket(
   );
 
   useEffect(() => {
-    if (user?.id) {
-      connect();
-    }
+    // Only connect if user is authenticated and we have the user data
+    if (user?.id && isLoggedIn) {
+      // Add a small delay to ensure cookies are properly set
+      const timeoutId = setTimeout(() => {
+        connect();
+      }, 500);
 
+      return () => clearTimeout(timeoutId);
+    }
+  }, [user?.id, isLoggedIn, connect]);
+
+  useEffect(() => {
     return () => {
       if (reconnectTimeoutRef.current) {
         window.clearTimeout(reconnectTimeoutRef.current);
@@ -322,7 +401,7 @@ export function useWebSocket(
         wsRef.current.close(1000, "Component unmounting");
       }
     };
-  }, [user?.id, connect]);
+  }, []);
 
   return {
     isConnected,
