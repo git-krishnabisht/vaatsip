@@ -79,6 +79,8 @@ function AuthPage() {
         : cred;
 
     try {
+      console.log(`Attempting ${authTab} with:`, { email: cred.email });
+
       const res = await fetch(url, {
         method: "POST",
         credentials: "include",
@@ -88,20 +90,32 @@ function AuthPage() {
         body: JSON.stringify(payload),
       });
 
+      console.log(`${authTab} response status:`, res.status);
+
       const data = await res.json();
+      console.log(`${authTab} response data:`, data);
 
       if (!res.ok) {
         throw new Error(
-          data.message || `Request failed with status ${res.status}`
+          data.error ||
+            data.message ||
+            `Request failed with status ${res.status}`
         );
       }
 
-      console.log("Success:", data);
+      console.log("Authentication successful:", data);
+
+      // Clear form
       setCred({ name: "", email: "", password: "" });
-      await checkAuthStatus();
-      navigate("/", { replace: true });
+
+      // Wait a bit for cookie to be set, then check auth status
+      setTimeout(async () => {
+        console.log("Cookies after sign in:", document.cookie);
+        await checkAuthStatus();
+        navigate("/", { replace: true });
+      }, 500);
     } catch (err: any) {
-      console.error("Error:", err);
+      console.error("Authentication error:", err);
       setFormError(err.message || "Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);

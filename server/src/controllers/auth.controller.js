@@ -7,14 +7,22 @@ import { jwtService } from "../utils/jwt.util.js";
 const getCookieOptions = () => {
   const isProduction = process.env.NODE_ENV === "production";
 
-  return {
-    httpOnly: false, // Allow client-side access for WebSocket
-    secure: isProduction, // Only use secure cookies in production
-    sameSite: isProduction ? "none" : "lax", // Cross-site cookies in production
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    domain: isProduction ? ".vercel.app" : undefined, // Set domain for Vercel in production
-    path: "/", // Available on all paths
+  console.log("Cookie options - Production:", isProduction);
+  console.log("Frontend URI:", process.env.FRONTEND_URI);
+
+  const options = {
+    httpOnly: false, 
+    secure: isProduction, 
+    sameSite: isProduction ? "none" : "lax", 
+    maxAge: 7 * 24 * 60 * 60 * 1000, 
+    path: "/", 
   };
+
+  if (isProduction) {
+    console.log("Production cookie options:", options);
+  }
+
+  return options;
 };
 
 export const sign_up = async (req, res) => {
@@ -56,7 +64,6 @@ export const sign_up = async (req, res) => {
 
     const token = jwtService.generateJWT({ id: user.id, email: user.email });
 
-    // Set the JWT cookie
     res.cookie("jwt", token, getCookieOptions());
 
     return res
@@ -98,8 +105,11 @@ export const sign_in = async (req, res) => {
       email: user.email,
     });
 
-    // Set the JWT cookie
-    res.cookie("jwt", token, getCookieOptions());
+    const cookieOptions = getCookieOptions();
+    res.cookie("jwt", token, cookieOptions);
+
+    console.log(`User ${user.email} signed in successfully`);
+    console.log("Cookie set with options:", cookieOptions);
 
     return res.status(200).json({
       signed_in: true,
@@ -107,9 +117,17 @@ export const sign_in = async (req, res) => {
         id: user.id,
         email: user.email,
         name: user.name ?? null,
+        avatar: user.avatar ?? null,
       },
+      ...(process.env.NODE_ENV !== "production" && {
+        debug: {
+          cookieSet: true,
+          tokenLength: token.length,
+        },
+      }),
     });
   } catch (err) {
+    console.error("Sign in error:", err);
     return res.status(500).json({
       error: "Something went wrong with /sign_in",
     });
