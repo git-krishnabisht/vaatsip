@@ -3,6 +3,7 @@ import type { User } from "../utils/users.util";
 import type { Message } from "../models/Messages";
 import Navbar from "./Navbar";
 import { useWebSocket } from "../hooks/useWebSocket";
+import { Send, Paperclip, Mic, Smile } from "lucide-react";
 
 interface ContentProps {
   selectedUser: User | null;
@@ -27,8 +28,11 @@ function Content({
   const [pendingMessages, setPendingMessages] = useState<Map<string, Message>>(
     new Map()
   );
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<number | null>(null);
   const lastTypingRef = useRef<number>(0);
 
@@ -39,12 +43,11 @@ function Content({
     sendTypingStop,
     onlineUsers,
     typingUsers,
-    // connectionStatus,
+    connectionStatus,
   } = useWebSocket(
     useCallback(
       (newMessage: Message) => {
         setLocalMessages((prev) => {
-          // duplicate detection
           const exists = prev.some(
             (msg) =>
               msg.messageId === newMessage.messageId ||
@@ -64,21 +67,15 @@ function Content({
               new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
           );
 
-          // Defer parent update to avoid render cycle issues
           setTimeout(() => onMessagesUpdate(updated), 0);
           return updated;
         });
 
-        // Auto-scroll to bottom
-        setTimeout(
-          () => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }),
-          100
-        );
+        setTimeout(() => scrollToBottom(), 100);
       },
       [onMessagesUpdate]
     ),
 
-    // onMessageSent - temp message removal
     useCallback(
       (tempId: string, sentMessage: Message) => {
         setPendingMessages((prev) => {
@@ -88,7 +85,6 @@ function Content({
         });
 
         setLocalMessages((prev) => {
-          // Remove the temporary message by matching the tempId pattern
           const tempMessageId = parseInt(
             tempId.replace(/[^0-9]/g, "").substring(0, 10)
           );
@@ -96,12 +92,10 @@ function Content({
             (msg) => msg.messageId !== tempMessageId
           );
 
-          // Check if the sent message already exists to prevent duplicates
           const exists = filtered.some(
             (msg) => msg.messageId === sentMessage.messageId
           );
           if (exists) {
-            // Defer parent update to avoid render cycle issues
             setTimeout(() => onMessagesUpdate(filtered), 0);
             return filtered;
           }
@@ -111,7 +105,6 @@ function Content({
               new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
           );
 
-          // Defer parent update to avoid render cycle issues
           setTimeout(() => onMessagesUpdate(updated), 0);
           return updated;
         });
@@ -119,16 +112,12 @@ function Content({
       [onMessagesUpdate]
     ),
 
-    // onMessageDelivered
     useCallback((messageId: number) => {
       console.log(`Message ${messageId} delivered`);
-      // can update message status here
     }, []),
 
-    // onMessageRead
     useCallback((messageId: number) => {
       console.log(`Message ${messageId} read`);
-      // can update message status here
     }, [])
   );
 
@@ -137,14 +126,32 @@ function Content({
     setLocalMessages(messages);
   }, [messages]);
 
-  // Auto-scroll to bottom when messages change
+  // Auto-scroll and scroll detection
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    scrollToBottom();
   }, [localMessages]);
 
-  // handleSendMessage to prevent duplicates
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      const isAtBottom = scrollHeight - scrollTop - clientHeight < 100;
+      setShowScrollToBottom(!isAtBottom && localMessages.length > 0);
+    };
+
+    container.addEventListener("scroll", handleScroll);
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, [localMessages.length]);
+
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, []);
+
   const handleSendMessage = useCallback(() => {
-    if (!message.trim() || !selectedUser || !isConnected) {
+    const trimmedMessage = message.trim();
+    if (!trimmedMessage || !selectedUser || !isConnected) {
       return;
     }
 
@@ -153,7 +160,7 @@ function Content({
       messageId: parseInt(tempId.replace(/[^0-9]/g, "").substring(0, 10)),
       senderId: currentUser!,
       receiverId: selectedUser.id,
-      message: message.trim(),
+      message: trimmedMessage,
       createdAt: new Date().toISOString(),
       sender: {
         id: currentUser!,
@@ -168,7 +175,6 @@ function Content({
       attachments: [],
     };
 
-    // Add pending message to local state with duplicate check
     setLocalMessages((prev) => {
       const exists = prev.some(
         (msg) => msg.messageId === tempMessage.messageId
@@ -179,15 +185,15 @@ function Content({
 
     setPendingMessages((prev) => new Map(prev).set(tempId, tempMessage));
 
-    // Send via WebSocket
-    wsSendMessage(selectedUser.id, message.trim());
+    wsSendMessage(selectedUser.id, trimmedMessage);
     setMessage("");
 
-    // Stop typing indicator
     if (isTyping) {
       sendTypingStop(selectedUser.id);
       setIsTyping(false);
     }
+
+    inputRef.current?.focus();
   }, [
     message,
     selectedUser,
@@ -218,18 +224,15 @@ function Content({
       const now = Date.now();
       lastTypingRef.current = now;
 
-      // Start typing indicator
       if (!isTyping && value.trim()) {
         setIsTyping(true);
         sendTypingStart(selectedUser.id);
       }
 
-      // Clear existing timeout
       if (typingTimeoutRef.current) {
         window.clearTimeout(typingTimeoutRef.current);
       }
 
-      // Stop typing after 2 seconds of inactivity
       typingTimeoutRef.current = window.setTimeout(() => {
         if (now === lastTypingRef.current && isTyping) {
           setIsTyping(false);
@@ -237,7 +240,6 @@ function Content({
         }
       }, 2000);
 
-      // Stop typing if message becomes empty
       if (!value.trim() && isTyping) {
         setIsTyping(false);
         sendTypingStop(selectedUser.id);
@@ -246,7 +248,6 @@ function Content({
     [selectedUser, isConnected, isTyping, sendTypingStart, sendTypingStop]
   );
 
-  // Cleanup typing timeout
   useEffect(() => {
     return () => {
       if (typingTimeoutRef.current) {
@@ -302,26 +303,64 @@ function Content({
     {}
   );
 
+  if (!selectedUser) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 p-8">
+        <div className="text-center space-y-6 max-w-md">
+          <div className="relative">
+            <div className="w-32 h-32 mx-auto bg-gradient-to-br from-blue-100 to-indigo-200 rounded-full flex items-center justify-center shadow-lg">
+              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center">
+                <svg
+                  className="w-8 h-8 text-indigo-500"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h4l4 4 4-4h4c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z" />
+                </svg>
+              </div>
+            </div>
+            <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-green-400 rounded-full border-4 border-white shadow-md"></div>
+          </div>
+          <div>
+            <h2 className="text-2xl font-semibold text-gray-800 mb-2">
+              Select a conversation
+            </h2>
+            <p className="text-gray-500 leading-relaxed">
+              Choose from your existing conversations or start a new one to get
+              started.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col h-full">
-      {/* Connection Status Bar */}
-      {/* {connectionStatus !== "connected" && (
+    <div className="flex flex-col h-full bg-gray-50">
+      {/* Connection Status */}
+      {connectionStatus !== "connected" && (
         <div
-          className={`px-4 py-2 text-center text-sm ${
+          className={`px-4 py-2 text-center text-sm font-medium transition-all ${
             connectionStatus === "connecting"
-              ? "bg-yellow-100 text-yellow-800"
+              ? "bg-yellow-50 text-yellow-700 border-b border-yellow-200"
               : connectionStatus === "error"
-              ? "bg-red-100 text-red-800"
-              : "bg-gray-100 text-gray-600"
+              ? "bg-red-50 text-red-700 border-b border-red-200"
+              : "bg-gray-50 text-gray-600 border-b border-gray-200"
           }`}
         >
-          {connectionStatus === "connecting" && "Connecting..."}
+          {connectionStatus === "connecting" && (
+            <div className="flex items-center justify-center space-x-2">
+              <div className="w-4 h-4 border-2 border-yellow-600 border-t-transparent rounded-full animate-spin"></div>
+              <span>Connecting...</span>
+            </div>
+          )}
           {connectionStatus === "error" && "Connection failed. Retrying..."}
           {connectionStatus === "disconnected" && "Reconnecting..."}
         </div>
-      )} */}
+      )}
 
-      <div className="sticky top-0 z-10 border-b border-black bg-gray-100">
+      {/* Header */}
+      <div className="sticky top-0 z-10 bg-white border-b border-gray-200 shadow-sm">
         <Navbar
           selectedUser={selectedUser}
           isOnline={isUserOnline}
@@ -329,220 +368,315 @@ function Content({
         />
       </div>
 
-      <div className="flex-1 flex flex-col bg-gray-100 min-h-0">
+      {/* Messages Area */}
+      <div className="flex-1 flex flex-col min-h-0 relative">
         <div
-          className="flex-1 overflow-y-auto px-4 py-4"
+          ref={messagesContainerRef}
+          className="flex-1 overflow-y-auto px-4 py-4 scroll-smooth"
           style={{
-            backgroundImage:
-              'url("data:image/svg+xml,%3Csvg width="260" height="260" viewBox="0 0 260 260" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23f0f0f0" fill-opacity="0.1"%3E%3Ccircle cx="3" cy="3" r="3"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
+            backgroundImage: `linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)`,
           }}
         >
           {loading ? (
-            <div className="flex justify-center items-center h-full">
-              <div className="text-gray-500">Loading messages...</div>
+            <div className="flex flex-col items-center justify-center h-full space-y-4">
+              <div className="w-8 h-8 border-3 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+              <p className="text-gray-500 text-sm">Loading messages...</p>
             </div>
           ) : error ? (
-            <div className="flex justify-center items-center h-full">
-              <div className="text-red-500">Error: {error}</div>
+            <div className="flex flex-col items-center justify-center h-full space-y-4">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
+                <svg
+                  className="w-8 h-8 text-red-500"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                </svg>
+              </div>
+              <div className="text-center">
+                <p className="text-red-600 font-medium">
+                  Failed to load messages
+                </p>
+                <p className="text-gray-500 text-sm mt-1">{error}</p>
+              </div>
             </div>
           ) : messageArray.length === 0 ? (
-            <>
-              <div className="flex justify-center mb-4">
-                <div className="bg-yellow-200 px-3 py-2 rounded-lg max-w-md text-center">
-                  <div className="flex items-start gap-2 text-amber-800 text-xs">
-                    <span>
-                      Messages and calls are end-to-end encrypted. Only people
-                      in this chat can read, listen to, or share them. Click to
-                      learn more
-                    </span>
-                  </div>
+            <div className="h-full flex flex-col items-center justify-center space-y-6">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-3 max-w-md">
+                <div className="flex items-start space-x-3">
+                  <svg
+                    className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  <p className="text-yellow-800 text-sm leading-relaxed">
+                    Messages are end-to-end encrypted. Only you and{" "}
+                    {selectedUser?.name} can read them.
+                  </p>
                 </div>
               </div>
-              <div className="text-center text-gray-500 text-sm">
-                No conversation yet. Start a new chat with {selectedUser?.name}.
+
+              <div className="text-center space-y-3">
+                <div className="w-20 h-20 bg-gradient-to-br from-blue-100 to-indigo-200 rounded-full flex items-center justify-center mx-auto shadow-lg">
+                  <svg
+                    className="w-10 h-10 text-indigo-600"
+                    fill="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h4l4 4 4-4h4c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-lg font-medium text-gray-800">
+                    Start a conversation
+                  </h3>
+                  <p className="text-gray-500 text-sm">
+                    Send a message to {selectedUser?.name} to begin chatting
+                  </p>
+                </div>
               </div>
-            </>
+            </div>
           ) : (
-            <>
-              <div className="flex justify-center mb-4">
-                <div className="bg-yellow-200 px-3 py-2 rounded-lg max-w-md text-center">
-                  <div className="flex items-start gap-2 text-amber-800 text-xs">
-                    <span>
-                      Messages and calls are end-to-end encrypted. Only people
-                      in this chat can read, listen to, or share them. Click to
-                      learn more
-                    </span>
+            <div className="space-y-6">
+              {/* Encryption Notice */}
+              <div className="flex justify-center">
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-2 max-w-md">
+                  <div className="flex items-center space-x-2">
+                    <svg
+                      className="w-4 h-4 text-yellow-600 flex-shrink-0"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    <p className="text-yellow-800 text-xs">
+                      End-to-end encrypted
+                    </p>
                   </div>
                 </div>
               </div>
 
               {Object.entries(groupedMessages).map(([date, dayMessages]) => (
-                <div key={date}>
-                  <div className="flex justify-center mb-4">
-                    <span className="bg-white px-3 py-1 rounded-full text-xs text-gray-600 shadow-sm border border-gray-200">
+                <div key={date} className="space-y-4">
+                  <div className="flex justify-center">
+                    <span className="bg-white px-4 py-1.5 rounded-full text-xs text-gray-600 shadow-sm border border-gray-200 font-medium">
                       {formatDate(dayMessages[0].createdAt)}
                     </span>
                   </div>
 
-                  {dayMessages.map((msg, index) => {
-                    const isOwnMessage = msg.senderId === currentUser;
-                    const isPending = pendingMessages.has(
-                      String(msg.messageId)
-                    );
-                    const isConsecutive =
-                      index > 0 &&
-                      dayMessages[index - 1].senderId === msg.senderId &&
-                      new Date(msg.createdAt).getTime() -
-                        new Date(dayMessages[index - 1].createdAt).getTime() <
-                        300000;
+                  <div className="space-y-3">
+                    {dayMessages.map((msg, index) => {
+                      const isOwnMessage = msg.senderId === currentUser;
+                      const isPending = pendingMessages.has(
+                        String(msg.messageId)
+                      );
+                      const isConsecutive =
+                        index > 0 &&
+                        dayMessages[index - 1].senderId === msg.senderId &&
+                        new Date(msg.createdAt).getTime() -
+                          new Date(dayMessages[index - 1].createdAt).getTime() <
+                          300000;
 
-                    return (
-                      <div
-                        key={msg.messageId}
-                        className={`flex mb-2 ${
-                          isOwnMessage ? "justify-end" : "justify-start"
-                        } ${isConsecutive ? "mt-1" : "mt-3"}`}
-                      >
+                      return (
                         <div
-                          className={`max-w-md px-3 py-2 rounded-lg relative ${
-                            isOwnMessage
-                              ? `bg-green-500 text-white rounded-br-none ${
-                                  isPending ? "opacity-70" : ""
-                                }`
-                              : "bg-white text-gray-900 rounded-bl-none shadow-sm"
-                          }`}
+                          key={msg.messageId}
+                          className={`flex ${
+                            isOwnMessage ? "justify-end" : "justify-start"
+                          } ${isConsecutive ? "mt-1" : "mt-4"}`}
                         >
-                          <div className="break-words">{msg.message}</div>
                           <div
-                            className={`text-xs mt-1 ${
-                              isOwnMessage ? "text-green-100" : "text-gray-500"
-                            } flex items-center justify-end gap-1`}
+                            className={`max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl`}
                           >
-                            <span>{formatTime(msg.createdAt)}</span>
-                            {isOwnMessage && (
-                              <>
-                                {isPending ? (
-                                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-                                ) : (
-                                  <svg
-                                    className="w-4 h-4"
-                                    fill="currentColor"
-                                    viewBox="0 0 20 20"
-                                  >
-                                    <path
-                                      fillRule="evenodd"
-                                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                      clipRule="evenodd"
-                                    />
-                                  </svg>
+                            <div
+                              className={`px-4 py-2.5 rounded-2xl relative shadow-sm transition-all duration-200 ${
+                                isOwnMessage
+                                  ? `bg-gradient-to-r from-blue-500 to-blue-600 text-white ${
+                                      isConsecutive
+                                        ? "rounded-br-md"
+                                        : "rounded-br-2xl"
+                                    } ${
+                                      isPending
+                                        ? "opacity-70 scale-95"
+                                        : "hover:shadow-md"
+                                    }`
+                                  : `bg-white text-gray-800 border border-gray-200 ${
+                                      isConsecutive
+                                        ? "rounded-bl-md"
+                                        : "rounded-bl-2xl"
+                                    } hover:shadow-md`
+                              }`}
+                            >
+                              <div className="break-words leading-relaxed">
+                                {msg.message}
+                              </div>
+                              <div
+                                className={`text-xs mt-1.5 flex items-center justify-end space-x-1 ${
+                                  isOwnMessage
+                                    ? "text-blue-100"
+                                    : "text-gray-500"
+                                }`}
+                              >
+                                <span className="font-medium">
+                                  {formatTime(msg.createdAt)}
+                                </span>
+                                {isOwnMessage && (
+                                  <div className="flex items-center">
+                                    {isPending ? (
+                                      <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin ml-1"></div>
+                                    ) : (
+                                      <svg
+                                        className="w-4 h-4 ml-1"
+                                        fill="currentColor"
+                                        viewBox="0 0 20 20"
+                                      >
+                                        <path
+                                          fillRule="evenodd"
+                                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                          clipRule="evenodd"
+                                        />
+                                      </svg>
+                                    )}
+                                  </div>
                                 )}
-                              </>
-                            )}
+                              </div>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
               ))}
 
-              {/* Typing indicator */}
+              {/* Typing Indicator */}
               {isUserTyping && (
-                <div className="flex justify-start mb-2">
-                  <div className="bg-white px-3 py-2 rounded-lg rounded-bl-none shadow-sm">
-                    <div className="flex items-center gap-1">
-                      <div className="flex gap-1">
+                <div className="flex justify-start">
+                  <div className="bg-white border border-gray-200 px-4 py-3 rounded-2xl rounded-bl-md shadow-sm">
+                    <div className="flex items-center space-x-1">
+                      <div className="flex space-x-1">
                         <div
                           className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                          style={{ animationDelay: "0ms" }}
-                        ></div>
+                          style={{
+                            animationDelay: "0ms",
+                            animationDuration: "1s",
+                          }}
+                        />
                         <div
                           className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                          style={{ animationDelay: "150ms" }}
-                        ></div>
+                          style={{
+                            animationDelay: "150ms",
+                            animationDuration: "1s",
+                          }}
+                        />
                         <div
                           className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                          style={{ animationDelay: "300ms" }}
-                        ></div>
+                          style={{
+                            animationDelay: "300ms",
+                            animationDuration: "1s",
+                          }}
+                        />
                       </div>
+                      <span className="text-xs text-gray-500 ml-2">
+                        {selectedUser.name} is typing...
+                      </span>
                     </div>
                   </div>
                 </div>
               )}
-
-              <div ref={messagesEndRef} />
-            </>
+            </div>
           )}
+
+          <div ref={messagesEndRef} />
         </div>
 
-        <div className="px-4 py-2 bg-gray-100">
-          <div className="flex items-end gap-2">
-            <button className="p-2 text-gray-500 hover:text-gray-700 mb-1">
-              <svg
-                className="w-6 h-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
-                />
-              </svg>
-            </button>
-            <div className="flex-1">
-              <input
-                type="text"
-                placeholder={
-                  !isConnected
-                    ? "Connecting..."
-                    : !selectedUser
-                    ? "Select a chat"
-                    : "Type a message"
-                }
-                value={message}
-                onChange={handleMessageChange}
-                onKeyDown={handleKeyDown}
-                disabled={!isConnected || !selectedUser}
-                className="w-full px-3 py-2 bg-white rounded-lg border-0 focus:outline-none text-sm disabled:bg-gray-200 disabled:text-gray-500"
-                style={{ minHeight: "40px" }}
+        {/* Scroll to Bottom Button */}
+        {showScrollToBottom && (
+          <button
+            onClick={scrollToBottom}
+            className="absolute bottom-20 right-4 bg-white hover:bg-gray-50 border border-gray-300 rounded-full p-2 shadow-lg transition-all duration-200 hover:shadow-xl z-10"
+          >
+            <svg
+              className="w-5 h-5 text-gray-600"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fillRule="evenodd"
+                d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z"
+                clipRule="evenodd"
+                transform="rotate(180 10 10)"
               />
-            </div>
-            {message.trim() ? (
-              <button
-                onClick={handleSendMessage}
-                disabled={!isConnected || !selectedUser}
-                className="p-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-full transition-colors ml-2"
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
-                </svg>
-              </button>
-            ) : (
-              <button
-                disabled={!isConnected || !selectedUser}
-                className="p-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-full transition-colors ml-2"
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </button>
-            )}
+            </svg>
+          </button>
+        )}
+      </div>
+
+      {/* Input Area */}
+      <div className="bg-white border-t border-gray-200 px-4 py-3">
+        <div className="flex items-end space-x-2 max-w-4xl mx-auto">
+          {/* Attachment Button */}
+          <button
+            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors flex-shrink-0"
+            disabled={!isConnected || !selectedUser}
+          >
+            <Paperclip className="w-5 h-5" />
+          </button>
+
+          {/* Message Input */}
+          <div className="flex-1 relative">
+            <input
+              ref={inputRef}
+              type="text"
+              placeholder={
+                !isConnected
+                  ? "Connecting..."
+                  : !selectedUser
+                  ? "Select a chat"
+                  : `Message ${selectedUser.name}`
+              }
+              value={message}
+              onChange={handleMessageChange}
+              onKeyDown={handleKeyDown}
+              disabled={!isConnected || !selectedUser}
+              className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500 transition-all duration-200 text-sm"
+            />
+
+            {/* Emoji Button */}
+            <button
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 transition-colors"
+              disabled={!isConnected || !selectedUser}
+            >
+              <Smile className="w-4 h-4" />
+            </button>
           </div>
+
+          {/* Send/Voice Button */}
+          {message.trim() ? (
+            <button
+              onClick={handleSendMessage}
+              disabled={!isConnected || !selectedUser}
+              className="p-2.5 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 text-white rounded-full transition-all duration-200 transform hover:scale-105 active:scale-95 flex-shrink-0 shadow-md hover:shadow-lg"
+            >
+              <Send className="w-5 h-5" />
+            </button>
+          ) : (
+            <button
+              disabled={!isConnected || !selectedUser}
+              className="p-2.5 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 text-white rounded-full transition-all duration-200 transform hover:scale-105 active:scale-95 flex-shrink-0 shadow-md hover:shadow-lg"
+            >
+              <Mic className="w-5 h-5" />
+            </button>
+          )}
         </div>
       </div>
     </div>

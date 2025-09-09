@@ -1,10 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
+import { type User } from "../models/Messages";
 
-interface User {
-  id: number;
-  name: string;
-  email: string;
-}
 
 interface AuthContextType {
   isLoggedIn: boolean;

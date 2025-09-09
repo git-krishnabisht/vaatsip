@@ -2,40 +2,188 @@
 
 /* Base theme styles */
 [theme="dark"] {
-  background-color: black;
-  color: white;
+  background-color: #0f0f23;
+  color: #e4e4e7;
   font-family: "Underdog", system-ui;
 }
 
 [theme="light"] {
-  background-color: white;
-  color: black;
+  background-color: #ffffff;
+  color: #1f2937;
   font-family: "Underdog", system-ui;
 }
 
-/* Custom responsive utilities */
-@media (max-width: 374px) {
-  .text-xs {
-    font-size: 0.7rem;
-  }
-}
-
-/* Improved scrollbar styling */
+/* Enhanced scrollbar styling */
 .overflow-y-auto::-webkit-scrollbar {
-  width: 4px;
+  width: 6px;
 }
 
 .overflow-y-auto::-webkit-scrollbar-track {
   background: transparent;
+  border-radius: 3px;
 }
 
 .overflow-y-auto::-webkit-scrollbar-thumb {
-  background-color: rgba(156, 163, 175, 0.5);
-  border-radius: 4px;
+  background-color: rgba(156, 163, 175, 0.4);
+  border-radius: 3px;
+  transition: background-color 0.2s ease;
 }
 
 .overflow-y-auto::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(156, 163, 175, 0.8);
+  background-color: rgba(156, 163, 175, 0.7);
+}
+
+/* Firefox scrollbar */
+.overflow-y-auto {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(156, 163, 175, 0.4) transparent;
+}
+
+/* Custom animations */
+@keyframes blob {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
+.animate-blob {
+  animation: blob 7s infinite;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+/* Smooth message animations */
+@keyframes messageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.message-slide-in {
+  animation: messageSlideIn 0.3s ease-out;
+}
+
+/* Enhanced bounce animation for typing indicator */
+@keyframes typingBounce {
+  0%,
+  80%,
+  100% {
+    transform: scale(0);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.typing-dot {
+  animation: typingBounce 1.4s infinite ease-in-out both;
+}
+
+.typing-dot:nth-child(1) {
+  animation-delay: -0.32s;
+}
+.typing-dot:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+/* Message bubble hover effects */
+.message-bubble {
+  transition: all 0.2s ease-in-out;
+}
+
+.message-bubble:hover {
+  transform: translateY(-1px);
+}
+
+/* Loading spinner */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Pulse animation for notifications */
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Ping animation for indicators */
+@keyframes ping {
+  75%,
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+.animate-ping {
+  animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+/* Glass morphism effects */
+.glass {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Button hover effects */
+.btn-hover {
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-hover:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-hover:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* Mobile-specific optimizations */
@@ -53,48 +201,32 @@
   }
 
   /* Optimize spacing for mobile */
-  .gap-1 {
-    gap: 0.125rem;
+  .space-x-1 > * + * {
+    margin-left: 0.125rem;
   }
 
-  .gap-2 {
-    gap: 0.375rem;
+  .space-x-2 > * + * {
+    margin-left: 0.375rem;
+  }
+
+  /* Mobile message bubbles */
+  .message-bubble {
+    max-width: calc(100vw - 4rem);
   }
 }
 
 /* Tablet optimizations */
 @media (min-width: 640px) and (max-width: 1023px) {
-  /* Optimize sidebar width for tablets */
-  .sidebar-tablet {
-    width: 320px;
+  .message-bubble {
+    max-width: calc(100vw - 25rem);
   }
 }
 
-/* Animation improvements */
-@keyframes slideInRight {
-  from {
-    transform: translateX(100%);
+/* Desktop optimizations */
+@media (min-width: 1024px) {
+  .message-bubble {
+    max-width: calc(100vw - 35rem);
   }
-  to {
-    transform: translateX(0);
-  }
-}
-
-@keyframes slideOutRight {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(100%);
-  }
-}
-
-.slide-in-right {
-  animation: slideInRight 0.3s ease-out;
-}
-
-.slide-out-right {
-  animation: slideOutRight 0.3s ease-out;
 }
 
 /* Focus improvements for accessibility */
@@ -104,36 +236,34 @@ input:focus-visible {
   outline-offset: 2px;
 }
 
-/* Better message bubble responsive design */
-.message-bubble {
-  max-width: calc(100vw - 4rem);
-}
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .text-gray-400 {
+    color: rgb(107 114 128);
+  }
 
-@media (min-width: 640px) {
-  .message-bubble {
-    max-width: calc(100vw - 25rem);
+  .border-gray-200 {
+    border-color: rgb(107 114 128);
   }
 }
 
-@media (min-width: 1024px) {
-  .message-bubble {
-    max-width: calc(100vw - 35rem);
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
-/* Loading spinner improvements */
-.spinner {
-  border-width: 2px;
-  border-style: solid;
-  border-color: transparent;
-  border-top-color: currentColor;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
+/* Dark mode specific styles */
+@media (prefers-color-scheme: dark) {
+  [theme="auto"] {
+    background-color: #0f0f23;
+    color: #e4e4e7;
   }
 }
 
@@ -146,9 +276,17 @@ input:focus-visible {
   .safe-area-bottom {
     padding-bottom: max(1rem, env(safe-area-inset-bottom));
   }
+
+  .safe-area-left {
+    padding-left: max(1rem, env(safe-area-inset-left));
+  }
+
+  .safe-area-right {
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
 }
 
-/* Improved typography scaling */
+/* Typography scaling */
 html {
   font-size: 16px;
 }
@@ -165,13 +303,65 @@ html {
   }
 }
 
-/* Better contrast for accessibility */
-.text-gray-400 {
-  color: rgb(156 163 175);
+/* Custom border styles */
+.border-3 {
+  border-width: 3px;
 }
 
-@media (prefers-contrast: high) {
-  .text-gray-400 {
-    color: rgb(107 114 128);
+/* Utility classes for animations */
+.fade-in {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
   }
+  to {
+    opacity: 1;
+  }
+}
+
+.slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Message status indicators */
+.message-sent {
+  opacity: 0.7;
+}
+
+.message-delivered {
+  opacity: 1;
+}
+
+.message-read {
+  opacity: 1;
+}
+
+/* Connection status styles */
+.connection-connecting {
+  background: linear-gradient(90deg, #fef3c7, #fde68a);
+  color: #92400e;
+}
+
+.connection-error {
+  background: linear-gradient(90deg, #fef2f2, #fecaca);
+  color: #991b1b;
+}
+
+.connection-success {
+  background: linear-gradient(90deg, #ecfdf5, #bbf7d0);
+  color: #065f46;
 }
