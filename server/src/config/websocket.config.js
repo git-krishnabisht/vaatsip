@@ -14,6 +14,8 @@ class WebSocketManager {
     this.wss = new WebSocketServer({
       server,
       path: "/ws",
+      perMessageDeflate: false,
+      maxPayload: 16 * 1024 * 1024,
       verifyClient: (info) => {
         try {
           const parsedUrl = url.parse(info.req.url, true);

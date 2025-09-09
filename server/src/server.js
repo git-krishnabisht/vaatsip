@@ -23,7 +23,7 @@ export const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 export const JWT_SECRET = process.env.JWT_SECRET;
 
 const corsOptions = {
-  origin: process.env.NODE_ENV === "production" ? process.env.FRONTEND_URI : "http://localhost:5173",
+  origin: "https://vaatsip-web.vercel.app",
   credentials: true,
   allowedHeaders: ["Content-Type", "Authorization"],
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
