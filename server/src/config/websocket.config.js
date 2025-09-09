@@ -1,4 +1,4 @@
-import { WebSocketServer } from "ws";
+import { WebSocketServer, WebSocket } from "ws"; // Fixed: Added WebSocket import
 import jwt from "jsonwebtoken";
 import url from "url";
 import prisma from "../utils/prisma.util.js";
@@ -40,7 +40,10 @@ class WebSocketManager {
             const isVercelApp =
               origin.includes("vaatsip-web") && origin.endsWith(".vercel.app");
 
-            if (!isAllowed && !isVercelApp) {
+            const isVercelPreview =
+              origin.includes("-git-") && origin.endsWith(".vercel.app");
+
+            if (!isAllowed && !isVercelApp && !isVercelPreview) {
               console.log(`WebSocket blocked origin: ${origin}`);
               return false;
             }
@@ -49,7 +52,6 @@ class WebSocketManager {
           const parsedUrl = url.parse(info.req.url, true);
           let token = parsedUrl.query.token;
 
-          // If no token in query, try to get from cookies
           if (!token) {
             const cookies = this.parseCookies(info.req.headers.cookie);
             token = cookies.jwt || cookies.token || cookies.authToken;
@@ -61,7 +63,6 @@ class WebSocketManager {
             }
           }
 
-          // Decode URI component if needed
           if (typeof token === "string" && token.includes("%")) {
             token = decodeURIComponent(token);
           }
@@ -148,8 +149,24 @@ class WebSocketManager {
         this.broadcastUserStatus(user.id, "offline");
       });
 
+      // Fixed: Enhanced error handling
       ws.on("error", (error) => {
         console.error(`WebSocket error for user ${user.id}:`, error);
+
+        // Send error info to client before cleanup
+        if (ws.readyState === WebSocket.OPEN) {
+          try {
+            ws.send(
+              JSON.stringify({
+                type: "connection_error",
+                error: "Connection lost, please refresh",
+              })
+            );
+          } catch (e) {
+            console.error("Failed to send error message:", e);
+          }
+        }
+
         this.connections.delete(user.id);
         this.userStatus.set(user.id, {
           status: "offline",
@@ -435,16 +452,22 @@ class WebSocketManager {
     };
 
     this.connections.forEach((connection, connUserId) => {
-      if (connUserId !== userId && connection.readyState === 1) {
-        // WebSocket.OPEN = 1
-        connection.send(JSON.stringify(statusMessage));
+      if (connUserId !== userId && connection.readyState === WebSocket.OPEN) {
+        try {
+          connection.send(JSON.stringify(statusMessage));
+        } catch (error) {
+          console.error(
+            `Failed to broadcast status to user ${connUserId}:`,
+            error
+          );
+        }
       }
     });
   }
 
   isUserOnline(userId) {
     const connection = this.connections.get(userId);
-    return connection && connection.readyState === 1; // WebSocket.OPEN = 1
+    return connection && connection.readyState === WebSocket.OPEN;
   }
 
   getUserStatus(userId) {
@@ -454,9 +477,15 @@ class WebSocketManager {
   // Broadcast to all connections
   broadcast(message, excludeUserId = null) {
     this.connections.forEach((connection, userId) => {
-      if (userId !== excludeUserId && connection.readyState === 1) {
-        // WebSocket.OPEN = 1
-        connection.send(JSON.stringify(message));
+      if (
+        userId !== excludeUserId &&
+        connection.readyState === WebSocket.OPEN
+      ) {
+        try {
+          connection.send(JSON.stringify(message));
+        } catch (error) {
+          console.error(`Failed to broadcast to user ${userId}:`, error);
+        }
       }
     });
   }

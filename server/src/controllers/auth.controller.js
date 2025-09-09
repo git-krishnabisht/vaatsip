@@ -16,6 +16,8 @@ const getCookieOptions = () => {
     sameSite: isProduction ? "none" : "lax",
     maxAge: 7 * 24 * 60 * 60 * 1000,
     path: "/",
+    ...(isProduction &&
+      process.env.COOKIE_DOMAIN && { domain: process.env.COOKIE_DOMAIN }),
   };
 
   if (isProduction) {
@@ -71,10 +73,17 @@ export const sign_up = async (req, res) => {
     console.log("Cookie set with options:", cookieOptions);
     console.log("Token length:", token.length);
 
-    return res
-      .status(201)
-      .json({ signed_up: true, message: "User signed up successfully" });
+    return res.status(201).json({
+      signed_up: true,
+      message: "User signed up successfully",
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+      },
+    });
   } catch (err) {
+    console.error("Sign up error:", err);
     return res.status(500).json({
       error: "Something is wrong with the /sign_up:\n" + (err.stack || err),
     });
@@ -95,6 +104,14 @@ export const sign_in = async (req, res) => {
 
     if (!user) {
       return res.status(404).json({ error: "User doesn't exist" });
+    }
+
+    if (!user.passwordHash) {
+      return res.status(401).json({
+        signed_in: false,
+        message:
+          "This account was created with Google. Please sign in with Google.",
+      });
     }
 
     const isMatch = await bcrypt.compare(input.password, user.passwordHash);
@@ -143,11 +160,20 @@ export const sign_in = async (req, res) => {
 
 export const sign_out = async (_req, res) => {
   try {
-    // Clear the cookie with the same options used when setting it
     const cookieOptions = getCookieOptions();
-    delete cookieOptions.maxAge; // Remove maxAge for clearing
 
-    res.clearCookie("jwt", cookieOptions);
+    const clearOptions = {
+      ...cookieOptions,
+      expires: new Date(0),
+      maxAge: 0,
+    };
+    delete clearOptions.maxAge;
+
+    res.clearCookie("jwt", clearOptions);
+
+    res.clearCookie("jwt", { path: "/" });
+
+    console.log("User signed out, cookies cleared");
 
     return res.status(200).json({
       body: {
@@ -156,8 +182,9 @@ export const sign_out = async (_req, res) => {
       },
     });
   } catch (err) {
+    console.error("Sign out error:", err);
     return res.status(500).json({
-      error: "Something is wrong with the /sign_out :\n " + err.stack || err,
+      error: "Something is wrong with the /sign_out :\n " + (err.stack || err),
     });
   }
 };
@@ -182,59 +209,56 @@ export const oauth_signin = async (req, res) => {
       });
     }
 
-    jwt.verify(token, process.env.JWT_SECRET, async (err, decoded) => {
-      if (err) {
-        console.error("JWT verification failed:", err.message);
-        return res.status(400).json({
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+      const user = await prisma.user.findUnique({
+        where: { id: decoded.id },
+        select: { id: true, email: true, name: true, avatar: true },
+      });
+
+      if (!user) {
+        return res.status(404).json({
           body: {
             signed_in: false,
-            message: "Invalid or expired token",
+            message: "User not found",
           },
         });
       }
 
-      try {
-        const user = await prisma.user.findUnique({
-          where: { id: decoded.id },
-          select: { id: true, email: true, name: true, avatar: true },
-        });
+      console.log(`OAuth verification successful for user: ${user.email}`);
 
-        if (!user) {
-          return res.status(404).json({
-            body: {
-              signed_in: false,
-              message: "User not found",
-            },
-          });
-        }
-
-        console.log(`OAuth verification successful for user: ${user.email}`);
-
-        return res.status(200).json({
-          body: {
-            signed_in: true,
-            user: {
-              id: user.id,
-              email: user.email,
-              name: user.name,
-              avatar: user.avatar,
-            },
+      return res.status(200).json({
+        body: {
+          signed_in: true,
+          user: {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            avatar: user.avatar,
           },
-        });
-      } catch (dbError) {
-        console.error("Database error in oauth_signin:", dbError);
-        return res.status(500).json({
-          body: {
-            signed_in: false,
-            message: "Database error",
-          },
-        });
-      }
-    });
+        },
+      });
+    } catch (jwtError) {
+      console.error("JWT verification failed:", jwtError.message);
+
+      const cookieOptions = getCookieOptions();
+      const clearOptions = { ...cookieOptions, expires: new Date(0) };
+      delete clearOptions.maxAge;
+      res.clearCookie("jwt", clearOptions);
+
+      return res.status(401).json({
+        body: {
+          signed_in: false,
+          message: "Invalid or expired token",
+        },
+      });
+    }
   } catch (err) {
+    console.error("OAuth signin error:", err);
     return res.status(500).json({
       error:
-        "Something is wrong with the /oauth_signin :\n " + err.stack || err,
+        "Something is wrong with the /oauth_signin :\n " + (err.stack || err),
     });
   }
 };

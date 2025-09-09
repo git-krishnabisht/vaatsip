@@ -42,6 +42,7 @@ const allowedOrigins =
         "https://vaatsip-web.vercel.app",
         "https://vaatsip-web-git-master-krishna-projects.vercel.app",
         "https://vaatsip-web-krishna-projects.vercel.app",
+        ...(process.env.FRONTEND_URI ? [process.env.FRONTEND_URI] : []),
       ]
     : [
         "http://localhost:5173",
@@ -53,6 +54,7 @@ const corsOptions = {
   origin: (origin, callback) => {
     console.log(`CORS check for origin: ${origin}`);
 
+    // Allow requests with no origin (mobile apps, curl, etc.)
     if (!origin) return callback(null, true);
 
     const isAllowed = allowedOrigins.some((allowed) => {
@@ -68,7 +70,14 @@ const corsOptions = {
     const isVercelApp =
       origin.includes("vaatsip-web") && origin.endsWith(".vercel.app");
 
-    if (isAllowed || isVercelApp) {
+    const isVercelPreview =
+      origin.includes("-git-") && origin.endsWith(".vercel.app");
+
+    // Support for Vercel branch deployments
+    const isVercelBranch =
+      /https:\/\/vaatsip-web-.*-krishna-projects\.vercel\.app/.test(origin);
+
+    if (isAllowed || isVercelApp || isVercelPreview || isVercelBranch) {
       console.log(`CORS allowed for origin: ${origin}`);
       callback(null, true);
     } else {
@@ -93,6 +102,7 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
+// Handle preflight requests
 app.options("*", cors(corsOptions));
 
 app.use(express.json({ limit: "10mb" }));
@@ -101,30 +111,41 @@ app.use(cookieParser());
 
 app.use((err, req, res, next) => {
   if (err.message === "Not allowed by CORS") {
+    console.error(`CORS blocked request from origin: ${req.get("Origin")}`);
     return res.status(403).json({
       error: "CORS policy violation",
       origin: req.get("Origin"),
+      allowedOrigins:
+        process.env.NODE_ENV === "production"
+          ? "Vercel deployments"
+          : "localhost",
     });
   }
   console.error("Unhandled error:", err);
   res.status(500).json({ error: "Internal server error" });
 });
 
+// Initialize WebSocket server
 wsManager.initialize(server);
 
+// Routes
 app.use("/api/comm", commRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 
+// OAuth routes
 app.get("/api/auth/google", oauthEntry);
 app.get("/api/auth/google/callback", oauthCallback);
 
+// Fixed: Enhanced health check
 app.get("/api/health", (_, res) => {
   res.json({
     status: "ok",
     websocket: wsManager.wss ? "running" : "not running",
     environment: process.env.NODE_ENV || "development",
     timestamp: new Date().toISOString(),
+    server: "Vaatsip Chat API",
+    version: "1.0.0",
   });
 });
 
