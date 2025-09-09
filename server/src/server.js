@@ -38,32 +38,63 @@ export const JWT_SECRET = process.env.JWT_SECRET;
 
 const allowedOrigins =
   process.env.NODE_ENV === "production"
-    ? ["https://vaatsip-web.vercel.app"]
-    : ["http://localhost:5173", "http://localhost:3000"];
+    ? [
+        "https://vaatsip-web.vercel.app",
+        "https://vaatsip-web-git-master-krishna-projects.vercel.app",
+        /\.vercel\.app$/,
+      ]
+    : ["http://localhost:5173", "http://localhost:3000", "http://localhost:4173"];
 
 const corsOptions = {
   origin: (origin, callback) => {
     if (!origin) return callback(null, true);
 
-    if (allowedOrigins.includes(origin)) {
+    const isAllowed = allowedOrigins.some((allowed) => {
+      if (typeof allowed === "string") {
+        return allowed === origin;
+      }
+      if (allowed instanceof RegExp) {
+        return allowed.test(origin);
+      }
+      return false;
+    });
+
+    if (isAllowed) {
       callback(null, true);
     } else {
+      console.log(`CORS blocked origin: ${origin}`);
       callback(new Error("Not allowed by CORS"));
     }
   },
   credentials: true,
-  allowedHeaders: ["Content-Type", "Authorization"],
+  optionsSuccessStatus: 200,
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+    "X-Requested-With",
+    "Accept",
+    "Origin",
+    "Access-Control-Request-Method",
+    "Access-Control-Request-Headers",
+  ],
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  preflightContinue: false,
 };
 
 app.use(cors(corsOptions));
+
+app.options("*", cors(corsOptions));
+
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(cookieParser());
 
 app.use((err, req, res, next) => {
   if (err.message === "Not allowed by CORS") {
-    return res.status(403).json({ error: "CORS policy violation" });
+    return res.status(403).json({
+      error: "CORS policy violation",
+      origin: req.get("Origin"),
+    });
   }
   console.error("Unhandled error:", err);
   res.status(500).json({ error: "Internal server error" });
@@ -94,5 +125,6 @@ app.use("*", (req, res) => {
 server.listen(PORT, () => {
   console.log(`Server is running on PORT: ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || "development"}`);
+  console.log(`Allowed origins:`, allowedOrigins);
   console.log(`WebSocket server available at PORT: ${PORT}`);
 });

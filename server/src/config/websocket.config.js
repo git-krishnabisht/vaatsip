@@ -18,25 +18,54 @@ class WebSocketManager {
       maxPayload: 16 * 1024 * 1024,
       verifyClient: (info) => {
         try {
+          const origin = info.origin || info.req.headers.origin;
+          const allowedOrigins =
+            process.env.NODE_ENV === "production"
+              ? ["https://vaatsip-web.vercel.app"]
+              : [
+                  "http://localhost:5173",
+                  "http://localhost:3000",
+                  "http://localhost4173",
+                ];
+
+          if (
+            origin &&
+            !allowedOrigins.some(
+              (allowed) =>
+                origin === allowed ||
+                (process.env.NODE_ENV === "production" &&
+                  origin.endsWith(".vercel.app"))
+            )
+          ) {
+            console.log(`WebSocket blocked origin: ${origin}`);
+            return false;
+          }
+
+          // Verify JWT token
           const parsedUrl = url.parse(info.req.url, true);
           const token = parsedUrl.query.token;
 
-          if (!token) return false;
+          if (!token) {
+            console.log("WebSocket: No token provided");
+            return false;
+          }
 
           const decoded = jwt.verify(token, process.env.JWT_SECRET);
           info.req.user = decoded;
+
+          console.log(`WebSocket auth successful for user ${decoded.id}`);
           return true;
         } catch (error) {
-          console.error("WebSocket auth failed:", error);
+          console.error("WebSocket auth failed:", error.message);
           return false;
         }
       },
     });
 
+    // Rest of your WebSocket code remains the same...
     this.wss.on("connection", (ws, req) => {
       const user = req.user;
 
-      // Store connection
       this.connections.set(user.id, ws);
       this.userStatus.set(user.id, {
         status: "online",
@@ -45,17 +74,14 @@ class WebSocketManager {
 
       console.log(`User ${user.id} connected via WebSocket`);
 
-      // Send initial connection success
       this.sendToUser(user.id, {
         type: "connection_established",
         userId: user.id,
         timestamp: new Date().toISOString(),
       });
 
-      // Broadcast user status to all connections
       this.broadcastUserStatus(user.id, "online");
 
-      // Handle incoming messages
       ws.on("message", async (data) => {
         try {
           const message = JSON.parse(data.toString());
@@ -69,7 +95,6 @@ class WebSocketManager {
         }
       });
 
-      // Handle connection close
       ws.on("close", () => {
         this.connections.delete(user.id);
         this.userStatus.set(user.id, {
@@ -78,12 +103,9 @@ class WebSocketManager {
         });
 
         console.log(`User ${user.id} disconnected`);
-
-        // Broadcast user status
         this.broadcastUserStatus(user.id, "offline");
       });
 
-      // Handle connection errors
       ws.on("error", (error) => {
         console.error(`WebSocket error for user ${user.id}:`, error);
         this.connections.delete(user.id);
@@ -93,7 +115,6 @@ class WebSocketManager {
         });
       });
 
-      // Send heartbeat every 30 seconds
       const heartbeat = setInterval(() => {
         if (ws.readyState === ws.OPEN) {
           ws.ping();
@@ -102,7 +123,6 @@ class WebSocketManager {
         }
       }, 30000);
 
-      // Handle pong responses
       ws.on("pong", () => {
         this.userStatus.set(user.id, {
           status: "online",

@@ -14,8 +14,11 @@ export const oauthCallback = async (req, res) => {
   const code = req.query.code;
 
   if (!code) {
-    throw new Error(
-      "Authorization code from the authorization server is required"
+    console.error("No authorization code received");
+    return res.redirect(
+      process.env.NODE_ENV === "production"
+        ? `${process.env.FRONTEND_URI}/auth-google?error=auth_failed`
+        : "http://localhost:4173/auth-google?error=auth_failed"
     );
   }
 
@@ -34,17 +37,17 @@ export const oauthCallback = async (req, res) => {
 
     if (!tokenRes.ok) {
       const errorBody = await tokenRes.text();
+      console.error("Token exchange failed:", errorBody);
       throw new Error(
         `Failed to fetch token from https://oauth2.googleapis.com/token, status: ${tokenRes.status} - ${errorBody}`
       );
     }
 
     const tokenData = await tokenRes.json();
-
     const { id_token } = tokenData;
 
     if (!id_token) {
-      throw new Error("Missing id_token");
+      throw new Error("Missing id_token in response");
     }
 
     const ticket = await oauthClient.verifyIdToken({
@@ -57,54 +60,64 @@ export const oauthCallback = async (req, res) => {
     }
 
     const payload = ticket.getPayload();
-
     const { email, name, picture } = payload;
 
-    if (!email || !name || !picture) {
-      throw new Error("Missing data in payload");
+    if (!email || !name) {
+      throw new Error("Missing required user data in payload");
     }
 
-    const result = await prisma.user.findUnique({
-      where: {
-        email,
-      },
+    let user = await prisma.user.findUnique({
+      where: { email },
     });
 
-    let userId;
-    if (!result) {
-      const newUser = await prisma.user.create({
+    if (!user) {
+      user = await prisma.user.create({
         data: {
           email,
-          avatar: picture,
+          avatar: picture || null,
           name,
           passwordHash: null,
         },
       });
-      userId = newUser.id;
     } else {
-      userId = result.id;
+      if (picture && user.avatar !== picture) {
+        user = await prisma.user.update({
+          where: { id: user.id },
+          data: { avatar: picture },
+        });
+      }
     }
 
-    const user = { id: userId, email, name };
-    const token = await jwtService.generateJWT(user);
+    const jwtPayload = { id: user.id, email: user.email };
+    const token = await jwtService.generateJWT(jwtPayload);
 
     res.cookie("jwt", token, {
       httpOnly: false,
-      secure: false,
-      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
+      domain: process.env.NODE_ENV === "production" ? undefined : undefined,
+      path: "/",
     });
-    return res.redirect(
+
+    const redirectUrl =
       process.env.NODE_ENV === "production"
         ? process.env.FRONTEND_URI
-        : "http://localhost:5173/"
+        : "http://localhost:4173";
+
+    console.log(
+      `OAuth successful for user ${user.email}, redirecting to ${redirectUrl}`
     );
+
+    return res.redirect(redirectUrl);
   } catch (err) {
     console.error("OAuth Error:", err);
-    return res.redirect(
+
+    const errorRedirectUrl =
       process.env.NODE_ENV === "production"
-        ? `${process.env.FRONTEND_URI}/?error=auth_failed`
-        : "http://localhost:5173/?error=auth_failed"
-    );
+        ? `${process.env.FRONTEND_URI}/auth-google?error=auth_failed`
+        : "http://localhost:4173/auth-google?error=auth_failed";
+
+    return res.redirect(errorRedirectUrl);
   }
 };

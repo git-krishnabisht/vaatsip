@@ -7,7 +7,6 @@ export interface WebSocketMessage {
   [key: string]: any;
 }
 
-// Better environment variable handling
 const ws_baseURL =
   import.meta.env.VITE_WS_API_BASE || "wss://vaatsip-web.onrender.com/ws";
 
@@ -60,7 +59,6 @@ export function useWebSocket(
     (data: WebSocketMessage) => {
       switch (data.type) {
         case "connection_established":
-          // Only log in development
           if (import.meta.env.DEV) {
             console.log(
               "WebSocket connection established for user:",
@@ -74,7 +72,6 @@ export function useWebSocket(
             onNewMessage(data.message);
           }
 
-          // Send delivery confirmation
           if (wsRef.current?.readyState === WebSocket.OPEN) {
             wsRef.current.send(
               JSON.stringify({
@@ -175,6 +172,8 @@ export function useWebSocket(
 
     try {
       const wsUrl = `${ws_baseURL}?token=${encodeURIComponent(token)}`;
+      console.log("Attempting WebSocket connection to:", wsUrl);
+
       wsRef.current = new WebSocket(wsUrl);
 
       wsRef.current.onopen = () => {

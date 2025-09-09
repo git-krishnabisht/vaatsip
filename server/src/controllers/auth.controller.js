@@ -4,6 +4,15 @@ import bcrypt from "bcrypt";
 import prisma from "../utils/prisma.util.js";
 import { jwtService } from "../utils/jwt.util.js";
 
+const getCookieOptions = () => ({
+  httpOnly: false, 
+  secure: process.env.NODE_ENV === "production",
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", 
+  maxAge: 7 * 24 * 60 * 60 * 1000, 
+  domain: process.env.NODE_ENV === "production" ? undefined : undefined, 
+  path: "/", 
+});
+
 export const sign_up = async (req, res) => {
   try {
     const input = new signUpDto(req.body);
@@ -43,12 +52,7 @@ export const sign_up = async (req, res) => {
 
     const token = jwtService.generateJWT({ id: user.id, email: user.email });
 
-    res.cookie("jwt", token, {
-      httpOnly: false,
-      secure: false,
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    res.cookie("jwt", token, getCookieOptions());
 
     return res
       .status(201)
@@ -89,12 +93,7 @@ export const sign_in = async (req, res) => {
       email: user.email,
     });
 
-    res.cookie("jwt", token, {
-      httpOnly: false,
-      secure: false,
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    res.cookie("jwt", token, getCookieOptions());
 
     return res.status(200).json({
       signed_in: true,
@@ -113,7 +112,13 @@ export const sign_in = async (req, res) => {
 
 export const sign_out = async (_req, res) => {
   try {
-    res.clearCookie("jwt");
+    res.clearCookie("jwt", {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      domain: process.env.NODE_ENV === "production" ? undefined : undefined,
+      path: "/",
+    });
 
     return res.status(200).json({
       body: {
@@ -141,7 +146,7 @@ export const oauth_signin = async (req, res) => {
       });
     }
 
-    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+    jwt.verify(token, process.env.JWT_SECRET, async (err, decoded) => {
       if (err) {
         return res.status(400).json({
           body: {
@@ -151,15 +156,41 @@ export const oauth_signin = async (req, res) => {
         });
       }
 
-      return res.status(200).json({
-        body: {
-          signed_in: true,
-          user: {
-            id: decoded.id,
-            email: decoded.email,
+      try {
+        const user = await prisma.user.findUnique({
+          where: { id: decoded.id },
+          select: { id: true, email: true, name: true, avatar: true },
+        });
+
+        if (!user) {
+          return res.status(404).json({
+            body: {
+              signed_in: false,
+              message: "User not found",
+            },
+          });
+        }
+
+        return res.status(200).json({
+          body: {
+            signed_in: true,
+            user: {
+              id: user.id,
+              email: user.email,
+              name: user.name,
+              avatar: user.avatar,
+            },
           },
-        },
-      });
+        });
+      } catch (dbError) {
+        console.error("Database error in oauth_signin:", dbError);
+        return res.status(500).json({
+          body: {
+            signed_in: false,
+            message: "Database error",
+          },
+        });
+      }
     });
   } catch (err) {
     return res.status(500).json({
