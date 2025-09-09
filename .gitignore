@@ -27,3 +27,4 @@ Work.txt
 /server/.env
 /client/public
 .vscode
+/client/.env

@@ -4,7 +4,7 @@ import { useParams } from "react-router-dom";
 import OptionBar from "../components/OptionBar";
 import Sidebar from "../components/Sidebar";
 import { useUserDetails } from "../contexts/UserDetailsProvider";
-import { useMessages } from "../utils/useMessages";
+import { useMessages } from "../hooks/useMessages";
 import { useAuth } from "../contexts/AuthContext";
 import { getUsers, type User } from "../utils/users.util";
 import type { Message } from "../models/Messages";

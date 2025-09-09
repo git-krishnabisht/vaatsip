@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { type User } from "../models/Messages";
-
+const baseURL = import.meta.env.VITE_API_BASE;
 
 interface AuthContextType {
   isLoggedIn: boolean;
@@ -22,7 +22,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const checkAuthStatus = async () => {
     try {
       setAuthLoading(true);
-      const res = await fetch("http://localhost:50136/api/auth/oauth-signin", {
+      const res = await fetch(`${baseURL}/auth/oauth-signin`, {
         method: "GET",
         credentials: "include",
       });
@@ -61,7 +61,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signout = async () => {
     try {
-      const res = await fetch("http://localhost:50136/api/auth/sign-out", {
+      const res = await fetch(`${baseURL}/auth/sign-out`, {
         method: "POST",
         credentials: "include",
       });

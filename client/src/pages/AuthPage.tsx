@@ -17,6 +17,8 @@ interface Cred {
   password: string;
 }
 
+const baseURL = import.meta.env.VITE_API_BASE;
+
 function AuthPage() {
   const { isLoggedIn, checkAuthStatus } = useAuth();
   const navigate = useNavigate();
@@ -67,8 +69,8 @@ function AuthPage() {
 
     const url =
       authTab === "signin"
-        ? "http://localhost:50136/api/auth/sign-in"
-        : "http://localhost:50136/api/auth/sign-up";
+        ? `${baseURL}/auth/sign-in`
+        : `${baseURL}/auth/sign-up`;
 
     const payload =
       authTab === "signin"
@@ -299,7 +301,7 @@ function AuthPage() {
 
             {/* Google OAuth Button */}
             <a
-              href="http://localhost:50136/auth/google"
+              href={`${baseURL}/auth/google`}
               className="w-full bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 font-medium py-3 px-4 rounded-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] shadow-md hover:shadow-lg flex items-center justify-center space-x-3 group"
             >
               <div className="w-5 h-5">

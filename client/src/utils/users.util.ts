@@ -4,8 +4,10 @@ export interface User {
   avatar: string | null;
 }
 
+const baseURL = import.meta.env.VITE_API_BASE;
+
 export const getUsers = async (): Promise<User[]> => {
-  const res = await fetch("http://localhost:50136/api/users/get-users", {
+  const res = await fetch(`${baseURL}/users/get-users`, {
     method: "GET",
     credentials: "include",
   });

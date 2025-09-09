@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import type { Message } from "../models/Messages";
 
+const baseURL = import.meta.env.VITE_API_BASE;
+
 export function useMessages() {
   const { receiver_id } = useParams<{ receiver_id: string }>();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -21,13 +23,10 @@ export function useMessages() {
         setLoading(true);
         setError(null);
 
-        const res = await fetch(
-          `http://localhost:50136/api/comm/get-messages/${receiver_id}`,
-          {
-            method: "GET",
-            credentials: "include",
-          }
-        );
+        const res = await fetch(`${baseURL}/comm/get-messages/${receiver_id}`, {
+          method: "GET",
+          credentials: "include",
+        });
 
         if (!res.ok) {
           if (res.status === 404) {

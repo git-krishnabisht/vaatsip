@@ -32,6 +32,7 @@ function Sidebar({
   const { receiver_id } = useParams<{ receiver_id: string }>();
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
+  const baseURL = import.meta.env.VITE_API_BASE;
 
   // Fetch users and conversation data
   const fetchConversationData = useCallback(async () => {
@@ -44,7 +45,7 @@ function Sidebar({
       const conversationPromises = filteredUsers.map(async (user) => {
         try {
           const response = await fetch(
-            `http://localhost:50136/api/comm/get-messages/${user.id}`,
+            `${baseURL}/comm/get-messages/${user.id}`,
             {
               method: "GET",
               credentials: "include",

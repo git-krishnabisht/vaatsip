@@ -7,6 +7,8 @@ export interface WebSocketMessage {
   [key: string]: any;
 }
 
+const ws_baseURL = import.meta.env.VITE_WS_API_BASE;
+
 export interface UseWebSocketReturn {
   isConnected: boolean;
   sendMessage: (receiverId: number, content: string) => string | undefined;
@@ -159,7 +161,7 @@ export function useWebSocket(
       return;
     }
 
-    const wsUrl = `ws://localhost:50136/ws?token=${encodeURIComponent(token)}`;
+    const wsUrl = `${ws_baseURL}?token=${encodeURIComponent(token)}`;
     wsRef.current = new WebSocket(wsUrl);
 
     wsRef.current.onopen = () => {

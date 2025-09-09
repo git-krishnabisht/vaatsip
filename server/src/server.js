@@ -17,13 +17,13 @@ const app = express();
 const server = http.createServer(app);
 
 const PORT = process.env.PORT || 50136;
-export const REDIRECT_URI = `http://localhost:${PORT}/auth/google/callback`;
+export const REDIRECT_URI = process.env.GOOGLE_AUTH_CALLBACK;
 export const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 export const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 export const JWT_SECRET = process.env.JWT_SECRET;
 
 const corsOptions = {
-  origin: "http://localhost:5000",
+  origin: process.env.NODE_ENV === "production" ? process.env.FRONTEND_URI : "http://localhost:5173",
   credentials: true,
   allowedHeaders: ["Content-Type", "Authorization"],
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
@@ -40,10 +40,10 @@ app.use("/api/comm", commRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 
-app.get("/auth/google", oauthEntry);
-app.get("/auth/google/callback", oauthCallback);
+app.get("/api/auth/google", oauthEntry);
+app.get("/api/auth/google/callback", oauthCallback);
 
-app.get("/health", (_, res) => {
+app.get("/api/health", (_, res) => {
   res.json({ 
     status: "ok", 
     websocket: wsManager.wss ? "running" : "not running",
@@ -52,6 +52,6 @@ app.get("/health", (_, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}...`);
-  console.log(`WebSocket server available at ws://localhost:${PORT}/ws`);
+  console.log(`Server is running on PORT: ${PORT}`);
+  console.log(`WebSocket server available at PORT: ${PORT}`);
 });

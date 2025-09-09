@@ -94,10 +94,17 @@ export const oauthCallback = async (req, res) => {
       sameSite: "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
-
-    return res.redirect("http://localhost:5000/");
+    return res.redirect(
+      process.env.NODE_ENV === "production"
+        ? process.env.FRONTEND_URI
+        : "http://localhost:5173/"
+    );
   } catch (err) {
     console.error("OAuth Error:", err);
-    return res.redirect("http://localhost:5000/?error=auth_failed");
+    return res.redirect(
+      process.env.NODE_ENV === "production"
+        ? `${process.env.FRONTEND_URI}/?error=auth_failed`
+        : "http://localhost:5173/?error=auth_failed"
+    );
   }
 };
