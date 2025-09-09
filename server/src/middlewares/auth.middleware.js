@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken";
+import prisma from "../utils/prisma.util.js";
 
 export async function protectedRoute(req, res, next) {
   try {
@@ -8,19 +9,30 @@ export async function protectedRoute(req, res, next) {
       return res.status(401).json({ error: "No token provided" });
     }
 
-    if (typeof token !== 'string' || token.length < 10) {
+    if (typeof token !== "string" || token.length < 10) {
       return res.status(401).json({ error: "Invalid token format" });
     }
-    
+
     const decoded = jwt.verify(token, process.env.JWT_SECRET, {
       algorithms: ["HS256"],
     });
-    
+
     if (!decoded || !decoded.id || !decoded.email) {
       return res.status(401).json({ error: "Invalid token payload" });
     }
-    
-    req.user = decoded;
+
+    // Verify user still exists in database
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id },
+      select: { id: true, email: true, name: true },
+    });
+
+    if (!user) {
+      return res.status(401).json({ error: "User no longer exists" });
+    }
+
+    req.user = user;
+    req.email = user.email; 
     return next();
   } catch (err) {
     if (err.name === "TokenExpiredError") {

@@ -3,66 +3,83 @@ import imageType from "image-type";
 import prisma from "../utils/prisma.util.js";
 
 export const getPictures = async (req, res) => {
-  const { id } = req.params;
   try {
-    if (!id) {
-      return res.status(400).json({ message: "email not found" });
+    const id = parseInt(req.params.id, 10);
+
+    if (isNaN(id)) {
+      return res.status(400).json({ message: "Invalid user ID" });
     }
 
     const user = await prisma.user.findUnique({
-      where: { id: id },
-      select: { avatar: true },
+      where: { id },
+      select: { avatar: true, name: true },
     });
 
     if (!user || !user.avatar) {
       return res.status(404).json({ message: "No image found for this user" });
     }
 
-    const img = user.avatar;
-    if (!img) {
-      return res
-        .status(404)
-        .json({ message: "No image found from the result query" });
+    const fileType = await fileTypeFromBuffer(user.avatar);
+    if (!fileType || !fileType.mime.startsWith("image/")) {
+      return res.status(400).json({ message: "Invalid image format" });
     }
 
-    const fileType = await fileTypeFromBuffer(img);
     res.setHeader("Content-Type", fileType.mime);
     res.setHeader(
       "Content-Disposition",
-      `inline; filename="${user.name}-img.${fileType.ext}"`
+      `inline; filename="${user.name || "user"}-img.${fileType.ext}"`
     );
-    res.send(img);
+    res.send(user.avatar);
   } catch (err) {
+    console.error("Error in getPictures:", err);
     return res.status(500).json({
-      error: "Something is wrong with the /get-pictures :\n " + err.stack,
+      error: "Failed to retrieve user picture",
     });
   }
 };
 
 export const userDetails = async (req, res) => {
   try {
-    const { id } = req.params;
-    if (!id) {
-      return res.status(400).json({ message: "User not found" });
+    const id = parseInt(req.params.id, 10);
+
+    if (isNaN(id)) {
+      return res.status(400).json({ message: "Invalid user ID" });
     }
 
     const user = await prisma.user.findUnique({
-      where: { id: id },
+      where: { id },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        avatar: true,
+        createdAt: true,
+      },
     });
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    if (!user.avatar) return res.status(200).json({ details: user });
+    let userDetails = { ...user };
 
-    const type = imageType(user.avatar)?.mime || "image/jpeg";
-    const base64Image = `data:${type};base64,${user.avatar.toString("base64")}`;
-    const userdetails = { ...user, avatar: base64Image };
-    return res.status(200).json({ details: userdetails });
+    if (user.avatar) {
+      try {
+        const type = imageType(user.avatar)?.mime || "image/jpeg";
+        userDetails.avatar = `data:${type};base64,${user.avatar.toString(
+          "base64"
+        )}`;
+      } catch (err) {
+        console.error("Error processing avatar:", err);
+        userDetails.avatar = null;
+      }
+    }
+
+    return res.status(200).json({ details: userDetails });
   } catch (err) {
+    console.error("Error in userDetails:", err);
     return res.status(500).json({
-      error: "Something is wrong with the /user-details : " + err.stack || err,
+      error: "Failed to retrieve user details",
     });
   }
 };
@@ -74,27 +91,41 @@ export const getUsers = async (req, res) => {
         id: true,
         name: true,
         avatar: true,
+        email: true,
       },
     });
 
-    return res.status(200).json({ data: users });
+    const usersWithAvatars = users.map((user) => {
+      if (user.avatar) {
+        try {
+          const type = imageType(user.avatar)?.mime || "image/jpeg";
+          return {
+            ...user,
+            avatar: `data:${type};base64,${user.avatar.toString("base64")}`,
+          };
+        } catch (err) {
+          console.error("Error processing avatar for user", user.id, err);
+          return { ...user, avatar: null };
+        }
+      }
+      return user;
+    });
+
+    return res.status(200).json({ data: usersWithAvatars });
   } catch (err) {
+    console.error("Error in getUsers:", err);
     return res.status(500).json({
-      error: "Something is wrong with the /get-users :\n " + err.stack,
+      error: "Failed to retrieve users",
     });
   }
 };
 
 export const uploadProfile = async (req, res) => {
   try {
-    const email = req.email;
-    const checkUser = await prisma.user.findUnique({
-      where: { email: email },
-      select: { id: true },
-    });
+    const user = req.user;
 
-    if (!checkUser) {
-      return res.status(404).json({ error: "User does not exist" });
+    if (!user?.id) {
+      return res.status(401).json({ error: "User not authenticated" });
     }
 
     if (!req.file?.buffer) {
@@ -103,71 +134,87 @@ export const uploadProfile = async (req, res) => {
         .json({ error: "No image file found in the request" });
     }
 
-    const image = req.file.buffer;
+    // Validate file type
+    const fileType = await fileTypeFromBuffer(req.file.buffer);
+    if (!fileType || !fileType.mime.startsWith("image/")) {
+      return res
+        .status(400)
+        .json({ error: "Invalid file type. Only images are allowed." });
+    }
+
+    // Validate file size (5MB limit)
+    if (req.file.buffer.length > 5 * 1024 * 1024) {
+      return res
+        .status(400)
+        .json({ error: "File too large. Maximum size is 5MB." });
+    }
+
     const result = await prisma.user.update({
-      where: { email: email },
-      data: { avatar: image },
-      select: { email: true },
+      where: { id: user.id },
+      data: { avatar: req.file.buffer },
+      select: { id: true, email: true },
     });
 
-    if (result) {
-      return res.status(200).json({
-        message: "Image uploaded successfully",
-        email: result.email,
-      });
-    } else {
-      return res.status(500).json({ error: "Failed to update user profile" });
-    }
+    return res.status(200).json({
+      message: "Image uploaded successfully",
+      userId: result.id,
+    });
   } catch (err) {
+    console.error("Error in uploadProfile:", err);
     return res.status(500).json({
-      error: `Error processing the upload-profile request: ${err.message}`,
+      error: "Failed to upload profile image",
     });
   }
 };
 
 export const userDelete = async (req, res) => {
-  const { id } = req.body;
-  if (!id) {
-    return res.status(400).json({ message: "Username not found" });
-  }
   try {
+    const id = parseInt(req.body.id, 10);
+
+    if (isNaN(id)) {
+      return res.status(400).json({ message: "Invalid user ID" });
+    }
+
     const result = await prisma.user.delete({
-      where: { id: id },
+      where: { id },
     });
 
-    if (result) {
-      return res.status(200).send({ message: "User deleted successfully" });
-    } else {
-      return res.status(400).send({ message: "Deletion failed" });
-    }
+    return res.status(200).json({ message: "User deleted successfully" });
   } catch (err) {
+    if (err.code === "P2025") {
+      return res.status(404).json({ message: "User not found" });
+    }
+    console.error("Error in userDelete:", err);
     return res.status(500).json({
-      error: "Something is wrong with the /user-delete :\n " + err.stack,
+      error: "Failed to delete user",
     });
   }
 };
 
 export const userUpdate = async (req, res) => {
-  const { email, password } = req.body;
-
-  if (!email || !password) {
-    return res.status(400).send({ message: "Provide correct information" });
-  }
-
   try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res
+        .status(400)
+        .json({ message: "Email and password are required" });
+    }
+
     const result = await prisma.user.update({
-      where: { email: email },
+      where: { email: email.toLowerCase() },
       data: { passwordHash: password },
+      select: { id: true, email: true },
     });
 
-    if (result) {
-      return res.status(200).send({ message: "Update successful" });
-    } else {
-      return res.status(400).send({ message: "Update failed" });
-    }
+    return res.status(200).json({ message: "User updated successfully" });
   } catch (err) {
+    if (err.code === "P2025") {
+      return res.status(404).json({ message: "User not found" });
+    }
+    console.error("Error in userUpdate:", err);
     return res.status(500).json({
-      error: "Something is wrong with the /user-update :\n " + err.stack,
+      error: "Failed to update user",
     });
   }
 };

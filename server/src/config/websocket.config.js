@@ -115,27 +115,48 @@ class WebSocketManager {
   }
 
   async handleMessage(senderId, message) {
-    switch (message.type) {
-      case "send_message":
-        await this.handleSendMessage(senderId, message);
-        break;
-      case "message_delivered":
-        await this.handleMessageDelivered(senderId, message);
-        break;
-      case "message_read":
-        await this.handleMessageRead(senderId, message);
-        break;
-      case "typing_start":
-        this.handleTypingStart(senderId, message);
-        break;
-      case "typing_stop":
-        this.handleTypingStop(senderId, message);
-        break;
-      case "get_online_users":
-        this.handleGetOnlineUsers(senderId);
-        break;
-      default:
-        console.log("Unknown message type:", message.type);
+    try {
+      // Validate message structure
+      if (!message || typeof message !== "object" || !message.type) {
+        this.sendToUser(senderId, {
+          type: "error",
+          error: "Invalid message format: missing type",
+        });
+        return;
+      }
+
+      switch (message.type) {
+        case "send_message":
+          await this.handleSendMessage(senderId, message);
+          break;
+        case "message_delivered":
+          await this.handleMessageDelivered(senderId, message);
+          break;
+        case "message_read":
+          await this.handleMessageRead(senderId, message);
+          break;
+        case "typing_start":
+          this.handleTypingStart(senderId, message);
+          break;
+        case "typing_stop":
+          this.handleTypingStop(senderId, message);
+          break;
+        case "get_online_users":
+          this.handleGetOnlineUsers(senderId);
+          break;
+        default:
+          console.log("Unknown message type:", message.type);
+          this.sendToUser(senderId, {
+            type: "error",
+            error: `Unknown message type: ${message.type}`,
+          });
+      }
+    } catch (error) {
+      console.error("Error in handleMessage:", error);
+      this.sendToUser(senderId, {
+        type: "error",
+        error: "Failed to process message",
+      });
     }
   }
 
