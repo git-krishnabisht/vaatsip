@@ -41,12 +41,18 @@ const allowedOrigins =
     ? [
         "https://vaatsip-web.vercel.app",
         "https://vaatsip-web-git-master-krishna-projects.vercel.app",
-        /\.vercel\.app$/,
+        "https://vaatsip-web-krishna-projects.vercel.app",
       ]
-    : ["http://localhost:5173", "http://localhost:3000", "http://localhost:4173"];
+    : [
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "http://localhost:4173",
+      ];
 
 const corsOptions = {
   origin: (origin, callback) => {
+    console.log(`CORS check for origin: ${origin}`);
+
     if (!origin) return callback(null, true);
 
     const isAllowed = allowedOrigins.some((allowed) => {
@@ -59,7 +65,11 @@ const corsOptions = {
       return false;
     });
 
-    if (isAllowed) {
+    const isVercelApp =
+      origin.includes("vaatsip-web") && origin.endsWith(".vercel.app");
+
+    if (isAllowed || isVercelApp) {
+      console.log(`CORS allowed for origin: ${origin}`);
       callback(null, true);
     } else {
       console.log(`CORS blocked origin: ${origin}`);

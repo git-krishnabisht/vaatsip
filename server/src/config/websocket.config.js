@@ -21,27 +21,31 @@ class WebSocketManager {
           const origin = info.origin || info.req.headers.origin;
           const allowedOrigins =
             process.env.NODE_ENV === "production"
-              ? ["https://vaatsip-web.vercel.app"]
+              ? [
+                  "https://vaatsip-web.vercel.app",
+                  "https://vaatsip-web-git-master-krishna-projects.vercel.app",
+                  "https://vaatsip-web-krishna-projects.vercel.app",
+                ]
               : [
                   "http://localhost:5173",
                   "http://localhost:3000",
-                  "http://localhost4173",
+                  "http://localhost:4173",
                 ];
 
-          if (
-            origin &&
-            !allowedOrigins.some(
-              (allowed) =>
-                origin === allowed ||
-                (process.env.NODE_ENV === "production" &&
-                  origin.endsWith(".vercel.app"))
-            )
-          ) {
-            console.log(`WebSocket blocked origin: ${origin}`);
-            return false;
+          if (origin) {
+            const isAllowed = allowedOrigins.some(
+              (allowed) => allowed === origin
+            );
+
+            const isVercelApp =
+              origin.includes("vaatsip-web") && origin.endsWith(".vercel.app");
+
+            if (!isAllowed && !isVercelApp) {
+              console.log(`WebSocket blocked origin: ${origin}`);
+              return false;
+            }
           }
 
-          // Verify JWT token
           const parsedUrl = url.parse(info.req.url, true);
           const token = parsedUrl.query.token;
 
@@ -62,7 +66,6 @@ class WebSocketManager {
       },
     });
 
-    // Rest of your WebSocket code remains the same...
     this.wss.on("connection", (ws, req) => {
       const user = req.user;
 

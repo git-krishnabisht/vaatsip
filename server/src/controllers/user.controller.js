@@ -65,10 +65,38 @@ export const userDetails = async (req, res) => {
 
     if (user.avatar) {
       try {
-        const type = imageType(user.avatar)?.mime || "image/jpeg";
-        userDetails.avatar = `data:${type};base64,${user.avatar.toString(
-          "base64"
-        )}`;
+        let avatarBuffer;
+
+        if (Buffer.isBuffer(user.avatar)) {
+          avatarBuffer = user.avatar;
+        } else if (typeof user.avatar === "string") {
+          if (user.avatar.startsWith("data:")) {
+            userDetails.avatar = user.avatar;
+            return res.status(200).json({ details: userDetails });
+          } else if (user.avatar.startsWith("http")) {
+            userDetails.avatar = user.avatar;
+            return res.status(200).json({ details: userDetails });
+          } else {
+            avatarBuffer = Buffer.from(user.avatar, "base64");
+          }
+        } else {
+          console.error(
+            "Unexpected avatar type for user",
+            user.id,
+            typeof user.avatar
+          );
+          userDetails.avatar = null;
+          return res.status(200).json({ details: userDetails });
+        }
+
+        if (avatarBuffer && avatarBuffer.length > 0) {
+          const type = imageType(avatarBuffer)?.mime || "image/jpeg";
+          userDetails.avatar = `data:${type};base64,${avatarBuffer.toString(
+            "base64"
+          )}`;
+        } else {
+          userDetails.avatar = null;
+        }
       } catch (err) {
         console.error("Error processing avatar:", err);
         userDetails.avatar = null;
@@ -98,11 +126,36 @@ export const getUsers = async (req, res) => {
     const usersWithAvatars = users.map((user) => {
       if (user.avatar) {
         try {
-          const type = imageType(user.avatar)?.mime || "image/jpeg";
-          return {
-            ...user,
-            avatar: `data:${type};base64,${user.avatar.toString("base64")}`,
-          };
+          let avatarBuffer;
+
+          if (Buffer.isBuffer(user.avatar)) {
+            avatarBuffer = user.avatar;
+          } else if (typeof user.avatar === "string") {
+            if (user.avatar.startsWith("data:")) {
+              return { ...user };
+            } else if (user.avatar.startsWith("http")) {
+              return { ...user };
+            } else {
+              avatarBuffer = Buffer.from(user.avatar, "base64");
+            }
+          } else {
+            console.error(
+              "Unexpected avatar type for user",
+              user.id,
+              typeof user.avatar
+            );
+            return { ...user, avatar: null };
+          }
+
+          if (avatarBuffer && avatarBuffer.length > 0) {
+            const type = imageType(avatarBuffer)?.mime || "image/jpeg";
+            return {
+              ...user,
+              avatar: `data:${type};base64,${avatarBuffer.toString("base64")}`,
+            };
+          } else {
+            return { ...user, avatar: null };
+          }
         } catch (err) {
           console.error("Error processing avatar for user", user.id, err);
           return { ...user, avatar: null };
