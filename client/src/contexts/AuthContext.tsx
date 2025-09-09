@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { type User } from "../models/Messages";
-const baseURL = import.meta.env.VITE_API_BASE;
+const baseURL =
+  import.meta.env.VITE_API_BASE || "https://vaatsip-web.onrender.com/api";
 
 interface AuthContextType {
   isLoggedIn: boolean;

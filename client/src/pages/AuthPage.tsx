@@ -17,7 +17,8 @@ interface Cred {
   password: string;
 }
 
-const baseURL = import.meta.env.VITE_API_BASE;
+const baseURL =
+  import.meta.env.VITE_API_BASE || "https://vaatsip-web.onrender.com/api";
 
 function AuthPage() {
   const { isLoggedIn, checkAuthStatus } = useAuth();

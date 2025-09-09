@@ -448,7 +448,7 @@ function Content({
                 <div key={date} className="space-y-4">
                   <div className="flex justify-center">
                     <span className="bg-white px-4 py-1.5 rounded-full text-xs text-gray-600 shadow-sm border border-gray-200 font-medium">
-                      {formatDate(dayMessages[0].createdAt)}
+                      {formatDate(dayMessages[0]!.createdAt)}
                     </span>
                   </div>
 
@@ -460,9 +460,11 @@ function Content({
                       );
                       const isConsecutive =
                         index > 0 &&
-                        dayMessages[index - 1].senderId === msg.senderId &&
+                        dayMessages[index - 1]!.senderId === msg.senderId &&
                         new Date(msg.createdAt).getTime() -
-                          new Date(dayMessages[index - 1].createdAt).getTime() <
+                          new Date(
+                            dayMessages[index - 1]!.createdAt
+                          ).getTime() <
                           300000;
 
                       return (

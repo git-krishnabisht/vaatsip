@@ -32,7 +32,8 @@ function Sidebar({
   const { receiver_id } = useParams<{ receiver_id: string }>();
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
-  const baseURL = import.meta.env.VITE_API_BASE;
+  const baseURL =
+    import.meta.env.VITE_API_BASE || "https://vaatsip-web.onrender.com/api";
 
   // Fetch users and conversation data
   const fetchConversationData = useCallback(async () => {

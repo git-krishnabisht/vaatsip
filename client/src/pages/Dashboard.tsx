@@ -136,7 +136,7 @@ function Dashboard() {
     // Update the recent message for sidebar
     if (updatedMessages.length > 0) {
       const latestMessage = updatedMessages[updatedMessages.length - 1];
-      setRecentMessage(latestMessage);
+      setRecentMessage(latestMessage!);
     }
   };
 

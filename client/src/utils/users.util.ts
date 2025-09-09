@@ -4,7 +4,8 @@ export interface User {
   avatar: string | null;
 }
 
-const baseURL = import.meta.env.VITE_API_BASE;
+const baseURL =
+  import.meta.env.VITE_API_BASE || "https://vaatsip-web.onrender.com/api";
 
 export const getUsers = async (): Promise<User[]> => {
   const res = await fetch(`${baseURL}/users/get-users`, {

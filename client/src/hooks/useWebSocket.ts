@@ -7,7 +7,9 @@ export interface WebSocketMessage {
   [key: string]: any;
 }
 
-const ws_baseURL = import.meta.env.VITE_WS_API_BASE;
+// Better environment variable handling
+const ws_baseURL =
+  import.meta.env.VITE_WS_API_BASE || "wss://vaatsip-web.onrender.com/ws";
 
 export interface UseWebSocketReturn {
   isConnected: boolean;
@@ -44,8 +46,9 @@ export function useWebSocket(
   const reconnectDelay = useRef(1000);
 
   const getCookieValue = (name: string): string | null => {
+    if (typeof document === "undefined") return null;
+
     const value = `; ${document.cookie}`;
-    console.log("value: ", value);
     const parts = value.split(`; ${name}=`);
     if (parts.length === 2) {
       return parts.pop()?.split(";").shift() || null;
@@ -57,10 +60,13 @@ export function useWebSocket(
     (data: WebSocketMessage) => {
       switch (data.type) {
         case "connection_established":
-          console.log(
-            "WebSocket connection established for user:",
-            data.userId
-          );
+          // Only log in development
+          if (import.meta.env.DEV) {
+            console.log(
+              "WebSocket connection established for user:",
+              data.userId
+            );
+          }
           break;
 
         case "new_message":
@@ -68,6 +74,7 @@ export function useWebSocket(
             onNewMessage(data.message);
           }
 
+          // Send delivery confirmation
           if (wsRef.current?.readyState === WebSocket.OPEN) {
             wsRef.current.send(
               JSON.stringify({
@@ -102,6 +109,7 @@ export function useWebSocket(
             if (data.isTyping) {
               newMap.set(data.userId, true);
 
+              // Auto-clear typing indicator after 3 seconds
               setTimeout(() => {
                 setTypingUsers((current) => {
                   const updated = new Map(current);
@@ -138,16 +146,20 @@ export function useWebSocket(
 
         case "error":
           console.error("WebSocket error:", data.error);
+          setConnectionStatus("error");
           break;
 
         default:
-          console.log("Unknown WebSocket message type:", data.type);
+          if (import.meta.env.DEV) {
+            console.log("Unknown WebSocket message type:", data.type);
+          }
       }
     },
     [onNewMessage, onMessageSent, onMessageDelivered, onMessageRead]
   );
 
   const connect = useCallback(() => {
+    // Prevent multiple concurrent connections
     if (!user?.id || wsRef.current?.readyState === WebSocket.CONNECTING) {
       return;
     }
@@ -161,64 +173,78 @@ export function useWebSocket(
       return;
     }
 
-    const wsUrl = `${ws_baseURL}?token=${encodeURIComponent(token)}`;
-    wsRef.current = new WebSocket(wsUrl);
+    try {
+      const wsUrl = `${ws_baseURL}?token=${encodeURIComponent(token)}`;
+      wsRef.current = new WebSocket(wsUrl);
 
-    wsRef.current.onopen = () => {
-      console.log("WebSocket connected");
-      setIsConnected(true);
-      setConnectionStatus("connected");
-      reconnectAttempts.current = 0;
-      reconnectDelay.current = 1000;
-
-      if (wsRef.current?.readyState === WebSocket.OPEN) {
-        wsRef.current.send(
-          JSON.stringify({
-            type: "get_online_users",
-          })
-        );
-      }
-
-      heartbeatIntervalRef.current = window.setInterval(() => {
-        if (wsRef.current?.readyState === WebSocket.OPEN) {
-          wsRef.current.send(JSON.stringify({ type: "ping" }));
+      wsRef.current.onopen = () => {
+        if (import.meta.env.DEV) {
+          console.log("WebSocket connected");
         }
-      }, 30000);
-    };
+        setIsConnected(true);
+        setConnectionStatus("connected");
+        reconnectAttempts.current = 0;
+        reconnectDelay.current = 1000;
 
-    wsRef.current.onmessage = (event) => {
-      try {
-        const data: WebSocketMessage = JSON.parse(event.data);
-        handleWebSocketMessage(data);
-      } catch (error) {
-        console.error("Error parsing WebSocket message:", error);
-      }
-    };
+        // Request online users list
+        if (wsRef.current?.readyState === WebSocket.OPEN) {
+          wsRef.current.send(
+            JSON.stringify({
+              type: "get_online_users",
+            })
+          );
+        }
 
-    wsRef.current.onclose = (event) => {
-      console.log("WebSocket disconnected:", event.code, event.reason);
-      setIsConnected(false);
-      setConnectionStatus("disconnected");
+        // Set up heartbeat
+        heartbeatIntervalRef.current = window.setInterval(() => {
+          if (wsRef.current?.readyState === WebSocket.OPEN) {
+            wsRef.current.send(JSON.stringify({ type: "ping" }));
+          }
+        }, 30000);
+      };
 
-      if (heartbeatIntervalRef.current) {
-        window.clearInterval(heartbeatIntervalRef.current);
-        heartbeatIntervalRef.current = null;
-      }
+      wsRef.current.onmessage = (event) => {
+        try {
+          const data: WebSocketMessage = JSON.parse(event.data);
+          handleWebSocketMessage(data);
+        } catch (error) {
+          console.error("Error parsing WebSocket message:", error);
+        }
+      };
 
-      if (
-        event.code !== 1000 &&
-        reconnectAttempts.current < maxReconnectAttempts
-      ) {
-        attemptReconnect();
-      } else if (reconnectAttempts.current >= maxReconnectAttempts) {
+      wsRef.current.onclose = (event) => {
+        if (import.meta.env.DEV) {
+          console.log("WebSocket disconnected:", event.code, event.reason);
+        }
+        setIsConnected(false);
+        setConnectionStatus("disconnected");
+
+        // Clear heartbeat
+        if (heartbeatIntervalRef.current) {
+          window.clearInterval(heartbeatIntervalRef.current);
+          heartbeatIntervalRef.current = null;
+        }
+
+        // Attempt reconnection for non-normal closures
+        if (
+          event.code !== 1000 && // Normal closure
+          event.code !== 1001 && // Going away
+          reconnectAttempts.current < maxReconnectAttempts
+        ) {
+          attemptReconnect();
+        } else if (reconnectAttempts.current >= maxReconnectAttempts) {
+          setConnectionStatus("error");
+        }
+      };
+
+      wsRef.current.onerror = (error) => {
+        console.error("WebSocket error:", error);
         setConnectionStatus("error");
-      }
-    };
-
-    wsRef.current.onerror = (error) => {
-      console.error("WebSocket error:", error);
+      };
+    } catch (error) {
+      console.error("Failed to create WebSocket connection:", error);
       setConnectionStatus("error");
-    };
+    }
   }, [user?.id, handleWebSocketMessage]);
 
   const attemptReconnect = useCallback(() => {
@@ -229,9 +255,11 @@ export function useWebSocket(
     }
 
     reconnectAttempts.current++;
-    console.log(
-      `Attempting to reconnect... (${reconnectAttempts.current}/${maxReconnectAttempts})`
-    );
+    if (import.meta.env.DEV) {
+      console.log(
+        `Attempting to reconnect... (${reconnectAttempts.current}/${maxReconnectAttempts})`
+      );
+    }
 
     reconnectTimeoutRef.current = window.setTimeout(() => {
       connect();
@@ -246,22 +274,27 @@ export function useWebSocket(
         !wsRef.current ||
         wsRef.current.readyState !== WebSocket.OPEN
       ) {
-        console.error("WebSocket not connected");
+        console.error("WebSocket not connected - cannot send message");
         return;
       }
 
       const tempId = `temp_${Date.now()}_${Math.random()}`;
 
-      wsRef.current.send(
-        JSON.stringify({
-          type: "send_message",
-          receiverId,
-          content,
-          tempId,
-        })
-      );
+      try {
+        wsRef.current.send(
+          JSON.stringify({
+            type: "send_message",
+            receiverId,
+            content,
+            tempId,
+          })
+        );
 
-      return tempId;
+        return tempId;
+      } catch (error) {
+        console.error("Failed to send message:", error);
+        return;
+      }
     },
     [isConnected]
   );
@@ -275,12 +308,16 @@ export function useWebSocket(
       )
         return;
 
-      wsRef.current.send(
-        JSON.stringify({
-          type: "typing_start",
-          receiverId,
-        })
-      );
+      try {
+        wsRef.current.send(
+          JSON.stringify({
+            type: "typing_start",
+            receiverId,
+          })
+        );
+      } catch (error) {
+        console.error("Failed to send typing start:", error);
+      }
     },
     [isConnected]
   );
@@ -294,12 +331,16 @@ export function useWebSocket(
       )
         return;
 
-      wsRef.current.send(
-        JSON.stringify({
-          type: "typing_stop",
-          receiverId,
-        })
-      );
+      try {
+        wsRef.current.send(
+          JSON.stringify({
+            type: "typing_stop",
+            receiverId,
+          })
+        );
+      } catch (error) {
+        console.error("Failed to send typing stop:", error);
+      }
     },
     [isConnected]
   );
@@ -310,6 +351,7 @@ export function useWebSocket(
     }
 
     return () => {
+      // Cleanup on unmount
       if (reconnectTimeoutRef.current) {
         window.clearTimeout(reconnectTimeoutRef.current);
         reconnectTimeoutRef.current = null;
