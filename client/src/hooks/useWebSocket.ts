@@ -17,13 +17,22 @@ const getWebSocketURL = () => {
   const apiBase =
     import.meta.env.VITE_API_BASE || "https://vaatsip-web.onrender.com/api";
 
-  if (apiBase.includes("localhost")) {
+  // Check for localhost development
+  if (apiBase.includes("localhost") || apiBase.includes("127.0.0.1")) {
     return "ws://localhost:50136/ws";
-  } else if (apiBase.includes("onrender.com")) {
+  } 
+  // Check for production deployment
+  else if (apiBase.includes("onrender.com")) {
+    const baseUrl = apiBase.replace("/api", "").replace("https://", "wss://");
+    return `${baseUrl}/ws`;
+  }
+  // Check for Vercel deployment
+  else if (apiBase.includes("vercel.app")) {
     const baseUrl = apiBase.replace("/api", "").replace("https://", "wss://");
     return `${baseUrl}/ws`;
   }
 
+  // Default fallback
   return "wss://vaatsip-web.onrender.com/ws";
 };
 
@@ -241,6 +250,12 @@ export function useWebSocket(
     }
 
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      console.log("WebSocket already connected");
+      return;
+    }
+
+    // Close existing connection if any
+    if (wsRef.current) {
       console.log("Closing existing WebSocket connection");
       wsRef.current.close();
     }
@@ -314,15 +329,20 @@ export function useWebSocket(
           heartbeatIntervalRef.current = null;
         }
 
+        // Only attempt reconnection for unexpected disconnections
         if (
           event.code !== 1000 && // Normal close
           event.code !== 1001 && // Going away
+          event.code !== 1005 && // No status code
           reconnectAttempts.current < maxReconnectAttempts
         ) {
+          console.log(`WebSocket closed unexpectedly (code: ${event.code}), attempting reconnection...`);
           attemptReconnect();
         } else if (reconnectAttempts.current >= maxReconnectAttempts) {
           console.error("Max reconnection attempts reached");
           setConnectionStatus("error");
+        } else {
+          console.log("WebSocket closed normally, no reconnection needed");
         }
       };
 
@@ -362,21 +382,25 @@ export function useWebSocket(
         wsRef.current.readyState !== WebSocket.OPEN
       ) {
         console.error("WebSocket not connected, cannot send message");
-        return;
+        return undefined;
       }
 
       const tempId = `temp_${Date.now()}_${Math.random()}`;
 
-      wsRef.current.send(
-        JSON.stringify({
-          type: "send_message",
-          receiverId,
-          content,
-          tempId,
-        })
-      );
-
-      return tempId;
+      try {
+        wsRef.current.send(
+          JSON.stringify({
+            type: "send_message",
+            receiverId,
+            content,
+            tempId,
+          })
+        );
+        return tempId;
+      } catch (error) {
+        console.error("Failed to send message via WebSocket:", error);
+        return undefined;
+      }
     },
     [isConnected]
   );

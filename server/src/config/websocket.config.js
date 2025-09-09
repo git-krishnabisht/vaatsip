@@ -25,11 +25,15 @@ class WebSocketManager {
                   "https://vaatsip-web.vercel.app",
                   "https://vaatsip-web-git-master-krishna-projects.vercel.app",
                   "https://vaatsip-web-krishna-projects.vercel.app",
+                  ...(process.env.FRONTEND_URI ? [process.env.FRONTEND_URI] : []),
                 ]
               : [
                   "http://localhost:5173",
                   "http://localhost:3000",
                   "http://localhost:4173",
+                  "http://127.0.0.1:4173",
+                  "http://127.0.0.1:5173",
+                  ...(process.env.FRONTEND_URI ? [process.env.FRONTEND_URI] : []),
                 ];
 
           if (origin) {
@@ -149,17 +153,18 @@ class WebSocketManager {
         this.broadcastUserStatus(user.id, "offline");
       });
 
-      // Fixed: Enhanced error handling
+      // Enhanced error handling
       ws.on("error", (error) => {
         console.error(`WebSocket error for user ${user.id}:`, error);
 
-        // Send error info to client before cleanup
+        // Send error info to client before cleanup if possible
         if (ws.readyState === WebSocket.OPEN) {
           try {
             ws.send(
               JSON.stringify({
                 type: "connection_error",
                 error: "Connection lost, please refresh",
+                timestamp: new Date().toISOString(),
               })
             );
           } catch (e) {
@@ -167,11 +172,15 @@ class WebSocketManager {
           }
         }
 
+        // Clean up connection
         this.connections.delete(user.id);
         this.userStatus.set(user.id, {
           status: "offline",
           lastSeen: new Date(),
         });
+
+        // Broadcast user offline status
+        this.broadcastUserStatus(user.id, "offline");
       });
 
       // Enhanced heartbeat with better error handling
@@ -286,6 +295,21 @@ class WebSocketManager {
         return;
       }
 
+      // Validate receiver exists
+      const receiver = await prisma.user.findUnique({
+        where: { id: receiverId },
+        select: { id: true, name: true, avatar: true },
+      });
+
+      if (!receiver) {
+        this.sendToUser(senderId, {
+          type: "message_error",
+          tempId,
+          error: "Receiver not found",
+        });
+        return;
+      }
+
       console.log(
         `💬 Message from ${senderId} to ${receiverId}: ${content.substring(
           0,
@@ -341,7 +365,7 @@ class WebSocketManager {
       console.error(`Error sending message from ${senderId}:`, error);
       this.sendToUser(senderId, {
         type: "message_error",
-        tempId: message.tempId,
+        tempId: message.tempId || "unknown",
         error: "Failed to send message",
       });
     }
