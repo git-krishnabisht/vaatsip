@@ -274,35 +274,17 @@ export function useWebSocket(
     console.log("🔗 Setting connection status to 'connecting'");
 
     const token = getJWTToken();
-    if (!token) {
-      console.error("❌ No JWT token found for WebSocket connection");
-      setConnectionStatus("error");
-
-      if (reconnectAttempts.current < 3) {
-        reconnectAttempts.current++;
-        const delay = Math.min(
-          1000 * Math.pow(2, reconnectAttempts.current),
-          8000
-        );
-        console.log(
-          `🔄 Retrying WebSocket connection in ${delay}ms (attempt ${reconnectAttempts.current}/3)`
-        );
-
-        setTimeout(() => {
-          connect();
-        }, delay);
-      } else {
-        console.error("❌ Max token retry attempts reached");
-      }
-      return;
-    }
+    const wsUrl = token
+      ? `${ws_baseURL}?token=${encodeURIComponent(token)}`
+      : ws_baseURL;
 
     console.log("🚀 Attempting WebSocket connection with:");
-    console.log("  - WebSocket URL:", ws_baseURL);
-    console.log("  - Token preview:", token.substring(0, 30) + "...");
+    console.log("  - WebSocket URL:", wsUrl);
+    console.log(
+      "  - Auth mode:",
+      token ? "query-token" : "cookie (no token found in document.cookie)"
+    );
     console.log("  - User ID:", user.id);
-
-    const wsUrl = `${ws_baseURL}?token=${encodeURIComponent(token)}`;
 
     try {
       wsRef.current = new WebSocket(wsUrl);
