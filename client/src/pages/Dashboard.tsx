@@ -17,7 +17,7 @@ function EmptyState() {
           className="w-80 h-80 text-gray-300"
           viewBox="0 0 320 320"
           fill="none"
-          xmlns="http://www.w3.org/2000/svg"
+          xmlns="https://www.w3.org/2000/svg"
         >
           <circle cx="160" cy="160" r="120" fill="currentColor" opacity="0.1" />
           <path

@@ -1,4 +1,6 @@
 import express from "express";
+import fs from "fs";
+import https from "https";
 import http from "http";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -10,7 +12,7 @@ import { oauthEntry } from "./oauth/oauth-entry.js";
 import { oauthCallback } from "./oauth/oauth-callback.js";
 import wsManager from "./config/websocket.config.js";
 
-dotenv.config();
+dotenv.config({ path: `.env.${process.env.NODE_ENV}` });
 
 const requiredEnvVars = [
   "JWT_SECRET",
@@ -28,7 +30,18 @@ for (const envVar of requiredEnvVars) {
 }
 
 const app = express();
-const server = http.createServer(app);
+
+let server;
+
+if (process.env.NODE_ENV === "development") {
+  const key = fs.readFileSync("./certs/localhost-key.pem");
+  const cert = fs.readFileSync("./certs/localhost.pem");
+  server = https.createServer({ key, cert }, app);
+  console.log("Running in DEV mode with HTTPS + local certs");
+} else {
+  server = http.createServer(app);
+  console.log("Running in PROD mode with plain HTTP (SSL handled by platform)");
+}
 
 const PORT = process.env.PORT || 50136;
 export const REDIRECT_URI = process.env.GOOGLE_AUTH_CALLBACK;
@@ -45,9 +58,9 @@ const allowedOrigins =
         ...(process.env.FRONTEND_URI ? [process.env.FRONTEND_URI] : []),
       ]
     : [
-        "http://localhost:5173",
-        "http://localhost:3000",
-        "http://localhost:4173",
+        "https://localhost:5173",
+        "https://localhost:3000",
+        "https://localhost:4173",
       ];
 
 const corsOptions = {

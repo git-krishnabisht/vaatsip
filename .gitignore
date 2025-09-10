@@ -29,3 +29,4 @@ client/public
 .vscode
 client/.env.production
 server/.env.production
+certs

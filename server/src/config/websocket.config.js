@@ -1,4 +1,4 @@
-import { WebSocketServer, WebSocket } from "ws"; // Fixed: Added WebSocket import
+import { WebSocketServer, WebSocket } from "ws";
 import jwt from "jsonwebtoken";
 import url from "url";
 import prisma from "../utils/prisma.util.js";
@@ -28,11 +28,11 @@ class WebSocketManager {
                   ...(process.env.FRONTEND_URI ? [process.env.FRONTEND_URI] : []),
                 ]
               : [
-                  "http://localhost:5173",
-                  "http://localhost:3000",
-                  "http://localhost:4173",
-                  "http://127.0.0.1:4173",
-                  "http://127.0.0.1:5173",
+                  "https://localhost:5173",
+                  "https://localhost:3000",
+                  "https://localhost:4173",
+                  "https://127.0.0.1:4173",
+                  "https://127.0.0.1:5173",
                   ...(process.env.FRONTEND_URI ? [process.env.FRONTEND_URI] : []),
                 ];
 

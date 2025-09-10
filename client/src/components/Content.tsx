@@ -43,7 +43,6 @@ function Content({
     sendTypingStop,
     onlineUsers,
     typingUsers,
-    connectionStatus,
   } = useWebSocket(
     useCallback(
       (newMessage: Message) => {
@@ -156,8 +155,10 @@ function Content({
     }
 
     const tempId = `temp_${Date.now()}_${Math.random()}`;
-    const tempMessageId = parseInt(tempId.replace(/[^0-9]/g, "").substring(0, 10));
-    
+    const tempMessageId = parseInt(
+      tempId.replace(/[^0-9]/g, "").substring(0, 10)
+    );
+
     const tempMessage: Message = {
       messageId: tempMessageId,
       senderId: currentUser!,
@@ -179,9 +180,7 @@ function Content({
 
     // Add temporary message to local state
     setLocalMessages((prev) => {
-      const exists = prev.some(
-        (msg) => msg.messageId === tempMessageId
-      );
+      const exists = prev.some((msg) => msg.messageId === tempMessageId);
       if (exists) return prev;
       return [...prev, tempMessage];
     });
@@ -194,7 +193,9 @@ function Content({
     if (!sentTempId) {
       console.error("Failed to send message via WebSocket");
       // Remove the temporary message if sending failed
-      setLocalMessages((prev) => prev.filter(msg => msg.messageId !== tempMessageId));
+      setLocalMessages((prev) =>
+        prev.filter((msg) => msg.messageId !== tempMessageId)
+      );
       setPendingMessages((prev) => {
         const updated = new Map(prev);
         updated.delete(tempId);
@@ -362,24 +363,6 @@ function Content({
           isOnline={isUserOnline}
           isTyping={isUserTyping}
         />
-        
-        {/* Connection Status Indicator */}
-        {connectionStatus !== "connected" && (
-          <div className="px-4 py-2 bg-yellow-50 border-b border-yellow-200">
-            <div className="flex items-center space-x-2 text-sm">
-              <div className={`w-2 h-2 rounded-full ${
-                connectionStatus === "connecting" ? "bg-yellow-500 animate-pulse" :
-                connectionStatus === "error" ? "bg-red-500" :
-                "bg-gray-400"
-              }`}></div>
-              <span className="text-yellow-800">
-                {connectionStatus === "connecting" ? "Connecting..." :
-                 connectionStatus === "error" ? "Connection lost. Trying to reconnect..." :
-                 "Disconnected"}
-              </span>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Messages Area */}

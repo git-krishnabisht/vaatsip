@@ -28,7 +28,7 @@ export const oauthCallback = async (req, res) => {
     return res.redirect(
       process.env.NODE_ENV === "production"
         ? `${process.env.FRONTEND_URI}/auth-google?error=auth_failed`
-        : "http://localhost:4173/auth-google?error=auth_failed"
+        : "https://localhost:5173/auth-google?error=auth_failed"
     );
   }
 
@@ -111,7 +111,7 @@ export const oauthCallback = async (req, res) => {
     const redirectUrl =
       process.env.NODE_ENV === "production"
         ? process.env.FRONTEND_URI
-        : "http://localhost:4173";
+        : "https://localhost:5173";
 
     console.log(`Redirecting to ${redirectUrl}`);
 
@@ -122,7 +122,7 @@ export const oauthCallback = async (req, res) => {
     const errorRedirectUrl =
       process.env.NODE_ENV === "production"
         ? `${process.env.FRONTEND_URI}/auth-google?error=auth_failed`
-        : "http://localhost:4173/auth-google?error=auth_failed";
+        : "https://localhost:5173/auth-google?error=auth_failed";
 
     return res.redirect(errorRedirectUrl);
   }
