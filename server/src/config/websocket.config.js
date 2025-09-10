@@ -42,7 +42,11 @@ class WebSocketManager {
                     : []),
                 ];
 
-          console.log("allowed origin: ", allowedOrigins);
+          console.log("WebSocket CORS check - Origin:", origin);
+          console.log(
+            "WebSocket CORS check - Allowed origins:",
+            allowedOrigins
+          );
 
           let originAllowed = false;
           if (origin) {
@@ -53,61 +57,82 @@ class WebSocketManager {
               (origin.includes("-git-") && origin.endsWith(".vercel.app"));
 
             if (!originAllowed) {
-              console.log(`WebSocket blocked origin: ${origin}`);
-              console.log(`Allowed origins:`, allowedOrigins);
+              console.log(`❌ WebSocket blocked origin: ${origin}`);
               return false;
             }
           }
 
-          // Extract token from query parameters or cookies
           const parsedUrl = url.parse(info.req.url, true);
           let token = parsedUrl.query.token;
 
+          console.log(
+            "WebSocket Auth - Query token:",
+            token ? "Found" : "Not found"
+          );
+          console.log(
+            "WebSocket Auth - Query params:",
+            Object.keys(parsedUrl.query)
+          );
+
           if (!token) {
-            const cookies = this.parseCookies(info.req.headers.cookie);
-            token =
-              cookies.jwt ||
-              cookies.token ||
-              cookies.authToken ||
-              cookies.access_token;
+            const cookies = this.parseWebSocketCookies(info.req.headers.cookie);
+            console.log(
+              "WebSocket Auth - Available cookies:",
+              Object.keys(cookies)
+            );
+
+            const tokenPriority = ["jwt", "token", "access_token", "authToken"];
+
+            for (const cookieName of tokenPriority) {
+              if (cookies[cookieName]) {
+                token = cookies[cookieName];
+                console.log(
+                  `✅ WebSocket token found in cookie: ${cookieName}`
+                );
+                break;
+              }
+            }
 
             if (!token) {
-              console.log("WebSocket: No token provided in query or cookies");
-              console.log("Query params:", parsedUrl.query);
-              console.log("Available cookies:", Object.keys(cookies));
+              console.log("❌ WebSocket: No token found in query or cookies");
               console.log("Cookie header:", info.req.headers.cookie);
               return false;
             }
           }
 
-          // Handle URL encoded tokens
-          if (typeof token === "string" && token.includes("%")) {
-            token = decodeURIComponent(token);
-          }
+          token = this.validateAndCleanToken(token);
 
-          // Additional token format validation
-          if (
-            !token ||
-            typeof token !== "string" ||
-            token.split(".").length !== 3
-          ) {
-            console.log("WebSocket: Invalid JWT token format");
-            console.log(
-              "Token preview:",
-              token ? token.substring(0, 20) + "..." : "null"
-            );
+          if (!token) {
+            console.log("❌ WebSocket: Token validation failed");
             return false;
           }
 
           console.log(
-            `WebSocket auth attempt for token: ${token.substring(0, 20)}...`
+            `WebSocket auth attempt with token: ${token.substring(0, 20)}...`
           );
 
-          // Verify JWT token
-          const decoded = jwt.verify(token, process.env.JWT_SECRET);
+          let decoded;
+          try {
+            decoded = jwt.verify(token, process.env.JWT_SECRET, {
+              algorithms: ["HS256"],
+            });
+          } catch (jwtError) {
+            console.error(
+              "❌ WebSocket JWT verification failed:",
+              jwtError.message
+            );
 
-          if (!decoded.id || !decoded.email) {
-            console.log("WebSocket: Invalid token payload", decoded);
+            if (jwtError.name === "TokenExpiredError") {
+              console.error("Token expired at:", jwtError.expiredAt);
+            } else if (jwtError.name === "JsonWebTokenError") {
+              console.error("Invalid token signature or format");
+            }
+
+            return false;
+          }
+
+          if (!decoded || !decoded.id || !decoded.email) {
+            console.log("❌ WebSocket: Invalid token payload", decoded);
             return false;
           }
 
@@ -118,16 +143,7 @@ class WebSocketManager {
           );
           return true;
         } catch (error) {
-          console.error("❌ WebSocket auth failed:", error.message);
-
-          if (error.name === "TokenExpiredError") {
-            console.error("Token has expired at:", error.expiredAt);
-          } else if (error.name === "JsonWebTokenError") {
-            console.error("Invalid token format or signature");
-          } else if (error.name === "NotBeforeError") {
-            console.error("Token not active yet");
-          }
-
+          console.error("❌ WebSocket auth error:", error);
           return false;
         }
       },
@@ -138,10 +154,9 @@ class WebSocketManager {
 
       try {
         console.log(
-          `🔗 New WebSocket connection attempt for user ${user.id} (${user.email})`
+          `🔗 WebSocket connection established for user ${user.id} (${user.email})`
         );
 
-        // Close any existing connection for this user to prevent duplicates
         if (this.connections.has(user.id)) {
           const existingWs = this.connections.get(user.id);
           if (existingWs.readyState === WebSocket.OPEN) {
@@ -150,7 +165,6 @@ class WebSocketManager {
           }
         }
 
-        // Store new connection
         this.connections.set(user.id, ws);
         this.userStatus.set(user.id, {
           status: "online",
@@ -162,33 +176,26 @@ class WebSocketManager {
           `✅ User ${user.id} (${user.email}) connected via WebSocket`
         );
 
-        // Send connection confirmation
         this.sendToUser(user.id, {
           type: "connection_established",
           userId: user.id,
           timestamp: new Date().toISOString(),
         });
 
-        // Broadcast user online status
         this.broadcastUserStatus(user.id, "online");
 
         ws.on("message", async (data) => {
           try {
             const message = JSON.parse(data.toString());
-
-            // Validate message structure
             if (!message || typeof message !== "object" || !message.type) {
               throw new Error("Invalid message structure");
             }
-
             await this.handleMessage(user.id, message);
           } catch (error) {
             console.error(
               `Error handling WebSocket message from user ${user.id}:`,
               error
             );
-
-            // Send specific error back to client
             this.sendToUser(user.id, {
               type: "error",
               error: error.message || "Invalid message format",
@@ -197,59 +204,34 @@ class WebSocketManager {
           }
         });
 
-        // Enhanced close handling
         ws.on("close", (code, reason) => {
           console.log(
             `❌ User ${
               user.id
             } disconnected (code: ${code}, reason: ${reason?.toString()})`
           );
-
           this.connections.delete(user.id);
           this.userStatus.set(user.id, {
             status: "offline",
             lastSeen: new Date(),
           });
-
           this.broadcastUserStatus(user.id, "offline");
         });
 
-        // Enhanced error handling
         ws.on("error", (error) => {
           console.error(`WebSocket error for user ${user.id}:`, error);
-
-          // Attempt to send error notification if connection is still open
-          if (ws.readyState === WebSocket.OPEN) {
-            try {
-              ws.send(
-                JSON.stringify({
-                  type: "connection_error",
-                  error: "Connection encountered an error",
-                  timestamp: new Date().toISOString(),
-                })
-              );
-            } catch (e) {
-              console.error("Failed to send error message:", e);
-            }
-          }
-
-          // Clean up connection
           this.connections.delete(user.id);
           this.userStatus.set(user.id, {
             status: "offline",
             lastSeen: new Date(),
           });
-
           this.broadcastUserStatus(user.id, "offline");
         });
 
-        // Enhanced heartbeat system
         const heartbeat = setInterval(() => {
           if (ws.readyState === WebSocket.OPEN) {
             try {
               ws.ping();
-
-              // Update last seen time
               this.userStatus.set(user.id, {
                 status: "online",
                 lastSeen: new Date(),
@@ -263,7 +245,6 @@ class WebSocketManager {
           }
         }, 30000);
 
-        // Handle pong responses
         ws.on("pong", () => {
           this.userStatus.set(user.id, {
             status: "online",
@@ -271,26 +252,8 @@ class WebSocketManager {
           });
         });
 
-        // Clean up heartbeat on close
         ws.on("close", () => {
           clearInterval(heartbeat);
-        });
-
-        // Set connection timeout for inactive connections
-        const connectionTimeout = setTimeout(() => {
-          if (ws.readyState === WebSocket.OPEN) {
-            console.log(`Closing inactive connection for user ${user.id}`);
-            ws.close(1000, "Connection timeout");
-          }
-        }, 5 * 60 * 1000); // 5 minutes timeout
-
-        // Clear timeout on any activity
-        ws.on("message", () => {
-          clearTimeout(connectionTimeout);
-        });
-
-        ws.on("close", () => {
-          clearTimeout(connectionTimeout);
         });
       } catch (error) {
         console.error(
@@ -301,7 +264,6 @@ class WebSocketManager {
       }
     });
 
-    // Handle server-level errors
     this.wss.on("error", (error) => {
       console.error("WebSocket Server Error:", error);
     });
@@ -309,8 +271,7 @@ class WebSocketManager {
     console.log("✅ WebSocket server initialized successfully");
   }
 
-  // Enhanced cookie parsing
-  parseCookies(cookieHeader) {
+  parseWebSocketCookies(cookieHeader) {
     const cookies = {};
 
     if (!cookieHeader) {
@@ -326,27 +287,54 @@ class WebSocketManager {
         if (key && value) {
           try {
             cookies[key] = decodeURIComponent(value);
-          } catch (e) {
-            // If decoding fails, use raw value
+          } catch (decodeError) {
             cookies[key] = value;
           }
         }
       });
     } catch (error) {
-      console.error("Error parsing cookies:", error);
+      console.error("Error parsing WebSocket cookies:", error);
     }
 
     return cookies;
   }
 
+  validateAndCleanToken(token) {
+    if (!token || typeof token !== "string") {
+      return null;
+    }
+
+    if (token.includes("%")) {
+      try {
+        token = decodeURIComponent(token);
+      } catch (error) {
+        console.error("Failed to decode token:", error);
+        return null;
+      }
+    }
+
+    if (token.split(".").length !== 3) {
+      console.log(
+        "Invalid JWT format - expected 3 parts, got:",
+        token.split(".").length
+      );
+      return null;
+    }
+
+    if (token.length < 100) {
+      console.log("Token too short, likely invalid");
+      return null;
+    }
+
+    return token;
+  }
+
   async handleMessage(senderId, message) {
     try {
-      // Enhanced message validation
       if (!message || typeof message !== "object" || !message.type) {
         throw new Error("Invalid message format: missing type");
       }
 
-      // Update user activity
       this.userStatus.set(senderId, {
         status: "online",
         lastSeen: new Date(),
@@ -402,7 +390,6 @@ class WebSocketManager {
     try {
       const { receiverId, content, tempId } = message;
 
-      // Enhanced validation
       if (!receiverId || typeof receiverId !== "number") {
         throw new Error("Invalid receiver ID");
       }
@@ -419,7 +406,6 @@ class WebSocketManager {
         throw new Error("Message too long");
       }
 
-      // Validate receiver exists
       const receiver = await prisma.user.findUnique({
         where: { id: receiverId },
         select: { id: true, name: true, avatar: true },
@@ -441,7 +427,6 @@ class WebSocketManager {
         )}...`
       );
 
-      // Save message to database with transaction
       const newMessage = await prisma.message.create({
         data: {
           senderId,
@@ -461,7 +446,6 @@ class WebSocketManager {
         },
       });
 
-      // Send confirmation to sender
       this.sendToUser(senderId, {
         type: "message_sent",
         tempId,
@@ -469,7 +453,6 @@ class WebSocketManager {
         timestamp: new Date().toISOString(),
       });
 
-      // Send message to receiver if online
       if (this.isUserOnline(receiverId)) {
         const sent = this.sendToUser(receiverId, {
           type: "new_message",
@@ -614,14 +597,11 @@ class WebSocketManager {
       return true;
     } catch (error) {
       console.error(`Failed to send message to user ${userId}:`, error);
-
-      // Clean up broken connection
       this.connections.delete(userId);
       this.userStatus.set(userId, {
         status: "offline",
         lastSeen: new Date(),
       });
-
       return false;
     }
   }
@@ -643,8 +623,6 @@ class WebSocketManager {
             `Failed to broadcast status to user ${connUserId}:`,
             error
           );
-
-          // Clean up broken connection
           this.connections.delete(connUserId);
           this.userStatus.set(connUserId, {
             status: "offline",
@@ -664,7 +642,6 @@ class WebSocketManager {
     return this.userStatus.get(userId) || { status: "offline", lastSeen: null };
   }
 
-  // Enhanced broadcast with error handling
   broadcast(message, excludeUserId = null) {
     const disconnectedUsers = [];
 
@@ -684,7 +661,6 @@ class WebSocketManager {
       }
     });
 
-    // Clean up disconnected users
     disconnectedUsers.forEach((userId) => {
       this.connections.delete(userId);
       this.userStatus.set(userId, {
@@ -694,7 +670,6 @@ class WebSocketManager {
     });
   }
 
-  // Utility method to get connection stats
   getConnectionStats() {
     const totalConnections = this.connections.size;
     const onlineUsers = Array.from(this.userStatus.values()).filter(
@@ -708,7 +683,6 @@ class WebSocketManager {
     };
   }
 
-  // Cleanup method for maintenance
   cleanupStaleConnections() {
     const staleConnections = [];
 

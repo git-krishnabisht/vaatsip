@@ -11,20 +11,48 @@ const getCookieOptions = () => {
   console.log("Frontend URI:", process.env.FRONTEND_URI);
 
   const options = {
-    httpOnly: false, // Allow JavaScript access for WebSocket authentication
-    secure: isProduction, // HTTPS only in production
-    sameSite: isProduction ? "none" : "lax", // Allow cross-site in production
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    path: "/", // Available on all paths
+    httpOnly: false, 
+    secure: isProduction, 
+    sameSite: isProduction ? "none" : "lax", 
+    maxAge: 7 * 24 * 60 * 60 * 1000, 
+    path: "/", 
   };
 
-  // Only set domain in production if specified
+  
   if (isProduction && process.env.COOKIE_DOMAIN) {
     options.domain = process.env.COOKIE_DOMAIN;
   }
 
   console.log("Final cookie options:", options);
   return options;
+};
+
+
+const clearAuthCookies = (res) => {
+  const cookieOptions = getCookieOptions();
+  const cookiesToClear = ["jwt", "authToken", "token", "access_token"];
+
+  cookiesToClear.forEach((cookieName) => {
+    
+    res.cookie(cookieName, "", {
+      ...cookieOptions,
+      expires: new Date(0),
+      maxAge: 0,
+    });
+
+    
+    res.clearCookie(cookieName, { path: "/" });
+
+    
+    if (process.env.NODE_ENV === "production" && process.env.COOKIE_DOMAIN) {
+      res.clearCookie(cookieName, {
+        path: "/",
+        domain: process.env.COOKIE_DOMAIN,
+        secure: true,
+        sameSite: "none",
+      });
+    }
+  });
 };
 
 export const sign_up = async (req, res) => {
@@ -67,16 +95,17 @@ export const sign_up = async (req, res) => {
     const token = jwtService.generateJWT({ id: user.id, email: user.email });
     const cookieOptions = getCookieOptions();
 
-    // Set the primary JWT cookie
+    
     res.cookie("jwt", token, cookieOptions);
 
-    // Set backup cookies with different names for better compatibility
-    res.cookie("authToken", token, { ...cookieOptions, httpOnly: true });
+    
     res.cookie("token", token, cookieOptions);
+    res.cookie("access_token", token, cookieOptions);
 
     console.log(`User ${user.email} signed up successfully`);
     console.log("JWT token length:", token.length);
     console.log("Token preview:", token.substring(0, 20) + "...");
+    console.log("Cookie options used:", cookieOptions);
 
     return res.status(201).json({
       signed_up: true,
@@ -91,6 +120,7 @@ export const sign_up = async (req, res) => {
           cookieSet: true,
           tokenLength: token.length,
           cookieOptions,
+          tokenPreview: token.substring(0, 30) + "...",
         },
       }),
     });
@@ -111,7 +141,7 @@ export const sign_in = async (req, res) => {
     }
 
     const user = await prisma.user.findUnique({
-      where: { email: input.email },
+      where: { email: input.email.toLowerCase() },
     });
 
     if (!user) {
@@ -134,21 +164,22 @@ export const sign_in = async (req, res) => {
       });
     }
 
-    const token = await jwtService.generateJWT({
+    const token = jwtService.generateJWT({
       id: user.id,
       email: user.email,
     });
 
     const cookieOptions = getCookieOptions();
 
-    // Set multiple cookies for better compatibility
+    
     res.cookie("jwt", token, cookieOptions);
-    res.cookie("authToken", token, { ...cookieOptions, httpOnly: true });
     res.cookie("token", token, cookieOptions);
+    res.cookie("access_token", token, cookieOptions);
 
     console.log(`User ${user.email} signed in successfully`);
     console.log("JWT token length:", token.length);
     console.log("Token preview:", token.substring(0, 20) + "...");
+    console.log("Cookie options used:", cookieOptions);
 
     return res.status(200).json({
       signed_in: true,
@@ -163,6 +194,7 @@ export const sign_in = async (req, res) => {
           cookieSet: true,
           tokenLength: token.length,
           cookieOptions,
+          tokenPreview: token.substring(0, 30) + "...",
         },
       }),
     });
@@ -176,30 +208,7 @@ export const sign_in = async (req, res) => {
 
 export const sign_out = async (_req, res) => {
   try {
-    const cookieOptions = getCookieOptions();
-
-    // Clear all authentication cookies
-    const cookiesToClear = ["jwt", "authToken", "token", "access_token"];
-
-    cookiesToClear.forEach((cookieName) => {
-      // Method 1: Set expired date
-      res.cookie(cookieName, "", {
-        ...cookieOptions,
-        expires: new Date(0),
-        maxAge: 0,
-      });
-
-      // Method 2: Use clearCookie with path
-      res.clearCookie(cookieName, { path: "/" });
-
-      // Method 3: Clear with domain if in production
-      if (process.env.NODE_ENV === "production" && process.env.COOKIE_DOMAIN) {
-        res.clearCookie(cookieName, {
-          path: "/",
-          domain: process.env.COOKIE_DOMAIN,
-        });
-      }
-    });
+    clearAuthCookies(res);
 
     console.log("User signed out, all authentication cookies cleared");
 
@@ -221,14 +230,17 @@ export const oauth_signin = async (req, res) => {
   try {
     console.log("=== OAuth Sign In Debug ===");
     console.log("All cookies received:", req.cookies);
+    console.log("Cookie header:", req.headers.cookie);
 
-    // Check for token in multiple cookie names
-    const possibleTokens = ["jwt", "authToken", "token", "access_token"];
+    
+    const possibleTokens = ["jwt", "token", "access_token", "authToken"];
     let token = null;
+    let tokenSource = null;
 
     for (const tokenName of possibleTokens) {
       if (req.cookies[tokenName]) {
         token = req.cookies[tokenName];
+        tokenSource = tokenName;
         console.log(`Found token in cookie: ${tokenName}`);
         break;
       }
@@ -238,6 +250,7 @@ export const oauth_signin = async (req, res) => {
       "JWT token:",
       token ? `${token.substring(0, 20)}...` : "NOT FOUND"
     );
+    console.log("Token source:", tokenSource);
 
     if (!token) {
       console.log("No authentication token found in any cookie");
@@ -245,6 +258,18 @@ export const oauth_signin = async (req, res) => {
         body: {
           signed_in: false,
           message: "No authentication token found",
+        },
+      });
+    }
+
+    
+    if (typeof token !== "string" || token.split(".").length !== 3) {
+      console.log("Invalid JWT token format");
+      clearAuthCookies(res);
+      return res.status(401).json({
+        body: {
+          signed_in: false,
+          message: "Invalid token format",
         },
       });
     }
@@ -263,6 +288,7 @@ export const oauth_signin = async (req, res) => {
 
       if (!user) {
         console.log("User not found in database for decoded token");
+        clearAuthCookies(res);
         return res.status(404).json({
           body: {
             signed_in: false,
@@ -288,18 +314,7 @@ export const oauth_signin = async (req, res) => {
       console.error("JWT verification failed:", jwtError.message);
       console.error("Token that failed:", token.substring(0, 50) + "...");
 
-      // Clear all authentication cookies on token failure
-      const cookieOptions = getCookieOptions();
-      const cookiesToClear = ["jwt", "authToken", "token", "access_token"];
-
-      cookiesToClear.forEach((cookieName) => {
-        res.cookie(cookieName, "", {
-          ...cookieOptions,
-          expires: new Date(0),
-          maxAge: 0,
-        });
-        res.clearCookie(cookieName, { path: "/" });
-      });
+      clearAuthCookies(res);
 
       return res.status(401).json({
         body: {
@@ -317,7 +332,6 @@ export const oauth_signin = async (req, res) => {
   }
 };
 
-// Enhanced OAuth callback with better cookie handling
 export const oauthCallback = async (req, res) => {
   const code = req.query.code;
 
@@ -331,7 +345,7 @@ export const oauthCallback = async (req, res) => {
   }
 
   try {
-    // Exchange code for tokens
+    
     const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -357,7 +371,7 @@ export const oauthCallback = async (req, res) => {
       throw new Error("Missing id_token in response");
     }
 
-    // Verify the ID token
+    
     const { OAuth2Client } = await import("google-auth-library");
     const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -373,7 +387,7 @@ export const oauthCallback = async (req, res) => {
       throw new Error("Missing required user data in payload");
     }
 
-    // Find or create user
+    
     let user = await prisma.user.findUnique({
       where: { email },
     });
@@ -384,7 +398,7 @@ export const oauthCallback = async (req, res) => {
           email,
           avatar: picture || null,
           name,
-          passwordHash: null, // OAuth user
+          passwordHash: null, 
         },
       });
     } else if (picture && user.avatar !== picture) {
@@ -394,19 +408,20 @@ export const oauthCallback = async (req, res) => {
       });
     }
 
-    // Generate JWT token
+    
     const jwtPayload = { id: user.id, email: user.email };
-    const token = await jwtService.generateJWT(jwtPayload);
+    const token = jwtService.generateJWT(jwtPayload);
     const cookieOptions = getCookieOptions();
 
-    // Set multiple cookies for better compatibility
+    
     res.cookie("jwt", token, cookieOptions);
-    res.cookie("authToken", token, { ...cookieOptions, httpOnly: true });
     res.cookie("token", token, cookieOptions);
+    res.cookie("access_token", token, cookieOptions);
 
     console.log(`OAuth successful for user ${user.email}`);
     console.log("JWT token length:", token.length);
     console.log("Token preview:", token.substring(0, 20) + "...");
+    console.log("Cookie options used:", cookieOptions);
 
     const redirectUrl =
       process.env.NODE_ENV === "production"
