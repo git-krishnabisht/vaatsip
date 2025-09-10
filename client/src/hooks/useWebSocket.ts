@@ -8,31 +8,6 @@ export interface WebSocketMessage {
 }
 
 const getWebSocketURL = () => {
-  const wsBase = import.meta.env.VITE_WS_API_BASE;
-
-  if (wsBase) {
-    return wsBase;
-  }
-
-  const apiBase =
-    import.meta.env.VITE_API_BASE || "https://vaatsip-web.onrender.com/api";
-
-  // Check for localhost development
-  if (apiBase.includes("localhost") || apiBase.includes("127.0.0.1")) {
-    return "ws://localhost:50136/ws";
-  } 
-  // Check for production deployment
-  else if (apiBase.includes("onrender.com")) {
-    const baseUrl = apiBase.replace("/api", "").replace("https://", "wss://");
-    return `${baseUrl}/ws`;
-  }
-  // Check for Vercel deployment
-  else if (apiBase.includes("vercel.app")) {
-    const baseUrl = apiBase.replace("/api", "").replace("https://", "wss://");
-    return `${baseUrl}/ws`;
-  }
-
-  // Default fallback
   return "wss://vaatsip-web.onrender.com/ws";
 };
 
@@ -85,7 +60,7 @@ export function useWebSocket(
         const [cookieName, ...cookieValueParts] = trimmed.split("=");
 
         if (cookieName === name) {
-          const cookieValue = cookieValueParts.join("="); // Handle values with = signs
+          const cookieValue = cookieValueParts.join("=");
           return decodeURIComponent(cookieValue || "");
         }
       }
@@ -97,47 +72,24 @@ export function useWebSocket(
   };
 
   const getJWTToken = (): string | null => {
-    console.log("=== JWT Token Debug ===");
-    console.log("All cookies:", document.cookie);
-
     if (!document.cookie) {
       console.log("No cookies found at all");
       return null;
     }
 
-    let token = getCookieValue("jwt");
+    // Try primary JWT cookie names
+    const cookieNames = ["jwt", "token", "authToken", "access_token"];
 
-    if (token && token.length > 10) {
-      console.log("Found JWT token in 'jwt' cookie");
-      console.log("Token preview:", token.substring(0, 20) + "...");
-
-      if (token.split(".").length === 3) {
-        return token;
-      } else {
-        console.log("Invalid JWT format - doesn't have 3 parts");
-      }
-    }
-
-    const possibleNames = ["token", "authToken", "access_token", "auth"];
-
-    for (const name of possibleNames) {
-      token = getCookieValue(name);
+    for (const name of cookieNames) {
+      const token = getCookieValue(name);
       if (token && token.length > 10 && token.split(".").length === 3) {
         console.log(`Found JWT token with name: ${name}`);
         return token;
       }
     }
 
-    const cookies = document.cookie.split(";").map((c) => c.trim());
-    for (const cookie of cookies) {
-      const [name, value] = cookie.split("=");
-      if (value && value.includes(".") && value.split(".").length === 3) {
-        console.log(`Found JWT-like cookie: ${name}`);
-        return decodeURIComponent(value);
-      }
-    }
-
-    console.log("No JWT token found in any format");
+    console.log("No JWT token found");
+    console.log("Available cookies:", document.cookie);
     return null;
   };
 
@@ -189,7 +141,6 @@ export function useWebSocket(
             const newMap = new Map(prev);
             if (data.isTyping) {
               newMap.set(data.userId, true);
-
               setTimeout(() => {
                 setTypingUsers((current) => {
                   const updated = new Map(current);
@@ -226,6 +177,10 @@ export function useWebSocket(
 
         case "error":
           console.error("WebSocket error:", data.error);
+          break;
+
+        case "pong":
+          // Handle pong response
           break;
 
         default:
@@ -268,6 +223,7 @@ export function useWebSocket(
       console.error("Available cookies:", document.cookie);
       setConnectionStatus("error");
 
+      // Retry logic for token not found
       setTimeout(() => {
         if (reconnectAttempts.current < 3) {
           reconnectAttempts.current++;
@@ -288,6 +244,8 @@ export function useWebSocket(
     try {
       wsRef.current = new WebSocket(wsUrl);
 
+      wsRef.current.binaryType = "arraybuffer";
+
       wsRef.current.onopen = () => {
         console.log("✅ WebSocket connected successfully");
         setIsConnected(true);
@@ -303,6 +261,7 @@ export function useWebSocket(
           );
         }
 
+        // Start heartbeat
         heartbeatIntervalRef.current = window.setInterval(() => {
           if (wsRef.current?.readyState === WebSocket.OPEN) {
             wsRef.current.send(JSON.stringify({ type: "ping" }));
@@ -329,14 +288,20 @@ export function useWebSocket(
           heartbeatIntervalRef.current = null;
         }
 
-        // Only attempt reconnection for unexpected disconnections
-        if (
+        // Reconnection logic for unexpected disconnections
+        const shouldReconnect =
           event.code !== 1000 && // Normal close
           event.code !== 1001 && // Going away
           event.code !== 1005 && // No status code
-          reconnectAttempts.current < maxReconnectAttempts
-        ) {
-          console.log(`WebSocket closed unexpectedly (code: ${event.code}), attempting reconnection...`);
+          event.code !== 3000 && // Custom close codes
+          reconnectAttempts.current < maxReconnectAttempts &&
+          user?.id &&
+          isLoggedIn;
+
+        if (shouldReconnect) {
+          console.log(
+            `WebSocket closed unexpectedly (code: ${event.code}), attempting reconnection...`
+          );
           attemptReconnect();
         } else if (reconnectAttempts.current >= maxReconnectAttempts) {
           console.error("Max reconnection attempts reached");
@@ -443,18 +408,26 @@ export function useWebSocket(
     [isConnected]
   );
 
+  // Connect when user is authenticated
   useEffect(() => {
     if (user?.id && isLoggedIn) {
       console.log("🔗 Initiating WebSocket connection for user:", user.id);
 
-      // Add a delay to ensure cookies are set properly after auth
+      // Longer delay to ensure cookies are properly set
       const timeoutId = setTimeout(() => {
         connect();
-      }, 1000); // Increased delay
+      }, 2000);
 
       return () => clearTimeout(timeoutId);
     } else {
       console.log("❌ Cannot connect WebSocket - user not authenticated");
+
+      // Clean up existing connection if user logs out
+      if (wsRef.current) {
+        wsRef.current.close(1000, "User logged out");
+        setIsConnected(false);
+        setConnectionStatus("disconnected");
+      }
     }
   }, [user?.id, isLoggedIn, connect]);
 

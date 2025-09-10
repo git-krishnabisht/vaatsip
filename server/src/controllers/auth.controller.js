@@ -11,19 +11,19 @@ const getCookieOptions = () => {
   console.log("Frontend URI:", process.env.FRONTEND_URI);
 
   const options = {
-    httpOnly: false,
-    secure: isProduction,
-    sameSite: isProduction ? "none" : "lax",
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-    path: "/",
-    ...(isProduction &&
-      process.env.COOKIE_DOMAIN && { domain: process.env.COOKIE_DOMAIN }),
+    httpOnly: false, // Allow JavaScript access for WebSocket authentication
+    secure: isProduction, // HTTPS only in production
+    sameSite: isProduction ? "none" : "lax", // Allow cross-site in production
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    path: "/", // Available on all paths
   };
 
-  if (isProduction) {
-    console.log("Production cookie options:", options);
+  // Only set domain in production if specified
+  if (isProduction && process.env.COOKIE_DOMAIN) {
+    options.domain = process.env.COOKIE_DOMAIN;
   }
 
+  console.log("Final cookie options:", options);
   return options;
 };
 
@@ -65,13 +65,18 @@ export const sign_up = async (req, res) => {
     }
 
     const token = jwtService.generateJWT({ id: user.id, email: user.email });
-
     const cookieOptions = getCookieOptions();
+
+    // Set the primary JWT cookie
     res.cookie("jwt", token, cookieOptions);
 
+    // Set backup cookies with different names for better compatibility
+    res.cookie("authToken", token, { ...cookieOptions, httpOnly: true });
+    res.cookie("token", token, cookieOptions);
+
     console.log(`User ${user.email} signed up successfully`);
-    console.log("Cookie set with options:", cookieOptions);
-    console.log("Token length:", token.length);
+    console.log("JWT token length:", token.length);
+    console.log("Token preview:", token.substring(0, 20) + "...");
 
     return res.status(201).json({
       signed_up: true,
@@ -81,6 +86,13 @@ export const sign_up = async (req, res) => {
         email: user.email,
         name: user.name,
       },
+      ...(process.env.NODE_ENV !== "production" && {
+        debug: {
+          cookieSet: true,
+          tokenLength: token.length,
+          cookieOptions,
+        },
+      }),
     });
   } catch (err) {
     console.error("Sign up error:", err);
@@ -128,10 +140,14 @@ export const sign_in = async (req, res) => {
     });
 
     const cookieOptions = getCookieOptions();
+
+    // Set multiple cookies for better compatibility
     res.cookie("jwt", token, cookieOptions);
+    res.cookie("authToken", token, { ...cookieOptions, httpOnly: true });
+    res.cookie("token", token, cookieOptions);
 
     console.log(`User ${user.email} signed in successfully`);
-    console.log("Cookie set with options:", cookieOptions);
+    console.log("JWT token length:", token.length);
     console.log("Token preview:", token.substring(0, 20) + "...");
 
     return res.status(200).json({
@@ -162,18 +178,30 @@ export const sign_out = async (_req, res) => {
   try {
     const cookieOptions = getCookieOptions();
 
-    const clearOptions = {
-      ...cookieOptions,
-      expires: new Date(0),
-      maxAge: 0,
-    };
-    delete clearOptions.maxAge;
+    // Clear all authentication cookies
+    const cookiesToClear = ["jwt", "authToken", "token", "access_token"];
 
-    res.clearCookie("jwt", clearOptions);
+    cookiesToClear.forEach((cookieName) => {
+      // Method 1: Set expired date
+      res.cookie(cookieName, "", {
+        ...cookieOptions,
+        expires: new Date(0),
+        maxAge: 0,
+      });
 
-    res.clearCookie("jwt", { path: "/" });
+      // Method 2: Use clearCookie with path
+      res.clearCookie(cookieName, { path: "/" });
 
-    console.log("User signed out, cookies cleared");
+      // Method 3: Clear with domain if in production
+      if (process.env.NODE_ENV === "production" && process.env.COOKIE_DOMAIN) {
+        res.clearCookie(cookieName, {
+          path: "/",
+          domain: process.env.COOKIE_DOMAIN,
+        });
+      }
+    });
+
+    console.log("User signed out, all authentication cookies cleared");
 
     return res.status(200).json({
       body: {
@@ -191,16 +219,28 @@ export const sign_out = async (_req, res) => {
 
 export const oauth_signin = async (req, res) => {
   try {
-    const token = req.cookies.jwt;
-
     console.log("=== OAuth Sign In Debug ===");
-    console.log("Cookies received:", req.cookies);
+    console.log("All cookies received:", req.cookies);
+
+    // Check for token in multiple cookie names
+    const possibleTokens = ["jwt", "authToken", "token", "access_token"];
+    let token = null;
+
+    for (const tokenName of possibleTokens) {
+      if (req.cookies[tokenName]) {
+        token = req.cookies[tokenName];
+        console.log(`Found token in cookie: ${tokenName}`);
+        break;
+      }
+    }
+
     console.log(
       "JWT token:",
       token ? `${token.substring(0, 20)}...` : "NOT FOUND"
     );
 
     if (!token) {
+      console.log("No authentication token found in any cookie");
       return res.status(404).json({
         body: {
           signed_in: false,
@@ -212,12 +252,17 @@ export const oauth_signin = async (req, res) => {
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
+      if (!decoded.id || !decoded.email) {
+        throw new Error("Invalid token payload");
+      }
+
       const user = await prisma.user.findUnique({
         where: { id: decoded.id },
         select: { id: true, email: true, name: true, avatar: true },
       });
 
       if (!user) {
+        console.log("User not found in database for decoded token");
         return res.status(404).json({
           body: {
             signed_in: false,
@@ -241,11 +286,20 @@ export const oauth_signin = async (req, res) => {
       });
     } catch (jwtError) {
       console.error("JWT verification failed:", jwtError.message);
+      console.error("Token that failed:", token.substring(0, 50) + "...");
 
+      // Clear all authentication cookies on token failure
       const cookieOptions = getCookieOptions();
-      const clearOptions = { ...cookieOptions, expires: new Date(0) };
-      delete clearOptions.maxAge;
-      res.clearCookie("jwt", clearOptions);
+      const cookiesToClear = ["jwt", "authToken", "token", "access_token"];
+
+      cookiesToClear.forEach((cookieName) => {
+        res.cookie(cookieName, "", {
+          ...cookieOptions,
+          expires: new Date(0),
+          maxAge: 0,
+        });
+        res.clearCookie(cookieName, { path: "/" });
+      });
 
       return res.status(401).json({
         body: {
@@ -260,5 +314,114 @@ export const oauth_signin = async (req, res) => {
       error:
         "Something is wrong with the /oauth_signin :\n " + (err.stack || err),
     });
+  }
+};
+
+// Enhanced OAuth callback with better cookie handling
+export const oauthCallback = async (req, res) => {
+  const code = req.query.code;
+
+  if (!code) {
+    console.error("No authorization code received");
+    return res.redirect(
+      process.env.NODE_ENV === "production"
+        ? `${process.env.FRONTEND_URI}/auth-google?error=auth_failed`
+        : "http://localhost:5173/auth-google?error=auth_failed"
+    );
+  }
+
+  try {
+    // Exchange code for tokens
+    const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        code,
+        client_id: process.env.GOOGLE_CLIENT_ID,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET,
+        redirect_uri: process.env.GOOGLE_REDIRECT_URI,
+        grant_type: "authorization_code",
+      }),
+    });
+
+    if (!tokenRes.ok) {
+      const errorBody = await tokenRes.text();
+      console.error("Token exchange failed:", errorBody);
+      throw new Error(`Token exchange failed: ${tokenRes.status}`);
+    }
+
+    const tokenData = await tokenRes.json();
+    const { id_token } = tokenData;
+
+    if (!id_token) {
+      throw new Error("Missing id_token in response");
+    }
+
+    // Verify the ID token
+    const { OAuth2Client } = await import("google-auth-library");
+    const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+    const ticket = await client.verifyIdToken({
+      idToken: id_token,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    const { email, name, picture } = payload;
+
+    if (!email || !name) {
+      throw new Error("Missing required user data in payload");
+    }
+
+    // Find or create user
+    let user = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          email,
+          avatar: picture || null,
+          name,
+          passwordHash: null, // OAuth user
+        },
+      });
+    } else if (picture && user.avatar !== picture) {
+      user = await prisma.user.update({
+        where: { id: user.id },
+        data: { avatar: picture },
+      });
+    }
+
+    // Generate JWT token
+    const jwtPayload = { id: user.id, email: user.email };
+    const token = await jwtService.generateJWT(jwtPayload);
+    const cookieOptions = getCookieOptions();
+
+    // Set multiple cookies for better compatibility
+    res.cookie("jwt", token, cookieOptions);
+    res.cookie("authToken", token, { ...cookieOptions, httpOnly: true });
+    res.cookie("token", token, cookieOptions);
+
+    console.log(`OAuth successful for user ${user.email}`);
+    console.log("JWT token length:", token.length);
+    console.log("Token preview:", token.substring(0, 20) + "...");
+
+    const redirectUrl =
+      process.env.NODE_ENV === "production"
+        ? process.env.FRONTEND_URI
+        : "https://localhost:5173";
+
+    console.log(`Redirecting to ${redirectUrl}`);
+    return res.redirect(redirectUrl);
+  } catch (err) {
+    console.error("OAuth Error:", err);
+    const errorRedirectUrl =
+      process.env.NODE_ENV === "production"
+        ? `${process.env.FRONTEND_URI}/auth-google?error=auth_failed`
+        : "https://localhost:5173/auth-google?error=auth_failed";
+
+    return res.redirect(errorRedirectUrl);
   }
 };
