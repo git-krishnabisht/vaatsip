@@ -21,7 +21,6 @@ export async function protectedRoute(req, res, next) {
       return res.status(401).json({ error: "Invalid token payload" });
     }
 
-    // Verify user still exists in database
     const user = await prisma.user.findUnique({
       where: { id: decoded.id },
       select: { id: true, email: true, name: true },

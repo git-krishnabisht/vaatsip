@@ -31,7 +31,6 @@ function AuthPage() {
   useEffect(() => {
     if (error === "auth_failed") {
       setAuthError("Authentication failed. Please try again.");
-      // Clear error from URL
       navigate("/auth-google", { replace: true });
     }
   }, [error, navigate]);
@@ -58,7 +57,6 @@ function AuthPage() {
       ...cred,
       [e.target.name]: e.target.value,
     });
-    // Clear errors when user starts typing
     if (formError) setFormError(null);
     if (authError) setAuthError(null);
   };
@@ -105,10 +103,8 @@ function AuthPage() {
 
       console.log("Authentication successful:", data);
 
-      // Clear form
       setCred({ name: "", email: "", password: "" });
 
-      // Wait a bit for cookie to be set, then check auth status
       setTimeout(async () => {
         console.log("Cookies after sign in:", document.cookie);
         await checkAuthStatus();

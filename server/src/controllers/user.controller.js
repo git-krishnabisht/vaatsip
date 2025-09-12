@@ -187,7 +187,6 @@ export const uploadProfile = async (req, res) => {
         .json({ error: "No image file found in the request" });
     }
 
-    // Validate file type
     const fileType = await fileTypeFromBuffer(req.file.buffer);
     if (!fileType || !fileType.mime.startsWith("image/")) {
       return res
@@ -195,7 +194,6 @@ export const uploadProfile = async (req, res) => {
         .json({ error: "Invalid file type. Only images are allowed." });
     }
 
-    // Validate file size (5MB limit)
     if (req.file.buffer.length > 5 * 1024 * 1024) {
       return res
         .status(400)

@@ -133,7 +133,6 @@ function Dashboard() {
   const handleMessagesUpdate = (updatedMessages: Message[]) => {
     setAllMessages(updatedMessages);
 
-    // Update the recent message for sidebar
     if (updatedMessages.length > 0) {
       const latestMessage = updatedMessages[updatedMessages.length - 1];
       setRecentMessage(latestMessage!);
@@ -141,7 +140,6 @@ function Dashboard() {
   };
 
   const handleConversationUpdate = (conversationId: number) => {
-    // This could be used for additional logic when conversations are updated
     console.log(`Conversation with user ${conversationId} was updated`);
   };
 

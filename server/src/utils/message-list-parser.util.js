@@ -1,5 +1,5 @@
 import { encode64 } from "./encode-base64.util.js";
-import imageType from "image-type"; // if you use this
+import imageType from "image-type"; 
 
 export function parseMessageList(rows) {
   return rows.map((row) => {

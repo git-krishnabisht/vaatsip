@@ -40,7 +40,6 @@ class ErrorBoundary extends Component<Props, State> {
       errorInfo,
     });
 
-    // Log error to monitoring service
     this.logErrorToService(error, errorInfo);
   }
 
@@ -51,7 +50,6 @@ class ErrorBoundary extends Component<Props, State> {
   }
 
   private logErrorToService = (error: Error, errorInfo: ErrorInfo) => {
-    // In a real app, you'd send this to your error monitoring service
     const errorData = {
       message: error.message,
       stack: error.stack,
@@ -91,7 +89,6 @@ class ErrorBoundary extends Component<Props, State> {
         return this.props.fallback;
       }
 
-      // Check if we're in development mode
       const isDevelopment =
         window.location.hostname === "localhost" ||
         window.location.hostname === "127.0.0.1" ||

@@ -67,7 +67,6 @@ const corsOptions = {
   origin: (origin, callback) => {
     console.log(`CORS check for origin: ${origin}`);
 
-    // Allow requests with no origin (mobile apps, curl, etc.)
     if (!origin) return callback(null, true);
 
     const isAllowed = allowedOrigins.some((allowed) => {
@@ -86,7 +85,6 @@ const corsOptions = {
     const isVercelPreview =
       origin.includes("-git-") && origin.endsWith(".vercel.app");
 
-    // Support for Vercel branch deployments
     const isVercelBranch =
       /https:\/\/vaatsip-web-.*-krishna-projects\.vercel\.app/.test(origin);
 
@@ -115,7 +113,6 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// Handle preflight requests
 app.options("*", cors(corsOptions));
 
 app.use(express.json({ limit: "10mb" }));
@@ -138,19 +135,15 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: "Internal server error" });
 });
 
-// Initialize WebSocket server
 wsManager.initialize(server);
 
-// Routes
 app.use("/api/comm", commRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 
-// OAuth routes
 app.get("/api/auth/google", oauthEntry);
 app.get("/api/auth/google/callback", oauthCallback);
 
-// Fixed: Enhanced health check
 app.get("/api/health", (_, res) => {
   res.json({
     status: "ok",
@@ -162,13 +155,12 @@ app.get("/api/health", (_, res) => {
   });
 });
 
-app.use("*", (req, res) => {
+app.use("*", (_, res) => {
   res.status(404).json({ error: "Route not found" });
 });
 
 server.listen(PORT, () => {
   console.log(`Server is running on PORT: ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || "development"}`);
-  console.log(`Allowed origins:`, allowedOrigins);
   console.log(`WebSocket server available at PORT: ${PORT}`);
 });

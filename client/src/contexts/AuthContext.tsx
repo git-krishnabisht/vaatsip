@@ -25,7 +25,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       setAuthLoading(true);
 
-      // Debug: Log cookies before making request
       console.log("Checking auth status...");
       console.log("Current cookies:", document.cookie);
 
@@ -51,7 +50,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setIsLoggedIn(false);
         setUser(null);
 
-        // Only log error if it's not a normal "not authenticated" case
         if (res.status !== 404 && res.status !== 401) {
           console.error("Unexpected auth error:", errorData);
         }
@@ -69,7 +67,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           data.body.user.email
         );
 
-        // Debug: Log cookies after successful auth
         console.log("Cookies after successful auth:", document.cookie);
       } else {
         setIsLoggedIn(false);
@@ -101,7 +98,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(null);
         console.log("Sign out successful");
 
-        // Clear any remaining cookies on client side
         const cookieNames = ["jwt", "token", "authToken", "access_token"];
         cookieNames.forEach((name) => {
           document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.vercel.app;`;
@@ -112,15 +108,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     } catch (error) {
       console.error("Network error during sign out:", error);
-      // Still clear local state even if network request fails
       setIsLoggedIn(false);
       setUser(null);
     }
   };
 
-  // Initial auth check on app load
   useEffect(() => {
-    // Add a small delay to ensure any cookies from redirects are set
     const timeoutId = setTimeout(() => {
       checkAuthStatus();
     }, 100);

@@ -426,10 +426,7 @@ class WebSocketManager {
       }
 
       console.log(
-        `💬 Message from ${senderId} to ${receiverId}: ${content.substring(
-          0,
-          50
-        )}...`
+        `💬 Message from ${senderId} to ${receiverId}: ${content.substring(0, 50)}...`
       );
 
       const newMessage = await prisma.message.create({

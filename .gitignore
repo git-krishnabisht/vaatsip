@@ -30,3 +30,4 @@ client/public
 client/.env.production
 server/.env.production
 certs
+.VSCodeCounter

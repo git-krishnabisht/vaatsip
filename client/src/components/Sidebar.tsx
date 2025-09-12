@@ -35,7 +35,6 @@ function Sidebar({
   const baseURL =
     import.meta.env.VITE_API_BASE || "https://vaatsip-web.onrender.com/api";
 
-  // Fetch users and conversation data
   const fetchConversationData = useCallback(async () => {
     try {
       setLoading(true);
@@ -92,7 +91,6 @@ function Sidebar({
     }
   }, [currentUser?.id, fetchConversationData]);
 
-  // Handle real-time message updates
   useEffect(() => {
     if (!recentMessage || !currentUser?.id) return;
 

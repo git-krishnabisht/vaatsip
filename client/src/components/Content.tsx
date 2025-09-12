@@ -120,12 +120,10 @@ function Content({
     }, [])
   );
 
-  // Sync messages with props
   useEffect(() => {
     setLocalMessages(messages);
   }, [messages]);
 
-  // Auto-scroll and scroll detection
   useEffect(() => {
     scrollToBottom();
   }, [localMessages]);
@@ -178,21 +176,17 @@ function Content({
       attachments: [],
     };
 
-    // Add temporary message to local state
     setLocalMessages((prev) => {
       const exists = prev.some((msg) => msg.messageId === tempMessageId);
       if (exists) return prev;
       return [...prev, tempMessage];
     });
 
-    // Track pending message
     setPendingMessages((prev) => new Map(prev).set(tempId, tempMessage));
 
-    // Send via WebSocket
     const sentTempId = wsSendMessage(selectedUser.id, trimmedMessage);
     if (!sentTempId) {
       console.error("Failed to send message via WebSocket");
-      // Remove the temporary message if sending failed
       setLocalMessages((prev) =>
         prev.filter((msg) => msg.messageId !== tempMessageId)
       );

@@ -1,8 +1,8 @@
-## Vaatsip Web
+# Vaatsip Web
 
-Chat web application with a React (Vite + TypeScript + Tailwind) client and a Node.js (Express + Prisma + WebSocket) server. Includes Google OAuth, JWT auth, and CORS hardening.
+Desktop first Web application with a React (Vite + TypeScript + Tailwind) client and a Node.js (Express + Prisma + WebSocket) server. Includes Google OAuth, JWT auth, and CORS hardening.
 
-### Repository layout
+## Repository layout
 
 ```
 vaatsip-web/
@@ -10,26 +10,32 @@ vaatsip-web/
   server/   # Express API + WebSocket + Prisma ORM
 ```
 
-### Tech stack
+## Features
+
+- Real‑time messaging over WebSocket (WS path: `/ws`)
+- JWT authentication and cookie support
+- Google OAuth sign-in flow
+- Secure CORS configuration for dev and production
+- File uploads (profile images, memory storage)
+- PostgreSQL via Prisma ORM with migrations
+- TypeScript React client with Tailwind CSS
+- Local HTTPS for both client and server (mkcert/self-signed)
+
+## Tech stack
 
 - **Client**: React 19, React Router, Vite 7, Tailwind CSS 4, Lucide Icons
-- **Server**: Node.js (ESM), Express, Prisma, JWT, Google OAuth, Socket.IO/WS, Redis (optional)
+- **Server**: Node.js (ESM), Express, Prisma, JWT, Google OAuth, ws (WebSocket), Socket.IO (dep present), Multer
+- **Database**: PostgreSQL (connection via `CLOUD_DB_URI`)
+- **Deploy**: Vercel (client), Render/Node host (server)
 
-### Browser support
-
-This is a web‑first application. Some features rely on modern Web APIs and cookie/CORS behaviors that can differ across browsers. You may experience issues on Firefox (e.g., stricter third‑party cookie policies, OAuth popup flows, local HTTPS with self‑signed certs, or WebSocket+CORS interactions).
-
-- For the smoothest experience, use a Chromium‑based browser (Chrome, Edge, Brave) during development.
-- If using Firefox locally, consider disabling Enhanced Tracking Protection for `https://localhost` or adding site exceptions, and ensure the dev certificates are trusted.
-
-### Prerequisites
+## Prerequisites
 
 - Node.js 18+ (recommended 20+)
 - npm 9+
-- A PostgreSQL (or compatible) database connection URL for Prisma (`CLOUD_DB_URI`)
+- A PostgreSQL database URL for Prisma (`CLOUD_DB_URI`)
 - Google OAuth credentials (Client ID/Secret)
 
-### Quick start
+## Quick start (local)
 
 1) Install dependencies
 
@@ -50,7 +56,7 @@ PORT=50136
 # Auth / security
 JWT_SECRET=replace-with-a-strong-secret
 
-# Database (Prisma will use this)
+# Database (Prisma)
 CLOUD_DB_URI=postgresql://user:password@host:5432/dbname?schema=public
 
 # Google OAuth
@@ -62,25 +68,40 @@ GOOGLE_AUTH_CALLBACK=https://localhost:50136/api/auth/google/callback
 FRONTEND_URI=https://localhost:5173
 ```
 
-3) Generate local HTTPS certs for dev (server)
+3) Generate local HTTPS certs for dev
 
-The dev server uses HTTPS when `NODE_ENV=development` and expects certs in `server/certs/`:
+The dev servers use HTTPS and expect certs in `client/certs/` and `server/certs/`.
 
+Required files:
+- `client/certs/localhost-key.pem`
+- `client/certs/localhost.pem`
 - `server/certs/localhost-key.pem`
 - `server/certs/localhost.pem`
 
-You can create them with mkcert (recommended):
+Create with mkcert (recommended):
 
 ```bash
-cd server
+# client
+cd client
 mkcert -install
+mkcert -key-file certs/localhost-key.pem -cert-file certs/localhost.pem localhost
+
+# server
+cd ../server
 mkcert -key-file certs/localhost-key.pem -cert-file certs/localhost.pem localhost
 ```
 
-Or with OpenSSL (self-signed):
+Or with OpenSSL (self‑signed):
 
 ```bash
-cd server
+# client
+cd client
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout certs/localhost-key.pem -out certs/localhost.pem \
+  -subj "/C=US/ST=Dev/L=Local/O=Vaatsip/OU=Dev/CN=localhost"
+
+# server
+cd ../server
 openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
   -keyout certs/localhost-key.pem -out certs/localhost.pem \
   -subj "/C=US/ST=Dev/L=Local/O=Vaatsip/OU=Dev/CN=localhost"
@@ -113,10 +134,9 @@ npm run dev
 - Client runs at `https://localhost:5173`
 - API/WebSocket runs at `https://localhost:50136`
 
-### Environment variables (server)
+## Environment variables (server)
 
-Required at startup (process will exit if missing):
-
+Required at startup (process exits if missing):
 - `JWT_SECRET`
 - `CLOUD_DB_URI`
 - `GOOGLE_CLIENT_ID`
@@ -124,13 +144,12 @@ Required at startup (process will exit if missing):
 - `GOOGLE_AUTH_CALLBACK`
 
 Optional:
-
 - `PORT` (default: `50136`)
 - `FRONTEND_URI` (adds an allowed CORS origin)
 
 Files read are `.env.${NODE_ENV}` (e.g., `.env.development`, `.env.production`).
 
-### CORS and origins
+## CORS and origins
 
 - Development allowed origins include:
   - `https://localhost:5173`, `https://localhost:3000`, `https://localhost:4173`
@@ -138,53 +157,105 @@ Files read are `.env.${NODE_ENV}` (e.g., `.env.development`, `.env.production`).
 
 If you see "Not allowed by CORS", ensure your frontend origin matches an allowed origin or set `FRONTEND_URI` appropriately.
 
-### API overview
+## API overview
+
+Base URL: `https://<server-host>/api`
 
 - Health check: `GET /api/health`
   - Returns server status, environment, and WebSocket availability
-- Auth routes: `GET /api/auth/google`, `GET /api/auth/google/callback`
-- Users routes: `GET /api/users/...`
-- Comm routes: `GET|POST /api/comm/...`
 
-WebSocket is initialized by the server; see `server/src/config/websocket.config.js`.
+- Auth routes (`/api/auth`)
+  - `GET /api/auth/google` (entry) → handled by OAuth entry
+  - `GET /api/auth/google/callback` → Google callback
+  - `GET /api/auth/oauth-signin` → controller: `oauth_signin`
+  - `POST /api/auth/sign-in` → controller: `sign_in`
+  - `POST /api/auth/sign-up` → controller: `sign_up`
+  - `POST /api/auth/sign-out` → controller: `sign_out`
 
-### Client scripts
+- Users routes (`/api/users`)
+  - `POST /api/users/upload-profile` (multipart `image`, protected)
+  - `GET /api/users/get-pictures/:id`
+  - `GET /api/users/get-users` (protected)
+  - `DELETE /api/users/user-delete`
+  - `PUT /api/users/user-update`
+  - `GET /api/users/user-details/:id` (protected)
 
+- Comm routes (`/api/comm`)
+  - `GET /api/comm/get-messages/:id` (protected)
+
+Protected endpoints require a valid JWT (typically via cookie).
+
+## WebSocket
+
+- URL: `wss://<server-host>/ws`
+- Auth: JWT required via query `?token=...` or cookie (`jwt`/`token`/`access_token`/`authToken`)
+- Origin check: same CORS rules as HTTP; only allowed origins can open WS
+
+Message types (examples):
+- `send_message` → `{ receiverId: number, content: string, tempId?: string }`
+- `message_delivered` → `{ messageId: number }`
+- `message_read` → `{ messageId: number }`
+- `typing_start` / `typing_stop` → `{ receiverId: number }`
+- `get_online_users` → `{}`
+- `ping` → `{}` → server replies with `pong`
+
+Server emits:
+- `connection_established`, `new_message`, `message_sent`, `message_delivered`, `message_read`, `user_typing`, `user_status_changed`, `online_users`, `error`
+
+## Database schema (Prisma)
+
+- Tables: `users`, `messages`, `attachments`
+- Relations: `User` has many sent/received `Message`; `Message` has many `Attachment`
+
+Run migrations and generate client with Prisma commands listed above.
+
+## Scripts
+
+Client (`client/`):
 ```bash
-# client/
 npm run dev       # start Vite dev server (https://localhost:5173)
 npm run build     # type-check + production build to client/dist
 npm run preview   # preview built client
 npm run lint      # lint client code
 ```
 
-### Server scripts
-
+Server (`server/`):
 ```bash
-# server/
 npm run dev         # start dev server with nodemon
 npm run start       # start server
 npm run build       # prisma generate
 npm run db:migrate  # prisma migrate deploy
 ```
 
-### Build and deploy
+## Build and deploy
 
 - Client
   - `cd client && npm run build` → outputs to `client/dist/`
-  - The repo includes `client/vercel.json` for Vercel deploys.
+  - Vercel config provided in `client/vercel.json`
 
 - Server
   - Ensure all required env vars are set in your hosting platform
   - Run `npm run build` (generates Prisma client)
   - Run `npm run start`
   - Run `npm run db:migrate` on deploy to apply migrations
+  - Sample `render.yaml` included for Render with health check `/api/health`
 
-### Troubleshooting
+## Browser support notes
+
+Some features rely on modern Web APIs and cookie/CORS behaviors. Firefox may require extra configuration for local HTTPS and third‑party cookie settings. For the smoothest dev experience, use a Chromium‑based browser (Chrome, Edge, Brave) and trust the local certs.
+
+## Troubleshooting
 
 - **Missing required environment variable**: The server exits on startup if any required env var is not set. Check `.env.${NODE_ENV}`.
 - **CORS blocked origin**: Ensure your frontend URL is in the allowed list or set `FRONTEND_URI`.
-- **HTTPS certificate errors (dev)**: Trust the mkcert root CA or add exceptions for the self-signed certs. Confirm cert files exist at `server/certs/`.
-- **Database connectivity**: Verify `CLOUD_DB_URI` and that the database is reachable from your machine/host.
+- **HTTPS certificate errors (dev)**: Trust the mkcert root CA or add exceptions for the self‑signed certs. Confirm cert files exist at `client/certs/` and `server/certs/`.
+- **Database connectivity**: Verify `CLOUD_DB_URI` and DB reachability; run migrations.
+- **WebSocket not connecting**: Verify origin, provide JWT via query or cookie, confirm `/ws` is reachable.
 
+## Contributing
 
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feat/your-feature`
+3. Commit your changes: `git commit -m "feat: add awesome feature"`
+4. Push to the branch: `git push origin feat/your-feature`
+5. Open a Pull Request
