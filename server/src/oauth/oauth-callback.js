@@ -1,4 +1,5 @@
 import { OAuth2Client } from "google-auth-library";
+import { url_encode64 } from "../utils/encode-base64.util.js";
 const oauthClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 import {
   REDIRECT_URI,
@@ -80,11 +81,16 @@ export const oauthCallback = async (req, res) => {
       where: { email },
     });
 
+    let avatar = null;
+    if (picture) {
+      avatar = await url_encode64(picture);
+    }
+
     if (!user) {
       user = await prisma.user.create({
         data: {
           email,
-          avatar: picture || null,
+          avatar: avatar,
           name,
           passwordHash: null,
         },
@@ -93,7 +99,7 @@ export const oauthCallback = async (req, res) => {
       if (picture && user.avatar !== picture) {
         user = await prisma.user.update({
           where: { id: user.id },
-          data: { avatar: picture },
+          data: { avatar: avatar },
         });
       }
     }

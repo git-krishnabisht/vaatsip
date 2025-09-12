@@ -1,6 +1,7 @@
 import { fileTypeFromBuffer } from "file-type";
 import imageType from "image-type";
 import prisma from "../utils/prisma.util.js";
+import { encode64 } from "../utils/encode-base64.util.js";
 
 export const getPictures = async (req, res) => {
   try {
@@ -200,9 +201,15 @@ export const uploadProfile = async (req, res) => {
         .json({ error: "File too large. Maximum size is 5MB." });
     }
 
+    const avatar = encode64(req.file.buffer, fileType.mime);
+
+    if (avatar.success === false) {
+      throw new Error("Prisma related error");
+    }
+
     const result = await prisma.user.update({
       where: { id: user.id },
-      data: { avatar: req.file.buffer },
+      data: { avatar: avatar.data } ,
       select: { id: true, email: true },
     });
 
@@ -211,7 +218,7 @@ export const uploadProfile = async (req, res) => {
       userId: result.id,
     });
   } catch (err) {
-    console.error("Error in uploadProfile:", err);
+    console.error("Error in uploadProfile:");
     return res.status(500).json({
       error: "Failed to upload profile image",
     });
